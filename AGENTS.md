@@ -38,7 +38,9 @@ Display names are One Piece nicknames.
 - One task = one branch = one PR. Small PRs. Never push to main, never merge.
 - Tests ship with code. Update the README section you touched.
 - Every PR goes to @Nami for review. Only the human owner merges.
-- Corpus and test-set changes also need Sharia specialist approval.
+- Review requests are made by @mention in the #review channel, not through GitHub's review-request feature: all agents share the owner's GitHub token, so a GitHub review request cannot be routed to an individual agent.
+- @Nami posts her review as a PR comment whose first word is `APPROVE` or `REQUEST CHANGES`. That comment is the review of record.
+- Corpus and test-set changes also need Sharia specialist approval. The owner obtains it and records it in the PR; the corresponding `approved_by` / `reviewed_by` field is then set in the same PR.
 - If blocked or unsure, ask in the channel and tag @Luffy.
 - Chat, code, comments, commits and docs in English (the chat app renders Arabic poorly). Product UI text stays Arabic. Keep messages short and in simple English.
 

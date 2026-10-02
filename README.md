@@ -66,8 +66,23 @@ Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner down
 formats and local paths. [SOURCES.md](SOURCES.md) records licence evidence; all current permissions
 are pending, so raw files are ignored and ingestion is blocked until permission is clear.
 [corpus/approved_sources.json](corpus/approved_sources.json) lists candidate sources by domain;
-it does not grant licensing or Sharia approval. [TOOLS.md](TOOLS.md) logs tools used for this contribution.
+it does not grant licensing or Sharia approval. The tool-log assignment remains with the lead.
 
 Source IDs match the register and SPEC (including `kfc-mushaf`). The `domains` values use
 SPEC §4.2's corpus enum, including `quran_translation`; translations remain separate records
 linked to the Arabic verse through `translation_of`.
+
+Run the source-register checks with Node.js 24 (no packages to install):
+
+```sh
+node --test tests/source-register.test.mjs
+```
+
+The checks enforce register/allowlist ID equality, pin the nine merged SPEC domain values,
+and require `corpus/corpus.jsonl` source IDs to be a subset of the allowlist when that file
+exists. An absent corpus is checked explicitly and does not establish corpus readiness or approval.
+The same suite runs in CI for changes to these files.
+
+**Unresolved review item:** the lead must decide P-03/P-04 ownership of `SOURCES.md` and its
+planned `docs/sources-v0` branch. This PR keeps the register for the requested consistency checks;
+it does not mark P-03 complete or change the task assignment in `TASKS.md`.

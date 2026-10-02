@@ -83,6 +83,5 @@ and require `corpus/corpus.jsonl` source IDs to be a subset of the allowlist whe
 exists. An absent corpus is checked explicitly and does not establish corpus readiness or approval.
 The same suite runs in CI for changes to these files.
 
-**Unresolved review item:** the lead must decide P-03/P-04 ownership of `SOURCES.md` and its
-planned `docs/sources-v0` branch. This PR keeps the register for the requested consistency checks;
-it does not mark P-03 complete or change the task assignment in `TASKS.md`.
+**Ownership decision (Oct 2):** P-04 owns `SOURCES.md` in this PR; P-03 and its planned
+`docs/sources-v0` branch are retired. Luffy owns `TOOLS.md` under P-10 in a separate PR.

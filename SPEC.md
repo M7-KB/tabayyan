@@ -184,6 +184,8 @@ eval/reports/                     committed eval reports
 docs/                             challenge-brief.md, architecture notes
 CODEOWNERS                        api/policy/ → the owner (G24)
 SOURCES.md                        every source, how it is used, license
+TOOLS.md                          log of tools/AI models used, per contributor (brief submission req.)
+                                    — owned by @Robin (TASKS.md P-10), contributors append their own row
 SPEC.md                           this file
 TASKS.md                          day-by-day task plan
 ```
@@ -1173,7 +1175,7 @@ recognisable human voice or face.
    for processing and are not stored by us (§8).
 
 ### 6.7 Submission checklist (from the brief)
-Working solution · public repo with licenses and setup docs, no secrets or user data · tested live demo link · video ≤ 2 min · deck (problem, solution, how it works, added value, technologies, results, continuation plan, screenshots) · source and license documentation · portal submission with the confirmation kept.
+Working solution · public repo with licenses and setup docs, no secrets or user data · tested live demo link · video ≤ 2 min · deck (problem, solution, how it works, added value, technologies, results, continuation plan, screenshots) · source and license documentation (`SOURCES.md`) · **log of sources, tools and licenses (`TOOLS.md`, P-10, §2)** · portal submission with the confirmation kept.
 
 ---
 

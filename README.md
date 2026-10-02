@@ -58,7 +58,7 @@ Uploading a clip requires an explicit consent tick. A TikTok or YouTube link sho
 caption as editable text, plus a plain outbound link to the original — there is no embedded player and
 no thumbnail, so nothing from the platform ever loads on the result screen.
 
-Run and setup instructions land with the application code (TASKS.md, T-604).
+API setup and run instructions are below; full application setup is tracked in TASKS.md, T-604.
 
 ## API scaffold (T-401)
 
@@ -95,3 +95,13 @@ loader and card schema are integrated, it reports `status: degraded`, `corpus_it
 artifact versions. It is a scaffold liveness response, not a release-readiness claim. Verification,
 transcription and ingestion routes are not implemented by this PR. Errors use the SPEC envelope
 `error: {code, message_ar, message_en}` with fixed text that does not echo input.
+
+## Source register (P-03)
+
+See [SOURCES.md](SOURCES.md) for candidate sources, uses and licence evidence. All 13 entries
+remain pending: this register grants no ingestion or redistribution permission. P-04 supplies
+the separate acquisition manifest and allowlist. The public raw-package history and
+pending cleanup in PR #13 are disclosed in SOURCES.md.
+
+Run the standalone register contract checks with `node --test tests/*.test.mjs`.
+CI checks headers, unique IDs, required license fields and the closed domain enum.

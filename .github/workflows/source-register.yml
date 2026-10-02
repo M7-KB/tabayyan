@@ -1,0 +1,31 @@
+name: Source register consistency
+
+on:
+  pull_request:
+    paths:
+      - 'SOURCES.md'
+      - 'SPEC.md'
+      - 'corpus/**'
+      - 'tests/source-register*.mjs'
+      - '.github/workflows/source-register.yml'
+  push:
+    branches: [main, docs/sources-v0, data/corpus-notes]
+    paths:
+      - 'SOURCES.md'
+      - 'SPEC.md'
+      - 'corpus/**'
+      - 'tests/source-register*.mjs'
+      - '.github/workflows/source-register.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test tests/source-register*.test.mjs

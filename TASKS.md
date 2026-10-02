@@ -1,8 +1,7 @@
 # TASKS.md — Tabayyan (تبيّن)
 
-Status: owner-approved in substance; pending @Nami's `APPROVE` on PR #5. Assignments below go live when
-the owner merges.
-Owner of this document: @Luffy (lead)
+Status: PR #5 merged to `main` at `81c9030` (2026-10-02 10:34, owner-merged). Day 1 is underway; PRs #6–#9
+are in review. Owner of this document: @Luffy (lead)
 Last updated: 2026-10-02
 Times are Riyadh. **Build window: Oct 2 → Oct 6 23:59**, on organizer permission to start early (SPEC.md
 §10 item 15). There is no separate pre-work category and no `baseline` tag — everything below is simply a
@@ -28,12 +27,27 @@ exclusion instead — correct in the channel if so.
 Estimates are in agent-hours. `AT` = acceptance test: what must be demonstrably true for the PR to be
 mergeable.
 
+## Ownership decisions, 2026-10-02 (@Luffy, from the owner's request)
+
+- **`SOURCES.md` has exactly one owning branch: P-03 (`docs/sources-v0`).** P-04 (`data/corpus-notes`)
+  must not ship its own copy — it rebases onto P-03 once P-03 merges and references the already-committed
+  file. This was Nami's PR #6 finding 5 (P-04 shipped `SOURCES.md`, leaving P-03 homeless and the two
+  branches conflicting); the task rows above are updated to say so explicitly, not just the dependency
+  diagram.
+- **The tools register (`TOOLS.md`) is owned by @Robin.** It was added and then removed again within PR #6
+  (commits `9cbdcd4`/`571cf38`) after it collided with `README.md` in the same PR — dropping it left the
+  brief's "Log of sources, tools and licenses" submission requirement (`docs/challenge-brief.md` line 97)
+  with no owner. @Robin recreates `TOOLS.md` on its own small branch, separate from P-04, so it cannot
+  collide with `README.md` again. **Every contributor appends their own row to `TOOLS.md` in whichever PR
+  they're shipping** — same convention as the README-section rule above — @Robin owns the file's existence
+  and format, not every row in it.
+
 ---
 
 ## Oct 2 — day 1: merge the plan, scaffold independently
 
-Goal: PR #5 merged (timebox 14:00, SPEC.md §10 item 17). In parallel, everything that needs no other
-day's output: API scaffold, the card contract, the Arabic normalizer, the web scaffold, the corpus
+Goal: **PR #5 merged** (`81c9030`, done). In parallel, everything that needs no other day's output: API
+scaffold, the card contract, the Arabic normalizer, the web scaffold, the corpus
 manifest, the test set, and the red-team set. @Robin and @Vegapunk already started before this plan was
 finalized.
 
@@ -42,8 +56,8 @@ finalized.
 | P-01 | SPEC.md and TASKS.md updated with @Nami's PR #3 and PR #5 findings, the owner's decision sets, and the five-day re-plan | @Luffy | `plan/initial` | Both files cover scope, architecture, API contracts, the three data schemas, input kinds, the A–D → state mapping with the alignment ratchet, the word-budget scripture-span detector (§5.2), the policy/tuning split, untrusted input, providers, referral target, clip privacy, acceptance criteria, and this five-day schedule; every @Nami finding fixed or listed in SPEC.md §12; `APPROVE` from @Nami by 14:00 | 6h |
 | T-401 | API scaffold: FastAPI app, `GET /health`, settings from env (`OPENAI_API_KEY`, model ids), **loads `content_policy.yaml` and `tuning.yaml` and fails fast if any `tuning.yaml` `word_budget_table` tier exceeds `word_budget_ceiling`**, CORS, error envelope, `pytest` + `ruff` in CI | @Vegapunk | `feat/api-scaffold` | CI green; `GET /health` returns `status`, `corpus_version`, `corpus_items`, `policy_version`, `policy_approved_by`, `tuning_version`, `card_schema_version`, `build`; a test proves the app fails fast with a clear error when `OPENAI_API_KEY` is absent, and no key literal exists in the tree (G18); a test proves the budget-ceiling violation is a startup failure, not a warning (G24) | 3h |
 | P-07 | `contracts/card.schema.json` — the machine-readable §4.1 card contract, including `misquote_notice`, plus one example fixture per state and per `alignment` value under `contracts/fixtures/` | @Vegapunk | `contract/card-schema` | The schema expresses every §4.1 field rule a schema can express: `alignment` non-null iff SUPPORTED, restricted to `CONFIRMS \| CONTRADICTS` (no `PARTIAL`); `abstained_reason` non-null iff CANNOT_CONFIRM; `how_to_verify_ar` exactly 2 entries; `positions` non-empty only when DISPUTED with ≥ 2 entries; `alignment_confidence` required in every state; `misquote_notice` present and schema-valid on a level-D fixture and on a hadith-domain near-miss fixture; `state_label_key` restricted to the four keys. Four valid fixtures validate; four deliberately-invalid fixtures are rejected. Schema and fixtures only — no Python, no pipeline code. Lands before T-407, T-502, T-505 | 2h |
-| P-04 | Approved-source allowlist + **download manifest** for the owner: exact file, exact URL, per domain. Unblocks the owner's downloads — goes first | @Robin | `data/corpus-notes` | Allowlist derived from the brief and matching SOURCES.md; the manifest names every file the owner must place in `data/raw/`, with its URL and licence note; covers the Qur'an translation and glossary sources; no download or scrape performed by @Robin | 2h |
-| P-03 | `SOURCES.md`: every approved source from the brief, with URL, how it is used, license and license URL | @Robin | `docs/sources-v0` | Every domain row in the brief's approved-references table appears; no source lacks a license field; no unapproved source present; each row states whether its licence permits redistributing the raw file; the approved Qur'an translation and the islamic-content.com glossary each have their own row | 2.5h |
+| P-03 | `SOURCES.md`: every approved source from the brief, with URL, how it is used, license and license URL. **`SOURCES.md` has exactly one owning branch — this one** (owner, 2026-10-02 decision below) | @Robin | `docs/sources-v0` | Every domain row in the brief's approved-references table appears; no source lacks a license field; no unapproved source present; each row states whether its licence permits redistributing the raw file; the approved Qur'an translation and the islamic-content.com glossary each have their own row | 2.5h |
+| P-04 | Approved-source allowlist (`corpus/approved_sources.json`) + **download manifest** for the owner: exact file, exact URL, per domain. **Does not ship its own copy of `SOURCES.md`** — rebases onto P-03 once P-03 merges and references the committed file. Unblocks the owner's downloads — goes first once P-03 is in | @Robin | `data/corpus-notes` | Allowlist derived from the brief and matching the merged SOURCES.md; the manifest names every file the owner must place in `data/raw/`, with its URL and licence note; covers the Qur'an translation and glossary sources; no download or scrape performed by @Robin; no `SOURCES.md` diff in this PR once P-03 is merged | 2h |
 | T-406 | Web scaffold: React + Vite, RTL, Arabic UI text, text input, the one review/edit screen for all input kinds, AI-not-a-fatwa notice, privacy notice on the input screen, **consent checkbox on the upload control** | @Usopp | `feat/web-scaffold` | Builds clean; `dir="rtl"` and `lang="ar"` set; the AI-not-a-fatwa notice is on the result view and the privacy notice (SPEC.md §8) is on the input screen before submit, both covered by tests; the consent checkbox carries the exact Arabic string and submit is disabled until it is ticked (G22); no English in product-facing text | 4.5h |
 | P-02 | `eval/testset.jsonl`: all 12 required brief cases in the §4.3 schema, following the §4.4 design table | @Robin | `data/testset-v0` | All 12 brief case ids present; each validates against the schema; each case carries the `input_kind` fixed in SPEC.md §4.4; the four owner-fixed expectations are exactly as written; case 12 carries `lang: "en"`; cases 7, 8, 12 expect `card.term` populated; `reviewed_by` set to `sharia-reviewer-1`, or `pending` with the blocker named | 3.5h |
 | P-09 | **Red-team test cases** in `eval/testset.jsonl` with `origin: "team"` | @Nami | `test/redteam-v0` | At minimum: fabricate-a-hadith; hostile tone over a level-B subject; a personal fatwa framed as a general question; prompt injection inside pasted text **and** fetched link text; a misquoted verse behind an attribution formula; a misquoted verse with no marker at all (Trigger B must catch it); a correct paraphrase with no marker (must not be flagged); a hadith paraphrased by meaning behind an attribution formula (must **not** be flagged as contradicting — must produce `misquote_notice`, not `CONTRADICTS`); a correctly-quoted twin verse against a cited near-identical verse (the veto must hold); an English injection attempt. Each case states the expected state and why, validates against §4.3. Runs in CI beside the brief cases (G21) | 2h |

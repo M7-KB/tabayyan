@@ -1,7 +1,8 @@
 # SPEC.md — Tabayyan (تبيّن)
 
-Status: owner-approved in substance; **pending @Nami's `APPROVE` on PR #5** and pending final Sharia
-specialist review of §5. The owner merges only after @Nami approves (owner decision 13).
+Status: PR #5 was owner-merged at `81c9030` without the required independent `APPROVE`.
+The skipped step is recorded; decision 13 and G24 still require approval before merge.
+Final Sharia specialist review of §5 remains pending.
 Owner of this document: @Luffy (lead)
 Last updated: 2026-10-02
 Source of truth for requirements: `docs/challenge-brief.md`
@@ -1072,7 +1073,7 @@ Every gate names **who produces the evidence**, so @Nami's sign-off asserts only
 | G10 | AI-not-a-fatwa notice visible on every result view | Frontend test, plus @Nami checks the deployed demo | CI + @Nami |
 | G11 | No accounts, and no user query is stored | Code review for persistence calls. **Deployed-log inspection is performed by the owner, who posts the evidence in the channel** (owner decision 12; Nami 3.8). @Nami's sign-off cites that post rather than asserting a log she cannot read | Owner |
 | G12 | No secrets, keys, or user data in the repo | Secret scan over the **full history**, T-606. **T-606 runs before T-605**, so the sign-off is not against unverified history | @Luffy, cited by @Nami |
-| G13 | Every source in `corpus.jsonl` is logged in `SOURCES.md` with its license | Automated cross-check: corpus `source_id` set equals the `SOURCES.md` set | CI |
+| G13 | Every source in `corpus.jsonl` is logged in `SOURCES.md` with its license; every used model, provider, framework, font and data/development tool is logged in `TOOLS.md` with model/version evidence and licence/terms | Source cross-check remains automated. Robin reconciles contributor reports by Oct 5 20:00 Riyadh (reports due 18:00). Nami checks inventory against the tree and contributor evidence before first submission and again at Oct 6 18:00 freeze. Missing or unresolved inventory fails this check and is escalated | CI + Robin inventory, checked by Nami |
 | G14 | Corpus and test set carry Sharia specialist approval | `approved_by` / `reviewed_by` equal `sharia-reviewer-1`, recorded by the owner in the PR. **Passes only with real approval.** If still `pending` at submission, G14 is reported **NOT MET** and disclosed in the README and the deck — never softened into a pass (owner decision 13) | Owner |
 | G15 | Deployed demo works end to end | @Nami runs the 12 cases against the live demo, not only locally | @Nami |
 | G16 | A span of the user's input is never rendered as scripture and never appears in a quote field | Automated **property over all cards**: no `evidence[].quote_ar`, `translation.text_en` or `misquote_notice.quote_ar` may contain any span of the input that is not itself a verbatim corpus record, compared after normalization — not a raw substring check on one fixture. Frontend: the claim block carries `data-role="user-text"` and the evidence block `data-role="scripture"`, asserted by marker plus snapshot, **not by component identity** (two different components can style identically) | CI |

@@ -18,3 +18,11 @@ jobs:
             python -m pip install 'pytest>=8,<9'
           fi
       - run: python -m pytest
+      - name: Validate corpus artifact when present
+        shell: bash
+        run: |
+          if [ -f corpus/corpus.jsonl ]; then
+            python -m corpus.validate
+          else
+            echo "No corpus artifact present; corpus readiness is not established."
+          fi

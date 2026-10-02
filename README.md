@@ -31,8 +31,8 @@ it must not use `ar-v1` as its security comparison surface.
 Use the result only as an indexing/matching key. Keep `text_ar` unchanged for display and calculate
 its checksum from the original text using the corpus loader's documented encoding. Normalization is
 lossy: equal keys do not authorize religious evidence or settle alignment. No quote checker, alignment,
-span detector, corpus download, loader, or eight-rule validator is implemented here. The loader and
-validator remain Robin's work. Tests use synthetic non-scriptural text and include idempotence across
+span detector or corpus download is implemented here. Loader and validator usage is below.
+Tests use synthetic non-scriptural text and include idempotence across
 every Unicode scalar in blocks.
 
 The normalizer and its tests were developed on October 2, 2026, with organizer permission to start
@@ -167,3 +167,35 @@ node --test tests/*.test.mjs
 The source checks reuse the register contract helper, require register/allowlist ID equality,
 validate the pinned domains and check corpus source IDs against the allowlist when records exist.
 An absent corpus does not establish corpus readiness or approval. CI runs both source suites.
+
+## Corpus loader and validator (T-402 remainder)
+
+`corpus.loader.load_corpus()` reads the local `corpus/corpus.jsonl` artifact and returns records only
+after all eight SPEC §4.2 rules pass. It requires complete hadith grading, registered source/domain,
+SHA-256 of unchanged UTF-8 `text_ar` bytes, reproducible `ar-v1` normalization, matching licence fields,
+unique IDs, specialist approval and resolvable translation links/English glossary text. It never
+downloads, repairs or rewrites records. A missing or empty corpus is an error, not readiness.
+
+```sh
+python -m corpus.validate
+python -m pytest
+```
+
+The validator cross-checks `corpus/approved_sources.json` and the explicit machine-readable table in
+`SOURCES.md`. For a cleared source, its allowlist row must have `license_status: confirmed`,
+`ingestion_allowed: true` and `redistribution_allowed: true`; its exact licence and licence URL must
+match the register. Existing candidate rows remain pending and cannot pass. Only an owner-cleared
+source PR changes these flags and records permission for derived corpus/application display. This
+validator trusts that reviewed metadata; it cannot prove the permission document or textual provenance.
+
+Offline review of a licence-cleared artifact may use `python -m corpus.validate --allow-pending-review`
+to admit `approved_by: pending`. This option never waives licence checks and is unavailable on
+`load_corpus`: runtime records always require `sharia-reviewer-1`. The owner records actual specialist
+approval in the content PR; a string in a fixture is not sign-off. Use `--corpus`, `--sources` and
+`--register` for explicit offline paths. The loader's analogous keyword paths support tests/integration.
+
+CI validates an artifact when present and reports its absence explicitly otherwise. No corpus records
+ship with this task. P-06 raw ingestion and T-403 filling remain blocked on owner files, permissions
+and specialist review; format-specific raw importers belong to P-06. Tests use only synthetic prose
+and synthetic metadata and cover the eight rejection rules, original-text preservation and runtime
+rejection of pending approval.

@@ -39,6 +39,22 @@ The normalizer and its tests were developed on October 2, 2026, with organizer p
 development that day (see Disclosure below). TASKS.md records the implementation and the pending
 T-503a quote-safety follow-up: equal normalized keys must never authorize a quotation.
 
+## Claim card contract (P-07)
+
+[contracts/card.schema.json](contracts/card.schema.json) is the Draft 2020-12 version-1
+structural contract. [contracts/fixtures/](contracts/fixtures/) contains four valid cards:
+SUPPORTED with each alignment, DISPUTED, and level-D CANNOT_CONFIRM. The CONFIRMS card
+includes a hadith-domain near-miss notice; the level-D card also includes a notice.
+The four `invalid-*.json` files must be rejected (alignment, abstention reason, positions,
+and verification-line count). All evidence text and source identities are synthetic,
+non-scriptural placeholders; these fixtures grant no source or specialist approval.
+
+Validate with a Draft 2020-12 validator, enabling URI format checking. Schema validation
+does not establish original-text equality, corpus provenance, quote isolation, notice
+eligibility, matching evidence IDs, or ordered character/time spans; the runtime gates
+must check those against the approved corpus. The contract includes the §5.2 detector
+status and gate result, nullable Trigger B markers, and §9 referral fallback text.
+
 ## Planning
 
 | Document | Contents |

@@ -1,0 +1,68 @@
+{
+  "card_id": "synthetic-card",
+  "card_schema_version": "1",
+  "input_kind": "claim",
+  "claim": {
+    "id": "c1",
+    "text_ar": "عبارة تجريبية",
+    "text_original": "عبارة تجريبية",
+    "lang": "ar",
+    "span": {
+      "start": 0,
+      "end": 14
+    },
+    "time_span": null,
+    "origin": "stated",
+    "level": "D",
+    "level_rationale_en": "Synthetic contract fixture; no religious judgment.",
+    "scripture_spans": [
+      {
+        "start": 0,
+        "end": 14,
+        "marker": "attribution_formula",
+        "nearest_corpus_id": "synthetic:e1",
+        "normalized_distance": 0.25,
+        "classification": "NEAR_MISS"
+      }
+    ],
+    "span_detector_status": "ran"
+  },
+  "state": "CANNOT_CONFIRM",
+  "alignment": null,
+  "alignment_confidence": 0.9,
+  "state_label_key": "cannot_confirm",
+  "evidence": [],
+  "positions": [],
+  "term": null,
+  "explanation_ar": "شرح تجريبي مستقل",
+  "explanation_en": null,
+  "referral": {
+    "body_name_ar": "الرئاسة العامة للبحوث العلمية والإفتاء",
+    "body_url": "https://alifta.gov.sa/ar/home",
+    "fallback_line_ar": "أو الجهة الرسمية للفتوى في بلدك",
+    "ready_to_ask_question_ar": "هل يمكن مراجعة هذه الحالة؟"
+  },
+  "how_to_verify_ar": [
+    "افتح المصدر المحدد",
+    "قارن النص المعروض"
+  ],
+  "misquote_notice": {
+    "corpus_id": "synthetic:e1",
+    "quote_ar": "نص تجريبي غير ديني",
+    "note_ar": "تنبيه تجريبي"
+  },
+  "confidence": 0.9,
+  "abstained_reason": null,
+  "policy_version": "p1",
+  "tuning_version": "t1",
+  "gate_report": {
+    "verbatim": "pass",
+    "separation": "pass",
+    "grading": "pass",
+    "two_line_verify": "pass",
+    "alignment": "pass",
+    "user_quote_isolation": "pass",
+    "untrusted_input": "pass",
+    "span_detector": "pass"
+  }
+}

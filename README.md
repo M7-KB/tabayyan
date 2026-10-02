@@ -34,12 +34,9 @@ span detector, corpus download, loader, or eight-rule validator is implemented h
 validator remain Robin's work. Tests use synthetic non-scriptural text and include idempotence across
 every Unicode scalar in blocks.
 
-## Pre-event disclosure
-
-The owner requested the Arabic normalizer on October 2, 2026, before the October 4 09:00 Riyadh build
-window. This function and its tests are application pre-work; commit dates remain public. It is
-excluded from evaluated build-window work. This branch remains unmerged for the owner to resolve the
-baseline-tag boundary with the lead. See TASKS.md for the pre-work record.
+The normalizer and its tests were developed on October 2, 2026, with organizer permission to start
+development that day (see Disclosure below). TASKS.md records the implementation and the pending
+T-503a quote-safety follow-up: equal normalized keys must never authorize a quotation.
 
 ## Planning
 

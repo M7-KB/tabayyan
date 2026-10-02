@@ -243,10 +243,20 @@ skeleton) carry the same ids as before; their acceptance tests are updated only 
 pattern didn't have enough ids for five days); T-420, T-508a, T-508b, T-609a and T-608a are also new.
 There is still no T-409 — see the PR #5 history for why.
 
-## Additional pre-work record — October 2, 2026
+## Normalizer implementation record — October 2, 2026
 
 - Arabic normalizer portion of T-402 and tests: owner requested implementation in #build on October 2
-  (event `8b6a06beac457fea2a6578c52fe47755f10daca38ebbf550d670dcbacbc6869f`). Application pre-work,
-  outside the evaluated October 4–6 window. Branch `feat/arabic-normalizer`, one PR, no agent merge.
-  Loader and eight-rule validator stay with Robin under the newer plan. Baseline merge timing and
-  the SPEC §7 update remain with the owner and lead.
+  (event `8b6a06beac457fea2a6578c52fe47755f10daca38ebbf550d670dcbacbc6869f`). Development started
+  October 2 with organizer permission, as recorded in SPEC.md §10 item 15. Branch
+  `feat/arabic-normalizer`, PR #8, no agent merge. Loader and eight-rule validator stay with Robin.
+
+## Pending quote-safety follow-up
+
+Registered for separate implementation after PR #8, on owner direction in #build event
+`d9a2a0df6dd0d806cd4c33986866e6e58ef9fa6b462c835ed45c65cd17eab4cb` and Nami's
+[PR #8 review, item 5](https://github.com/M7-KB/tabayyan/pull/8#issuecomment-5948270312).
+This requirement applies to T-503's verbatim gate and its callers; PR #8 does not implement it.
+
+| ID | Task | Owner | Branch | Acceptance test | Status |
+|---|---|---|---|---|---|
+| T-503a | Enforce quote safety with lossy normalization: equal normalized keys must never authorize a quotation | Vegapunk; Nami reviews | `fix/quote-safety` (planned) | Tests use synthetic non-scriptural candidate/passage pairs with equal normalized keys but different original text, covering diacritic removal, alef/ya/ta-marbuta folding, presentation forms, invisible format characters and digit folding. Every altered candidate is rejected as a verbatim quote despite key equality; only an exact original-text passage from the retrieved approved corpus record can authorize the displayed quote, retaining its source identity. Exercise both `evidence[].quote_ar` and `misquote_notice.quote_ar`, with an exact-source positive control and a fail-closed missing-source case. Retrieval-key equality alone never passes the gate. | Pending; implement in a separate PR |

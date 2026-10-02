@@ -6,15 +6,15 @@ on:
       - 'SOURCES.md'
       - 'SPEC.md'
       - 'corpus/**'
-      - 'tests/source-register.test.mjs'
+      - 'tests/source-register*.mjs'
       - '.github/workflows/source-register.yml'
   push:
-    branches: [main, data/corpus-notes]
+    branches: [main, docs/sources-v0, data/corpus-notes]
     paths:
       - 'SOURCES.md'
       - 'SPEC.md'
       - 'corpus/**'
-      - 'tests/source-register.test.mjs'
+      - 'tests/source-register*.mjs'
       - '.github/workflows/source-register.yml'
 
 permissions:
@@ -28,4 +28,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test tests/source-register.test.mjs
+      - run: node --test tests/source-register*.test.mjs

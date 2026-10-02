@@ -5,32 +5,7 @@ import test from 'node:test';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
-// SPEC.md sections 4.1 and 4.2, merged in PR #5. Change only after SPEC review.
-const legalDomains = new Set([
-  'quran', 'hadith', 'tafsir', 'aqeeda', 'fiqh', 'seerah', 'glossary', 'faq',
-  'quran_translation',
-]);
-
-function registerRows(markdown) {
-  const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((line) => line.startsWith('| Source id |'));
-  assert.ok(start >= 0, 'Source register table is required');
-  const cells = (line) => line.trim().slice(1, -1).split('|').map((cell) => cell.trim());
-  const headers = cells(lines[start]);
-  assert.ok(headers.includes('license'), 'Explicit license column is required');
-  assert.equal(headers.indexOf('Source id'), 0);
-  const rows = [];
-  for (const line of lines.slice(start + 2)) {
-    if (!line.startsWith('|')) break;
-    const values = cells(line);
-    assert.equal(values.length, headers.length, 'Register row column count');
-    const row = Object.fromEntries(headers.map((header, index) => [header, values[index]]));
-    assert.ok(row.license, `Missing license for ${row['Source id']}`);
-    rows.push(row);
-  }
-  assert.ok(rows.length > 0, 'Source register must not be empty');
-  return rows;
-}
+import { legalDomains, registerRows } from './source-register-contract.mjs';
 
 function uniqueIds(ids, label) {
   for (const id of ids) assert.ok(typeof id === 'string' && id.length > 0, `${label}: missing ID`);

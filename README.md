@@ -59,3 +59,9 @@ caption as editable text, plus a plain outbound link to the original — there i
 no thumbnail, so nothing from the platform ever loads on the result screen.
 
 Run and setup instructions land with the application code (TASKS.md, T-604).
+
+## Tools register
+
+[TOOLS.md](TOOLS.md) records verified AI-tool use and outstanding inventory details.
+Each contributor appends their own row in the PR where the tool or model is used.
+Planned product models are listed separately in SPEC.md and are not recorded as actual use.

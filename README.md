@@ -66,7 +66,7 @@ Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner down
 formats and local paths. [SOURCES.md](SOURCES.md) records licence evidence; all current permissions
 are pending, so raw files are ignored and ingestion is blocked until permission is clear.
 [corpus/approved_sources.json](corpus/approved_sources.json) lists candidate sources by domain;
-it does not grant licensing or Sharia approval. The tool-log assignment remains with the lead.
+it does not grant licensing or Sharia approval. Robin owns the separate tool register in PR #18.
 
 Source IDs match the register and SPEC (including `kfc-mushaf`). The `domains` values use
 SPEC §4.2's corpus enum, including `quran_translation`; translations remain separate records
@@ -84,5 +84,8 @@ exists. An absent corpus is checked explicitly and does not establish corpus rea
 The same suite runs in CI for changes to these files.
 
 **Ownership decision (Oct 2, PR #14):** P-03 (`docs/sources-v0`) owns `SOURCES.md`.
-P-04 rebases after P-03 merges, so the register is inherited and absent from this PR's diff.
-Robin owns `TOOLS.md` on a separate small branch. P-04 waits on P-03 before merge.
+P-04 does not add a competing register. The source-register suite requires the P-03 file;
+until PR #17 merges, this branch alone cannot run that integration check.
+PR #13 (raw-file removal and ignore rules) and PR #17 merge first. P-04 then rebases onto
+both, inherits the register, and drops its redundant `.gitignore` change.
+Robin owns `TOOLS.md` on a separate small branch (PR #18). P-04 is not merge-ready yet.

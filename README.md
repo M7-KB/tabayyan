@@ -20,12 +20,12 @@ Python 3.11+, standard library only. Run all tests from the repository root:
 python -m unittest discover -s tests -v
 ```
 
-Import `normalize_arabic` from `corpus.normalize`. Version `ar-v2` expands Arabic presentation forms
-(U+FB50–U+FDFF and U+FE70–U+FEFF) with NFKC, then applies Unicode NFC. It strips Arabic combining
-marks (including U+08CA–U+08D2), tatweel and all `Cf` format characters (including ZWJ/ZWNJ), folds
-`أ/إ/آ/ٱ` to `ا`, `ى` to `ي`, and `ة` to `ه`, and maps both Arabic-Indic digit sets to ASCII. It collapses
-Unicode whitespace to single spaces and trims it. Other scripts' compatibility forms, punctuation,
-hamza letters and non-Arabic accents remain intact. Rebuild any `ar-v1` derived index with `ar-v2`.
+Import `normalize_arabic` from `corpus.normalize`. Version `ar-v1` composes Unicode NFC,
+strips Arabic marks and tatweel, folds alef/ya/ta-marbuta variants, and collapses Unicode
+whitespace. Presentation forms, format characters and digits retain their original form.
+This general retrieval key does not provide the adversarial comparison required by the span
+detector. T-411 owns a separate hardened function covering the four Unicode bypass classes;
+it must not use `ar-v1` as its security comparison surface.
 
 Use the result only as an indexing/matching key. Keep `text_ar` unchanged for display and calculate
 its checksum from the original text using the corpus loader's documented encoding. Normalization is

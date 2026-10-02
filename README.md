@@ -122,14 +122,26 @@ allows none. Set `BUILD_SHA` to the deployed commit SHA. Disable server access l
 because paths and query strings can contain user text. No request body or exception details are logged
 by application code or included in error responses.
 
-**Integration prerequisite:** install reviewed P-08 files at `api/policy/content_policy.yaml` and
-`api/tuning.yaml` (or set `CONTENT_POLICY_PATH` and `TUNING_PATH`). They belong to a separate task and
-are deliberately not recreated here. Startup fails on a missing API key, missing/invalid config, or
+P-08 provides `api/policy/content_policy.yaml` and `api/tuning.yaml`; override their locations with
+`CONTENT_POLICY_PATH` and `TUNING_PATH` when needed. Startup fails on a missing API key, missing/invalid config, or
 any word-budget tier exceeding the policy ceiling, zero budgets, or decreasing budgets across
 length bands. The schema validates confidence floors and the Trigger B minimum window. Startup errors
 identify the config path and field without echoing values. This reads metadata and limits only; it does
 not implement alignment or span detection. `span_detector_status` and `misquote_notice` are runtime
 claim/card fields per SPEC.md, not tuning keys; they arrive with the detector/card contract tasks.
+
+The policy file transcribes SPEC §§5.1–5.5 and §9: level/state rows, state guards, the ordered
+alignment ratchet, detector prerequisites, markers, user-text isolation and referral copy. State
+guards run before alignment; level D stays CANNOT_CONFIRM even with a detected near-miss. The
+scaffold currently loads metadata and budget limits only; these files do not implement the classifier,
+composer, detector or gates. Those tasks must consume the policy instead of duplicating its rules.
+T-410 separately owns independent literal pinning; P-08 tests real-file startup integration.
+
+Policy `p1` remains `approved_by: pending`, so G14 is not met. The owner must record specialist
+approval before changing that field. SPEC §12 still lists four specialist decisions: contradiction
+label wording, the hadith narration-by-meaning boundary, ceiling 4 and Trigger B minimum 3. Tuning
+`t1` uses the SPEC defaults (confidence 0.5/0.6, retrieval floor 8.0, word budgets 1/2/3); these are
+initial engineering values, not measured performance. T-508a owns calibration against the real index.
 
 `GET /health` exposes the policy approval and tuning versions read from those files. Until the corpus
 loader and card schema are integrated, it reports `status: degraded`, `corpus_items: 0` and null

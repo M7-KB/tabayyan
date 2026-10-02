@@ -11,6 +11,6 @@
 # to change.
 #
 # api/tuning.yaml is deliberately NOT listed here. It holds engineering thresholds only, is tuned on
-# the test set during the build, and is bounded by near_miss_max_ceiling in the policy file.
+# the test set during the build, and is bounded by word_budget_ceiling in the policy file.
 
 /api/policy/   @M7-KB

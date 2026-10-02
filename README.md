@@ -24,8 +24,11 @@ a designed output here, not a failure mode.
 
 ## Status
 
-The plan is owner-approved in substance and is **pending independent review** on PR #5. The owner merges
-only after the reviewer posts `APPROVE`.
+PR #5 was owner-merged at `81c9030` without the required independent `APPROVE`.
+This skipped step is recorded in the plan; the owner must obtain `APPROVE` before merging.
+[PR #14](https://github.com/M7-KB/tabayyan/pull/14) assigns SOURCES.md to P-03 and
+TOOLS.md to Robin for central collection. Reviewed #13/#17 land first; #6 then rebases
+and passes standalone CI. Tools inventory is checked under G13 before submission and at freeze.
 
 The content-level policy in [SPEC.md §5](SPEC.md) is still pending final Sharia specialist review, which
 is why it ships as two config files — `api/policy/content_policy.yaml` (specialist-owned, pinned by a
@@ -48,6 +51,17 @@ The corpus-free comparison arm in the eval reports is called `control`.
 
 The reference-pack PDF was **removed from the tree but remains reachable in this repository's public
 history at commit `03109af`**. There is no history rewrite.
+
+A Qur'an text archive (`data/raw/kfgqpc_hafs_smart_4/`) was committed directly to `main` on Oct 2, 2026
+(commit `78c7988`), before its licence was confirmed. Owner decision 24 (2026-10-02): removed from the
+tree, no history rewrite. **It remains reachable in this repository's public history**, same disclosure
+as the reference-pack PDF above, at a different scale — this archive is the full Qur'an text, not one
+PDF. This decision does not grant ingestion or redistribution permission. The package identifies itself
+as KFGQPC Hafs Smart (`hafs_smart_v8`); redistribution clearance remains pending in P-03
+([PR #17](https://github.com/M7-KB/tabayyan/pull/17)). A raw file is added back to `data/raw/` only once
+its licence is confirmed and recorded in P-03's `SOURCES.md` (SPEC.md §4.2). Because raw directories are
+ignored by default, the cleared-source PR must add an explicit per-source negation to `.gitignore` and
+stage only the licensed files; never force-add an uncleared file.
 
 ## Privacy
 

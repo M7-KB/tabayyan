@@ -8,3 +8,12 @@ dist/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+
+# Raw source files whose licence is not yet cleared for redistribution (SPEC.md §4.2).
+# Never commit a file under data/raw/ or docs/raw/ until its licence is confirmed and
+# recorded in SOURCES.md. kfgqpc_hafs_smart_4 was committed and removed on 2026-10-02 —
+# see README.md "Disclosure" for the public-history note.
+# A cleared-source PR adds a per-source negation below and stages only licensed files.
+/data/raw/*
+!/data/raw/.gitkeep
+/docs/raw/

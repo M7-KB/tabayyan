@@ -17,10 +17,13 @@ Never put credentials, private prompts, user queries or personal data in this re
 |---|---|---|---|---|---|---|
 | 2026-10-02 | P-04 source documentation | Codex / OpenAI | Pending verification; no provider API identifier recorded in the contribution | Metadata research and documentation; no religious source downloads or ingestion | PR [#6](https://github.com/M7-KB/tabayyan/pull/6), source documentation and tests | Tool service terms pending verification; source permissions belong in SOURCES.md |
 | 2026-10-02 | P-03 register split and tools register | Codex / OpenAI | Pending verification; runtime display labels are not provider API identifiers | Documentation edits and repository checks | Branches `docs/sources-v0` and `docs/tools-register` | Tool service terms pending verification |
+| 2026-10-02 | Planning edits and PR/review coordination: PR #5, #13, #14 | Claude Code / Anthropic (Luffy contributor report) | `claude-sonnet-5` (Claude Sonnet 5), contributor-confirmed; not independently checked against provider/runtime evidence | SPEC.md, TASKS.md, README.md and .gitignore; no application code or corpus/scripture content authored, per report | Planning message `6c1e5f7bde9dfefcf8fb6e2e01bfaf06f839aff6ba5e4d66e2a33a3f88616c47`, Luffy, 2026-10-02 14:09:26 UTC; PR [#5](https://github.com/M7-KB/tabayyan/pull/5), [#13](https://github.com/M7-KB/tabayyan/pull/13), [#14](https://github.com/M7-KB/tabayyan/pull/14) | Service terms pending verification; Robin collects evidence by Oct 5 18:00 Riyadh |
 
-Supporting tools used for these contributions: Buzz CLI, Git, GitHub CLI, PowerShell and Node.js
+Supporting tools used for Robin's contributions: Buzz CLI, Git, GitHub CLI, PowerShell and Node.js
 (source-register checks). Versions and licence evidence are not yet recorded; Robin collects contributor evidence for them
 when preparing the submission inventory. These are development tools, not declared product dependencies.
+
+Luffy reports Git, GitHub CLI (gh), Buzz CLI and standard file read/edit/grep for the planning contributions above. Versions and licence evidence remain pending; no specific file utility or version was reported.
 
 ## Reconciliation before submission
 
@@ -37,16 +40,12 @@ status is recorded. Recheck updates before the Oct 6 21:00 final submission.
 |---|---|---|---|
 | Exact model identifiers and service terms for Robin's rows | Robin | Runtime/provider evidence; a display label alone is not an API id | Oct 5 18:00 |
 | Earlier and parallel contributors' AI-tool use | Robin | Reports from Luffy, Vegapunk, Usopp and Nami covering each contribution | Oct 5 18:00 |
-| Claude-based tooling indication | Robin | Contributor confirmation of actual tool/model use or correction | Oct 5 18:00 |
+| Luffy's Claude Code service terms and supporting-tool evidence | Robin | Actual use and model id reported in the row above; collect terms, versions and licence references | Oct 5 18:00 |
 | Development tool versions/licence evidence | Robin | Version output and licence/terms references for tools listed above | Oct 5 18:00 |
 | Actual product model use | Robin | Vegapunk's verified model ids and use evidence, separate from planned models | Oct 5 18:00 |
 | Consolidated completeness check and escalation | Robin | Every report retained; each unknown resolved or explicitly escalated | Oct 5 20:00 |
 
-Claude tooling is a pending inventory item, not a verified contributor row.
-Main `52a3983` includes `CLAUDE.md` containing `@AGENTS.md`; that configuration
-alone does not establish actual use. [PR #14's body](https://github.com/M7-KB/tabayyan/pull/14)
-also contains a Claude Code attribution. Robin will collect the responsible
-contributor's confirmation and exact model evidence rather than invent that row.
+Luffy confirmed actual Claude Code use and reported the model identifier in the cited planning message. This resolves the earlier configuration-only indication from CLAUDE.md and PR #14's attribution. The row preserves contributor-reported evidence; service terms and independent runtime/provider confirmation are not established by that message. Luffy will report changes before Oct 5 18:00 Riyadh.
 
 Product model identifiers in [SPEC.md section 8](SPEC.md) remain planned and pending
 verification. Record actual use and evidence before claiming them in the submission.

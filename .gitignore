@@ -5,6 +5,9 @@ __pycache__/
 .venv/
 node_modules/
 dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
 
 # Raw source files whose licence is not yet cleared for redistribution (SPEC.md §4.2).
 # Never commit a file under data/raw/ or docs/raw/ until its licence is confirmed and

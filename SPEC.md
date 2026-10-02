@@ -1,7 +1,8 @@
 # SPEC.md — Tabayyan (تبيّن)
 
-Status: owner-approved in substance; **pending @Nami's `APPROVE` on PR #5** and pending final Sharia
-specialist review of §5. The owner merges only after @Nami approves (owner decision 13).
+Status: PR #5 was owner-merged at `81c9030` without the required independent `APPROVE`.
+The skipped step is recorded; decision 13 and G24 still require approval before merge.
+Final Sharia specialist review of §5 remains pending.
 Owner of this document: @Luffy (lead)
 Last updated: 2026-10-02
 Source of truth for requirements: `docs/challenge-brief.md`
@@ -184,6 +185,9 @@ eval/reports/                     committed eval reports
 docs/                             challenge-brief.md, architecture notes
 CODEOWNERS                        api/policy/ → the owner (G24)
 SOURCES.md                        every source, how it is used, license
+TOOLS.md                          log of tools/AI models used, per contributor (brief submission req.)
+                                    — owned by @Robin (TASKS.md P-10); she is the only committer, each
+                                    contributor reports their own usage to her rather than editing the file
 SPEC.md                           this file
 TASKS.md                          day-by-day task plan
 ```
@@ -544,6 +548,9 @@ download manifest — exact file, exact URL, per domain — and the owner downlo
 `data/raw/` is committed only for sources whose licence permits redistribution; every other raw file is
 git-ignored and the manifest records where it came from. The licence decision per source is recorded in
 `SOURCES.md`. (Confirmed by the owner, decision 13.)
+Raw directories are ignored by default. A cleared-source PR adds an explicit per-source
+negation to `.gitignore` and stages only the files whose redistribution licence is recorded.
+Never force-add an uncleared file. PR #13 owns the default ignore rules; P-04 does not duplicate them.
 
 **Derived fields.** `text_normalized` and `checksum_sha256` are produced by the shared normalizer (T-402).
 Ingestion that runs before the normalizer exists fills the authored fields only and leaves the two
@@ -767,7 +774,16 @@ that broke the character metric does not exist at the word level, because "one w
 distance 1 by definition, not a ratio. That also removes the need for a separate "a single edit always
 counts" exemption: a length-banded budget that is never smaller than 1 covers it without a special case.
 
-- `W(x)` is the word sequence of `x` after A4 normalization.
+- `W(x)` is the word sequence of `x` after **T-411's hardened comparison normalization** — a separate
+  function from A4's retrieval key (`ar-v1`), built to resist adversarial Unicode input (ZWJ/ZWSP and
+  other `Cf` insertion, Arabic presentation-form retyping, the Qur'anic-annotation-mark gap, Arabic-Indic
+  digits). A4 stays a clean retrieval key for correct input; it is never the detector's comparison
+  surface, because a miss there is fail-open (non-negotiable 1), not fail-safe the way a retrieval miss
+  is. (@Nami, PR #8 documentation blocker.) This applies to **both triggers and the whole-index veto
+  below** — everything in this section built on `W(x)` inherits the hardened function from this one
+  definition. Normalization never authorizes a quotation by itself: a card only shows `quote_ar` when it
+  is an exact, character-for-character copy of the matched corpus record (G1, G2, enforced by T-503),
+  independent of which key matched it.
 - `wd(span, record)` is the word-level edit distance between `W(span)` and `W(record)`: inserting,
   deleting or substituting **one whole word** costs 1.
 - `n = max(|W(span)|, |W(record)|)`. **Pinned to `max`,** not to the cited record, so it is symmetric and
@@ -1069,7 +1085,7 @@ Every gate names **who produces the evidence**, so @Nami's sign-off asserts only
 | G10 | AI-not-a-fatwa notice visible on every result view | Frontend test, plus @Nami checks the deployed demo | CI + @Nami |
 | G11 | No accounts, and no user query is stored | Code review for persistence calls. **Deployed-log inspection is performed by the owner, who posts the evidence in the channel** (owner decision 12; Nami 3.8). @Nami's sign-off cites that post rather than asserting a log she cannot read | Owner |
 | G12 | No secrets, keys, or user data in the repo | Secret scan over the **full history**, T-606. **T-606 runs before T-605**, so the sign-off is not against unverified history | @Luffy, cited by @Nami |
-| G13 | Every source in `corpus.jsonl` is logged in `SOURCES.md` with its license | Automated cross-check: corpus `source_id` set equals the `SOURCES.md` set | CI |
+| G13 | Every source in `corpus.jsonl` is logged in `SOURCES.md` with its license; every used model, provider, framework, font and data/development tool is logged in `TOOLS.md` with model/version evidence and licence/terms | Source cross-check remains automated. Robin reconciles contributor reports by Oct 5 20:00 Riyadh (reports due 18:00). Nami checks inventory against the tree and contributor evidence before first submission and again at Oct 6 18:00 freeze. Missing or unresolved inventory fails this check and is escalated | CI + Robin inventory, checked by Nami |
 | G14 | Corpus and test set carry Sharia specialist approval | `approved_by` / `reviewed_by` equal `sharia-reviewer-1`, recorded by the owner in the PR. **Passes only with real approval.** If still `pending` at submission, G14 is reported **NOT MET** and disclosed in the README and the deck — never softened into a pass (owner decision 13) | Owner |
 | G15 | Deployed demo works end to end | @Nami runs the 12 cases against the live demo, not only locally | @Nami |
 | G16 | A span of the user's input is never rendered as scripture and never appears in a quote field | Automated **property over all cards**: no `evidence[].quote_ar`, `translation.text_en` or `misquote_notice.quote_ar` may contain any span of the input that is not itself a verbatim corpus record, compared after normalization — not a raw substring check on one fixture. Frontend: the claim block carries `data-role="user-text"` and the evidence block `data-role="scripture"`, asserted by marker plus snapshot, **not by component identity** (two different components can style identically) | CI |
@@ -1173,7 +1189,7 @@ recognisable human voice or face.
    for processing and are not stored by us (§8).
 
 ### 6.7 Submission checklist (from the brief)
-Working solution · public repo with licenses and setup docs, no secrets or user data · tested live demo link · video ≤ 2 min · deck (problem, solution, how it works, added value, technologies, results, continuation plan, screenshots) · source and license documentation · portal submission with the confirmation kept.
+Working solution · public repo with licenses and setup docs, no secrets or user data · tested live demo link · video ≤ 2 min · deck (problem, solution, how it works, added value, technologies, results, continuation plan, screenshots) · the brief's "log of sources, tools and licenses" requirement, split across two files: source and license documentation (`SOURCES.md`) and the tools/AI-models log (`TOOLS.md`, P-10, §2) · portal submission with the confirmation kept.
 
 ---
 
@@ -1197,6 +1213,13 @@ commit `03109af`.* This sentence goes into the README disclosure (T-604) as writ
 dropped `baseline` tag — it is a statement about public git history, not about the evaluation window. A
 judge running `git log --diff-filter=D` finds it either way; finding it undisclosed would cost more than
 disclosing it.
+
+**The KFGQPC Hafs Smart Qur'an archive.** Committed directly to `main` on Oct 2, 2026 (commit `78c7988`)
+before its licence was confirmed. Owner decision 24: removed from the tree (PR #13), **no history
+rewrite**. Same disclosure pattern as the PDF above, at a different scale — this is the full Qur'an text,
+not one reference PDF — and it remains reachable in the public repository's history. The decision is
+**removal and disclosure only; it does not grant ingestion or redistribution permission.** Redistribution
+clearance for this source stays a separate, pending question in P-03's `SOURCES.md` (PR #17).
 
 ---
 
@@ -1321,6 +1344,12 @@ days, sets a timebox on PR #5, and answers the remaining §12 items in direction
 | 21 | **No embed player, and no thumbnail.** A TikTok/YouTube link shows only the oEmbed title/caption plus a plain outbound link to the original. A11's click-to-load mechanism is dropped; T-507 and the privacy notice simplify accordingly. | §3, A11 (removed), T-507 |
 | 22 | **Branch protection on `main` is already active** (PR required, no force push, no deletion). Since every agent shares the owner's GitHub account, `CODEOWNERS` cannot make GitHub enforce a distinct reviewer identity; the actual enforcement is procedural — only the owner merges, only after `APPROVE`. G24 and §5.6 point 2 reworded to say so plainly. | §5.6, §6.1 G24 |
 | 23 | **Pre-work go-ahead:** post P-02…P-09 in #build now that the Oct-4 boundary is dropped; they are simply Oct 2–3 tasks in the re-planned schedule, not a separately disclosed category. | TASKS.md |
+
+### 2026-10-02, fourth set — PR #5 process failure and the KFC archive history question
+
+| # | Decision | Where it lands |
+|---|---|---|
+| 24 | **PR #5's skipped `APPROVE` is recorded as a one-time process failure; approval-before-merge is unchanged** (decision 13, G24). **The KFGQPC Hafs Smart archive** (`data/raw/kfgqpc_hafs_smart_4/`, committed at `78c7988`): removal from the tree and disclosure that copies remain in public history, **no history rewrite now**. This does **not** grant ingestion or redistribution permission — that stays a separate, pending question in P-03's `SOURCES.md`. | §0 (status line), §7, §6.1 G24, README, PR #13 |
 
 ---
 

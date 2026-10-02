@@ -14,10 +14,11 @@ a designed output here, not a failure mode.
 
 ## Arabic normalizer (normalizer portion of T-402)
 
-Python 3.11+, standard library only. Run all tests from the repository root:
+Python 3.11+, standard library only for the normalizer. Install the API development dependencies
+using the setup below, then run the full Python suite from the repository root:
 
 ```sh
-python -m unittest discover -s tests -v
+python -m pytest
 ```
 
 Import `normalize_arabic` from `corpus.normalize`. Version `ar-v1` composes Unicode NFC,
@@ -50,8 +51,11 @@ T-503a quote-safety follow-up: equal normalized keys must never authorize a quot
 
 ## Status
 
-The plan is owner-approved in substance and is **pending independent review** on PR #5. The owner merges
-only after the reviewer posts `APPROVE`.
+PR #5 was owner-merged at `81c9030` without the required independent `APPROVE`.
+This skipped step is recorded in the plan; the owner must obtain `APPROVE` before merging.
+[PR #14](https://github.com/M7-KB/tabayyan/pull/14) assigns SOURCES.md to P-03 and
+TOOLS.md to Robin for central collection. Reviewed #13/#17 land first; #6 then rebases
+and passes standalone CI. Tools inventory is checked under G13 before submission and at freeze.
 
 The content-level policy in [SPEC.md §5](SPEC.md) is still pending final Sharia specialist review, which
 is why it ships as two config files — `api/policy/content_policy.yaml` (specialist-owned, pinned by a
@@ -75,6 +79,17 @@ The corpus-free comparison arm in the eval reports is called `control`.
 The reference-pack PDF was **removed from the tree but remains reachable in this repository's public
 history at commit `03109af`**. There is no history rewrite.
 
+A Qur'an text archive (`data/raw/kfgqpc_hafs_smart_4/`) was committed directly to `main` on Oct 2, 2026
+(commit `78c7988`), before its licence was confirmed. Owner decision 24 (2026-10-02): removed from the
+tree, no history rewrite. **It remains reachable in this repository's public history**, same disclosure
+as the reference-pack PDF above, at a different scale — this archive is the full Qur'an text, not one
+PDF. This decision does not grant ingestion or redistribution permission. The package identifies itself
+as KFGQPC Hafs Smart (`hafs_smart_v8`); redistribution clearance remains pending in P-03
+([PR #17](https://github.com/M7-KB/tabayyan/pull/17)). A raw file is added back to `data/raw/` only once
+its licence is confirmed and recorded in P-03's `SOURCES.md` (SPEC.md §4.2). Because raw directories are
+ignored by default, the cleared-source PR must add an explicit per-source negation to `.gitignore` and
+stage only the licensed files; never force-add an uncleared file.
+
 ## Privacy
 
 No accounts. No stored queries. Text, audio and images you submit are sent to an AI provider for
@@ -84,4 +99,71 @@ Uploading a clip requires an explicit consent tick. A TikTok or YouTube link sho
 caption as editable text, plus a plain outbound link to the original — there is no embedded player and
 no thumbnail, so nothing from the platform ever loads on the result screen.
 
-Run and setup instructions land with the application code (TASKS.md, T-604).
+API setup and run instructions are below; full application setup is tracked in TASKS.md, T-604.
+
+## API scaffold (T-401)
+
+Python 3.11+. From the repository root:
+
+```sh
+python -m venv .venv
+# Activate .venv for your shell, then:
+python -m pip install -e '.[dev]'
+python -m pytest
+ruff check .
+ruff format --check .
+uvicorn api.main:app --no-access-log
+```
+
+Set `OPENAI_API_KEY` in the process environment; no `.env` file is loaded automatically.
+`.env.example` lists empty key/model settings. Model IDs are environment configuration, with no
+model calls in this scaffold. Set `CORS_ORIGINS` to a JSON array of exact frontend origins; the default
+allows none. Set `BUILD_SHA` to the deployed commit SHA. Disable server access logs as shown above
+because paths and query strings can contain user text. No request body or exception details are logged
+by application code or included in error responses.
+
+**Integration prerequisite:** install reviewed P-08 files at `api/policy/content_policy.yaml` and
+`api/tuning.yaml` (or set `CONTENT_POLICY_PATH` and `TUNING_PATH`). They belong to a separate task and
+are deliberately not recreated here. Startup fails on a missing API key, missing/invalid config, or
+any word-budget tier exceeding the policy ceiling, zero budgets, or decreasing budgets across
+length bands. The schema validates confidence floors and the Trigger B minimum window. Startup errors
+identify the config path and field without echoing values. This reads metadata and limits only; it does
+not implement alignment or span detection. `span_detector_status` and `misquote_notice` are runtime
+claim/card fields per SPEC.md, not tuning keys; they arrive with the detector/card contract tasks.
+
+`GET /health` exposes the policy approval and tuning versions read from those files. Until the corpus
+loader and card schema are integrated, it reports `status: degraded`, `corpus_items: 0` and null
+artifact versions. It is a scaffold liveness response, not a release-readiness claim. Verification,
+transcription and ingestion routes are not implemented by this PR. Errors use the SPEC envelope
+`error: {code, message_ar, message_en}` with fixed text that does not echo input.
+
+## Source register (P-03)
+
+See [SOURCES.md](SOURCES.md) for candidate sources, uses and licence evidence. All 13 entries
+remain pending: this register grants no ingestion or redistribution permission. P-04 supplies
+the separate acquisition manifest and allowlist. The public raw-package history and
+pending cleanup in PR #13 are disclosed in SOURCES.md.
+
+Run the standalone register contract checks with `node --test tests/*.test.mjs`.
+CI checks headers, unique IDs, required license fields and the closed domain enum.
+
+## Manual source collection (P-04)
+
+Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner download checklist,
+formats and local paths. [SOURCES.md](SOURCES.md) records licence evidence; all current permissions
+are pending, so ingestion remains blocked until permission is clear.
+[corpus/approved_sources.json](corpus/approved_sources.json) lists candidate sources by domain;
+it does not grant licensing or Sharia approval. P-03 owns the source register.
+
+Source IDs match the register and SPEC (including `kfc-mushaf`). Domains use the nine SPEC values;
+translations remain separate records linked to the Arabic verse through `translation_of`.
+
+Run all standalone checks with Node.js 24 (no packages to install):
+
+```sh
+node --test tests/*.test.mjs
+```
+
+The source checks reuse the register contract helper, require register/allowlist ID equality,
+validate the pinned domains and check corpus source IDs against the allowlist when records exist.
+An absent corpus does not establish corpus readiness or approval. CI runs both source suites.

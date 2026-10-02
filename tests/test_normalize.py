@@ -40,15 +40,11 @@ class NormalizerTests(unittest.TestCase):
                 if not 0xD800 <= code <= 0xDFFF
             )
             normalized = normalize_arabic(text)
-            self.assertEqual(
-                normalize_arabic(normalized), normalized, f"block {start:x}"
-            )
+            self.assertEqual(normalize_arabic(normalized), normalized, f"block {start:x}")
 
     def test_preserves_word_and_punctuation_boundaries(self):
         self.assertNotEqual(normalize_arabic("مكتب جديد"), normalize_arabic("مكتبجديد"))
-        self.assertNotEqual(
-            normalize_arabic("مكتب، جديد"), normalize_arabic("مكتب جديد")
-        )
+        self.assertNotEqual(normalize_arabic("مكتب، جديد"), normalize_arabic("مكتب جديد"))
 
     def test_idempotent_when_removing_marks_exposes_composition(self):
         for text in ("a\u064e\u030a", "eـ\u0301", "ب\u064e\u0654"):

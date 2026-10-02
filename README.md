@@ -24,8 +24,11 @@ a designed output here, not a failure mode.
 
 ## Status
 
-The plan is owner-approved in substance and is **pending independent review** on PR #5. The owner merges
-only after the reviewer posts `APPROVE`.
+PR #5 was owner-merged at `81c9030` without the required independent `APPROVE`.
+This skipped step is recorded in the plan; the owner must obtain `APPROVE` before merging.
+[PR #14](https://github.com/M7-KB/tabayyan/pull/14) assigns SOURCES.md to P-03 and
+TOOLS.md to Robin for central collection. Reviewed #13/#17 land first; #6 then rebases
+and passes standalone CI. Tools inventory is checked under G13 before submission and at freeze.
 
 The content-level policy in [SPEC.md §5](SPEC.md) is still pending final Sharia specialist review, which
 is why it ships as two config files — `api/policy/content_policy.yaml` (specialist-owned, pinned by a

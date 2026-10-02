@@ -1,7 +1,7 @@
 # TASKS.md — Tabayyan (تبيّن)
 
-Status: PR #5 merged to `main` at `81c9030` (2026-10-02 10:34, owner-merged). Day 1 is underway; PRs #6–#9
-are in review. Owner of this document: @Luffy (lead)
+Status: PR #5 merged to `main` at `81c9030` (2026-10-02 10:34, owner-merged). Day 1 is underway; PRs
+#6–#9, #13, #14, #17 and #18 are open/in review. Owner of this document: @Luffy (lead)
 Last updated: 2026-10-02
 Times are Riyadh. **Build window: Oct 2 → Oct 6 23:59**, on organizer permission to start early (SPEC.md
 §10 item 15). There is no separate pre-work category and no `baseline` tag — everything below is simply a
@@ -32,15 +32,20 @@ mergeable.
 - **`SOURCES.md` has exactly one owning branch: P-03 (`docs/sources-v0`).** P-04 (`data/corpus-notes`)
   must not ship its own copy — it rebases onto P-03 once P-03 merges and references the already-committed
   file. This was Nami's PR #6 finding 5 (P-04 shipped `SOURCES.md`, leaving P-03 homeless and the two
-  branches conflicting); the task rows above are updated to say so explicitly, not just the dependency
+  branches conflicting); the task rows below are updated to say so explicitly, not just the dependency
   diagram.
-- **The tools register (`TOOLS.md`) is owned by @Robin.** It was added and then removed again within PR #6
-  (commits `9cbdcd4`/`571cf38`) after it collided with `README.md` in the same PR — dropping it left the
-  brief's "Log of sources, tools and licenses" submission requirement (`docs/challenge-brief.md` line 97)
-  with no owner. @Robin recreates `TOOLS.md` on its own small branch, separate from P-04, so it cannot
-  collide with `README.md` again. **Every contributor appends their own row to `TOOLS.md` in whichever PR
-  they're shipping** — same convention as the README-section rule above — @Robin owns the file's existence
-  and format, not every row in it.
+- **The tools register (`TOOLS.md`) is owned by @Robin, and she collects rows centrally — no one else
+  edits the file directly.** `TOOLS.md` was added and then removed again within PR #6 (commits
+  `9cbdcd4`/`571cf38`) after it collided with `README.md` in the same PR — dropping it left the brief's
+  "Log of sources, tools and licenses" submission requirement (`docs/challenge-brief.md` line 97) with no
+  owner. @Robin recreates it on its own small branch, separate from P-04, so it cannot collide with
+  `README.md` again. **Each contributor reports their tool/model usage to @Robin** (PR description or a
+  channel message) rather than editing `TOOLS.md` directly; @Robin is the only one who commits a row. A
+  one-contributor-per-row convention across five parallel branches resolves conflicts by dropping rows,
+  and a dropped row is an undeclared tool in a submission deliverable (Nami, PR #18) — centralizing commit
+  ownership is what makes "never resolve a `TOOLS.md` conflict by dropping a row" enforceable rather than
+  aspirational. @Robin also owns giving any unresolved entry (e.g. a not-yet-verified model id) an explicit
+  owner and a cutoff no later than the Oct 5 submission, so nothing sits unresolved into the deadline.
 
 ---
 
@@ -58,13 +63,12 @@ finalized.
 | P-07 | `contracts/card.schema.json` — the machine-readable §4.1 card contract, including `misquote_notice`, plus one example fixture per state and per `alignment` value under `contracts/fixtures/` | @Vegapunk | `contract/card-schema` | The schema expresses every §4.1 field rule a schema can express: `alignment` non-null iff SUPPORTED, restricted to `CONFIRMS \| CONTRADICTS` (no `PARTIAL`); `abstained_reason` non-null iff CANNOT_CONFIRM; `how_to_verify_ar` exactly 2 entries; `positions` non-empty only when DISPUTED with ≥ 2 entries; `alignment_confidence` required in every state; `misquote_notice` present and schema-valid on a level-D fixture and on a hadith-domain near-miss fixture; `state_label_key` restricted to the four keys. Four valid fixtures validate; four deliberately-invalid fixtures are rejected. Schema and fixtures only — no Python, no pipeline code. Lands before T-407, T-502, T-505 | 2h |
 | P-03 | `SOURCES.md`: every approved source from the brief, with URL, how it is used, license and license URL. **`SOURCES.md` has exactly one owning branch — this one** (owner, 2026-10-02 decision below) | @Robin | `docs/sources-v0` | Every domain row in the brief's approved-references table appears; no source lacks a license field; no unapproved source present; each row states whether its licence permits redistributing the raw file; the approved Qur'an translation and the islamic-content.com glossary each have their own row | 2.5h |
 | P-04 | Approved-source allowlist (`corpus/approved_sources.json`) + **download manifest** for the owner: exact file, exact URL, per domain. **Does not ship its own copy of `SOURCES.md`** — rebases onto P-03 once P-03 merges and references the committed file. Unblocks the owner's downloads — goes first once P-03 is in | @Robin | `data/corpus-notes` | Allowlist derived from the brief and matching the merged SOURCES.md; the manifest names every file the owner must place in `data/raw/`, with its URL and licence note; covers the Qur'an translation and glossary sources; no download or scrape performed by @Robin; no `SOURCES.md` diff in this PR once P-03 is merged | 2h |
-| P-10 | `TOOLS.md` register skeleton (owner, decision above) — the brief's "log of sources, tools and licenses" requirement, separate from P-03/P-04 so it cannot collide with `README.md` again | @Robin | `docs/tools-register` | File exists with a README link; evidence-backed rows only — no provider model identifier logged until independently verified; contributors append their own row in whichever PR ships the tool; no overlap with SOURCES.md's source-license rows | 0.5h |
 | T-406 | Web scaffold: React + Vite, RTL, Arabic UI text, text input, the one review/edit screen for all input kinds, AI-not-a-fatwa notice, privacy notice on the input screen, **consent checkbox on the upload control** | @Usopp | `feat/web-scaffold` | Builds clean; `dir="rtl"` and `lang="ar"` set; the AI-not-a-fatwa notice is on the result view and the privacy notice (SPEC.md §8) is on the input screen before submit, both covered by tests; the consent checkbox carries the exact Arabic string and submit is disabled until it is ticked (G22); no English in product-facing text | 4.5h |
 | P-02 | `eval/testset.jsonl`: all 12 required brief cases in the §4.3 schema, following the §4.4 design table | @Robin | `data/testset-v0` | All 12 brief case ids present; each validates against the schema; each case carries the `input_kind` fixed in SPEC.md §4.4; the four owner-fixed expectations are exactly as written; case 12 carries `lang: "en"`; cases 7, 8, 12 expect `card.term` populated; `reviewed_by` set to `sharia-reviewer-1`, or `pending` with the blocker named | 3.5h |
 | P-09 | **Red-team test cases** in `eval/testset.jsonl` with `origin: "team"` | @Nami | `test/redteam-v0` | At minimum: fabricate-a-hadith; hostile tone over a level-B subject; a personal fatwa framed as a general question; prompt injection inside pasted text **and** fetched link text; a misquoted verse behind an attribution formula; a misquoted verse with no marker at all (Trigger B must catch it); a correct paraphrase with no marker (must not be flagged); a hadith paraphrased by meaning behind an attribution formula (must **not** be flagged as contradicting — must produce `misquote_notice`, not `CONTRADICTS`); a correctly-quoted twin verse against a cited near-identical verse (the veto must hold); an English injection attempt. Each case states the expected state and why, validates against §4.3. Runs in CI beside the brief cases (G21) | 2h |
 | T-408 | Daily status post: done / in progress / blocked / risks, plus API spend against the $30 cap | @Luffy | — | Posted in the channel by 23:00 | 0.5h |
 
-Day 1 load: @Robin 8h (P-04 2h + P-03 2.5h + P-02 3.5h + P-10 0.5h), @Vegapunk 5h, @Usopp 4.5h, @Nami 2h, @Luffy 6.5h — all ≤ 8h.
+Day 1 load: @Robin 8h (P-04 2h + P-03 2.5h + P-02 3.5h), @Vegapunk 5h, @Usopp 4.5h, @Nami 2h, @Luffy 6.5h — all ≤ 8h.
 
 ---
 
@@ -78,6 +82,7 @@ by 21:00 so Oct 4 onward iterates against a real deployment.
 |---|---|---|---|---|---|
 | P-06 | Corpus v0 ingestion from `data/raw/` into `corpus/corpus.jsonl`: authored fields only, derived fields left for T-403 | @Robin | `data/corpus-v0-ingest` | Every item carries `corpus_id`, `domain`, `source_id`, `source_url`, `text_ar`, `ref`, `license`, `license_url`, `retrieved_at`, `grading` for every hadith item, `text_en` + `translation_of` for every `quran_translation` item; `text_normalized`/`checksum_sha256` empty and recorded as T-403's job; every `source_id` is in the P-04 allowlist | 3h |
 | P-08 | **`api/policy/content_policy.yaml` + `api/tuning.yaml`** — transcribe SPEC.md §5.1, §5.4, §5.5 and §9 into the two files, split specialist-owned from engineering-owned | @Robin | `data/content-policy-p1` | Both files parse; `content_policy.yaml` carries every row of §5.1, every rule of §5.4, `scripture_span_markers`, `word_budget_ceiling`, `hadith_near_miss_shows_notice_not_contradicts`, `contradicts_requires_confidence_floor`, `tone_affects_level: false`, the §9 referral strings, `policy_version: p1`, `approved_by: pending`; `tuning.yaml` carries the four numeric thresholds plus `word_budget_table` and `trigger_b_min_window_tokens`; no `word_budget_table` tier exceeds `word_budget_ceiling`; the PR description carries both files inline for specialist review | 1.5h |
+| P-10 | `TOOLS.md` register skeleton — the brief's "log of sources, tools and licenses" requirement, on its own branch so it cannot collide with `README.md` again (moved off Day 1 to keep @Robin ≤ 8h — Nami, PR #14 finding 1) | @Robin | `docs/tools-register` | File exists with a README link; evidence-backed rows only — no provider model identifier logged until independently verified; @Robin is the only committer to the file, collecting each contributor's reported tool/model usage centrally rather than letting contributors edit it directly (Nami, PR #18 finding — a shared append-only table across parallel branches drops rows on conflict); any unresolved entry carries an explicit owner and a cutoff no later than Oct 5; no overlap with SOURCES.md's source-license rows | 0.5h |
 | T-402 | Arabic normalizer + corpus loader + `corpus/validate.py` implementing all 8 validator rules in SPEC.md §4.2 | @Robin | `feat/corpus-loader` | Unit tests prove: a hadith item with no grading is rejected; an unknown `source_id` is rejected; a checksum mismatch is rejected; a normalizer-drift item is rejected; a `quran_translation` item without `translation_of` is rejected; the normalizer is idempotent | 3h |
 | T-405 | Level classifier A/B/C/D: deterministic level-D rules first, model may raise but never lower, low confidence → more restrictive, tone is never a level input | @Vegapunk | `feat/level-classifier` | All 12 brief cases classify to their expected level; a unit test proves a model answer of "B" cannot override a rule-matched "D"; a test proves low confidence escalates restrictiveness; a test proves the hostile phrasing of case 9 classifies the same as a neutral phrasing of the same subject | 3h |
 | T-411 | **Scripture-span detector** (SPEC.md §5.2): word-level edit distance against the `tuning.yaml` budget table, both triggers against the whole corpus index (Qur'an + hadith), the verbatim veto ahead of everything, `trigger_b_min_window_tokens` floor on Trigger B only, `span_detector_status` reported, Qur'an/hadith domain split feeding `misquote_notice` | @Vegapunk | `feat/span-detector` | Markers and the budget table come from policy/tuning files, never hard-coded; **@Nami's word-budget probe v2 rows ship as literal test cases**: each of her measured one-word misquotes (2, 3, 4, 4, 4, 6, 19 tokens) classifies `NEAR_MISS`; each of her four twin pairs (incl. Q 7:69/7:74) classifies `VERBATIM` via the veto, not `NEAR_MISS`; a hadith-domain `NEAR_MISS` behind an attribution formula does not set `CONTRADICTS` and populates `misquote_notice` instead; a quran-domain `NEAR_MISS` does set up the forcing condition for §5.4 rule 1; a correct paraphrase with no marker and outside budget returns `UNRELATED`; a 2-token window below `trigger_b_min_window_tokens` never fires Trigger B; `span_detector_status` is `ran` on a clean run and a non-`ran` status is produced when the detector is stubbed to raise. Deterministic — no model call anywhere in this module. Lands before T-502 | 3h |
@@ -86,7 +91,7 @@ by 21:00 so Oct 4 onward iterates against a real deployment.
 | T-410 | **Policy pinning test**: SPEC.md §5.1 and §5.4 as literals in test code, independent of the YAML | @Nami | `test/policy-pin` | The pinned table and rules are written as literals, not read from `content_policy.yaml`; a test proves editing `allowed_states` for level C to include `SUPPORTED` fails CI; a test asserts `PARTIAL` is not an accepted `alignment` value; a test asserts the startup budget-ceiling check exists (G24) | 1.5h |
 | T-412 | Daily status post | @Luffy | — | Posted by 23:00 | 0.5h |
 
-Day 2 load: @Robin 7.5h, @Vegapunk 7h, @Nami 4.5h, @Luffy 0.5h — all ≤ 8h.
+Day 2 load: @Robin 8h (P-06 3h + P-08 1.5h + T-402 3h + P-10 0.5h), @Vegapunk 7h, @Nami 4.5h, @Luffy 0.5h — all ≤ 8h.
 
 ---
 

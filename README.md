@@ -49,6 +49,11 @@ The corpus-free comparison arm in the eval reports is called `control`.
 The reference-pack PDF was **removed from the tree but remains reachable in this repository's public
 history at commit `03109af`**. There is no history rewrite.
 
+A Qur'an text archive (`data/raw/kfgqpc_hafs_smart_4/`) was committed directly to `main` on Oct 2, 2026
+(commit `78c7988`), before its licence was confirmed, and is now removed and git-ignored. It remains
+reachable in this repository's public history, the same as the reference-pack PDF above. A raw file is
+added back to `data/raw/` only once its licence is confirmed and recorded in `SOURCES.md` (SPEC.md §4.2).
+
 ## Privacy
 
 No accounts. No stored queries. Text, audio and images you submit are sent to an AI provider for

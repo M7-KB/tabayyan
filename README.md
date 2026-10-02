@@ -119,3 +119,24 @@ pending cleanup in PR #13 are disclosed in SOURCES.md.
 
 Run the standalone register contract checks with `node --test tests/*.test.mjs`.
 CI checks headers, unique IDs, required license fields and the closed domain enum.
+
+## Manual source collection (P-04)
+
+Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner download checklist,
+formats and local paths. [SOURCES.md](SOURCES.md) records licence evidence; all current permissions
+are pending, so ingestion remains blocked until permission is clear.
+[corpus/approved_sources.json](corpus/approved_sources.json) lists candidate sources by domain;
+it does not grant licensing or Sharia approval. P-03 owns the source register.
+
+Source IDs match the register and SPEC (including `kfc-mushaf`). Domains use the nine SPEC values;
+translations remain separate records linked to the Arabic verse through `translation_of`.
+
+Run all standalone checks with Node.js 24 (no packages to install):
+
+```sh
+node --test tests/*.test.mjs
+```
+
+The source checks reuse the register contract helper, require register/allowlist ID equality,
+validate the pinned domains and check corpus source IDs against the allowlist when records exist.
+An absent corpus does not establish corpus readiness or approval. CI runs both source suites.

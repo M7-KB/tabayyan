@@ -1,0 +1,168 @@
+{
+  "version": "p04-draft-1",
+  "authority": "docs/challenge-brief.md#approved-references-by-domain",
+  "scope": "Candidate sources only. URLs are acquisition entry pages, not runtime fetch permissions. Licence and Sharia approval remain mandatory per item.",
+  "sources": [
+    {
+      "source_id": "kfc-mushaf",
+      "domains": [
+        "quran"
+      ],
+      "entry_url": "https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "sahih-bukhari",
+      "domains": [
+        "hadith"
+      ],
+      "entry_url": "https://shamela.ws/book/1681",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "sahih-muslim",
+      "domains": [
+        "hadith"
+      ],
+      "entry_url": "https://shamela.ws/book/1727",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "dorar-hadith",
+      "domains": [
+        "hadith"
+      ],
+      "entry_url": "https://dorar.net/hadith",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "jamhara-glossary",
+      "domains": [
+        "glossary"
+      ],
+      "entry_url": "https://islamic-content.com/dictionary",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "bayyinat",
+      "domains": [
+        "faq"
+      ],
+      "entry_url": "https://dawa.center/file/7937",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "approved-quran-translation",
+      "domains": [
+        "quran_translation"
+      ],
+      "entry_url": "https://quranpedia.net/translations/languages",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "pending_exact_item"
+    },
+    {
+      "source_id": "dorar-tafsir",
+      "domains": [
+        "tafsir"
+      ],
+      "entry_url": "https://dorar.net/tafseer",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "dorar-aqeeda",
+      "domains": [
+        "aqeeda"
+      ],
+      "entry_url": "https://dorar.net/aqeeda",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "dorar-fiqh",
+      "domains": [
+        "fiqh"
+      ],
+      "entry_url": "https://dorar.net/feqhia",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "dorar-history",
+      "domains": [
+        "seerah"
+      ],
+      "entry_url": "https://dorar.net/history",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "candidate"
+    },
+    {
+      "source_id": "dawa-other",
+      "domains": [
+        "faq"
+      ],
+      "entry_url": "https://dawa.center/",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "pending_exact_item"
+    },
+    {
+      "source_id": "jamhara-dawah",
+      "domains": [
+        "faq"
+      ],
+      "entry_url": "https://islamic-content.com/",
+      "license_status": "pending",
+      "redistribution_allowed": false,
+      "ingestion_allowed": false,
+      "approved_by": "pending",
+      "selection_status": "pending_exact_item"
+    }
+  ],
+  "pending_alternatives": [
+    "Early tafsir, creed and history: exact work/edition pending specialist selection.",
+    "Books of the four fiqh schools: exact works/editions pending specialist selection.",
+    "Other hadith collections: exact approved Shamela editions and matching grading records pending."
+  ]
+}

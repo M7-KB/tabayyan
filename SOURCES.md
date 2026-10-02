@@ -1,10 +1,10 @@
 # Source and licence register
 
-P-04 initial register, baseline pre-work, checked 2026-10-02. Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md); the [manual manifest](docs/DOWNLOAD_MANIFEST.md) records acquisition steps. No source files downloaded, no corpus built. **Every licence clearance is pending; no raw or derived content is authorized for public commitment by this register.**
+P-04 initial register, checked 2026-10-02. Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md); the [manual manifest](docs/DOWNLOAD_MANIFEST.md) records acquisition steps. No source files downloaded, no corpus built. **Every licence clearance is pending; no raw or derived content is authorized for public commitment by this register.**
 
 | Source id | Domain/use | Source URL | Licence evidence URL | Licence finding | Redistribution / ingestion |
 |---|---|---|---|---|---|
-| kfc-quran | quran; unchanged Arabic text | https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/ | https://policy.qurancomplex.gov.sa/?Lan=en | General policy reserves rights with exceptions for explicitly released resources; exact package terms pending. Portal timeout; formats confirmed only by official indexed developer-page description. | Pending; local only; do not ingest |
+| kfc-mushaf | quran; unchanged Arabic text | https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/ | https://policy.qurancomplex.gov.sa/?Lan=en | General policy reserves rights with exceptions for explicitly released resources; exact package terms pending. Portal timeout; formats confirmed only by official indexed developer-page description. | Pending; local only; do not ingest |
 | sahih-bukhari | hadith; Sultaniyya / Dar Tawq al-Najah reproduction, Shamela 1681 | https://shamela.ws/book/1681 | https://shamela.ws/book/1681 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
 | sahih-muslim | hadith; Abd al-Baqi, 1955 edition, Shamela 1727 | https://shamela.ws/book/1727 | https://shamela.ws/book/1727 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
 | dorar-hadith | hadith; exact grading, grader and reference per item | https://dorar.net/hadith | https://dorar.net/hadith | Rights-reserved footer; no dataset licence established. Edition list: https://dorar.net/hadith/refs . | Pending; local only; do not ingest |

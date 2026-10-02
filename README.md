@@ -66,4 +66,8 @@ Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner down
 formats and local paths. [SOURCES.md](SOURCES.md) records licence evidence; all current permissions
 are pending, so raw files are ignored and ingestion is blocked until permission is clear.
 [corpus/approved_sources.json](corpus/approved_sources.json) lists candidate sources by domain;
-it does not grant licensing or Sharia approval. [TOOLS.md](TOOLS.md) logs tools used for this pre-work.
+it does not grant licensing or Sharia approval. [TOOLS.md](TOOLS.md) logs tools used for this contribution.
+
+Source IDs match the register and SPEC (including `kfc-mushaf`). The `domains` values use
+SPEC §4.2's corpus enum, including `quran_translation`; translations remain separate records
+linked to the Arabic verse through `translation_of`.

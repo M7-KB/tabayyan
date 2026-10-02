@@ -1,11 +1,10 @@
 {
   "version": "p04-draft-1",
-  "baseline": true,
   "authority": "docs/challenge-brief.md#approved-references-by-domain",
   "scope": "Candidate sources only. URLs are acquisition entry pages, not runtime fetch permissions. Licence and Sharia approval remain mandatory per item.",
   "sources": [
     {
-      "source_id": "kfc-quran",
+      "source_id": "kfc-mushaf",
       "domains": [
         "quran"
       ],

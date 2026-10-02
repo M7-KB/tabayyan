@@ -1,0 +1,16 @@
+# CODEOWNERS — Tabayyan
+#
+# Required by SPEC.md §5.6 and release gate G24 (owner decision 12).
+#
+# api/policy/content_policy.yaml holds the content-level → card-state table, the alignment rules,
+# the scripture-span markers and the referral strings. Those are religious-content decisions owned by
+# the project owner and the Sharia specialist, not by any implementing agent.
+#
+# Changing that file must also update the pinned literals in the T-410 policy test, in the same PR,
+# or CI fails. Pinning is deliberately annoying: a religious-content rule should cost a conversation
+# to change.
+#
+# api/tuning.yaml is deliberately NOT listed here. It holds engineering thresholds only, is tuned on
+# the test set during the build, and is bounded by near_miss_max_ceiling in the policy file.
+
+/api/policy/   @M7-KB

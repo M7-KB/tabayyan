@@ -17,7 +17,7 @@ a designed output here, not a failure mode.
 | Document | Contents |
 |---|---|
 | [SPEC.md](SPEC.md) | Scope, architecture, API contracts, data schemas, input kinds and the question → claim design for all 12 required brief cases, the A–D → card-state mapping with the `alignment` ratchet, the scripture-span detector, the policy/tuning split, untrusted-input rules, providers, referral target, clip privacy, acceptance criteria |
-| [TASKS.md](TASKS.md) | Day-by-day task plan for Oct 2–6 |
+| [TASKS.md](TASKS.md) | Source register: Robin/P-04 (P-03 retired); tools register: Luffy/P-10. Day-by-day task plan for Oct 2–6 |
 | [AGENTS.md](AGENTS.md) | Team, non-negotiable rules, workflow, file-access boundary |
 | [CODEOWNERS](CODEOWNERS) | `api/policy/` is owned by the project owner (gate G24) |
 | [docs/challenge-brief.md](docs/challenge-brief.md) | Challenge requirements: content levels, approved references, required test cases, evaluation weights |

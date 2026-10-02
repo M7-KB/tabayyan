@@ -83,5 +83,6 @@ and require `corpus/corpus.jsonl` source IDs to be a subset of the allowlist whe
 exists. An absent corpus is checked explicitly and does not establish corpus readiness or approval.
 The same suite runs in CI for changes to these files.
 
-**Ownership decision (Oct 2):** P-04 owns `SOURCES.md` in this PR; P-03 and its planned
-`docs/sources-v0` branch are retired. Luffy owns `TOOLS.md` under P-10 in a separate PR.
+**Ownership decision (Oct 2, PR #14):** P-03 (`docs/sources-v0`) owns `SOURCES.md`.
+P-04 rebases after P-03 merges, so the register is inherited and absent from this PR's diff.
+Robin owns `TOOLS.md` on a separate small branch. P-04 waits on P-03 before merge.

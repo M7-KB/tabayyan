@@ -1,0 +1,39 @@
+"""Deterministic Arabic matching keys; retain original text separately for display."""
+
+import unicodedata
+
+NORMALIZER_VERSION = "ar-v1"
+_VARIANTS = str.maketrans("أإآٱىة", "اااايه")
+_MARK_RANGES = (
+    (0x0610, 0x061A),
+    (0x064B, 0x065F),
+    (0x0670, 0x0670),
+    (0x06D6, 0x06ED),
+    (0x0898, 0x089F),
+    (0x08D3, 0x08FF),
+)
+
+
+def normalize_arabic(text: str) -> str:
+    """Strip Arabic marks/tatweel, fold variants, and collapse Unicode whitespace.
+
+    NFC composes decomposed hamza/alef before folding. Hamza letters, punctuation,
+    numbers, non-Arabic accents and presentation ligatures otherwise remain intact.
+    This is a general retrieval key, not the adversarial span-comparison surface.
+    This lossy key must never replace source text or itself authorize a quotation.
+    """
+    if not isinstance(text, str):
+        raise TypeError("normalize_arabic expects a string")
+    composed = unicodedata.normalize("NFC", text)
+    stripped = "".join(
+        char
+        for char in composed
+        if char != "ـ"
+        and not (
+            unicodedata.category(char).startswith("M")
+            and any(start <= ord(char) <= end for start, end in _MARK_RANGES)
+        )
+    )
+    # Removing intervening Arabic marks can expose a new Unicode composition.
+    canonical = unicodedata.normalize("NFC", stripped)
+    return " ".join(canonical.translate(_VARIANTS).split())

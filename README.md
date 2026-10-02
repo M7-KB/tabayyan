@@ -12,6 +12,33 @@ names which evidence state applies, keeps source text and generated explanation 
 separate UI blocks, and **abstains and refers** when the corpus does not hold the evidence. Abstention is
 a designed output here, not a failure mode.
 
+## Arabic normalizer (normalizer portion of T-402)
+
+Python 3.11+, standard library only for the normalizer. Install the API development dependencies
+using the setup below, then run the full Python suite from the repository root:
+
+```sh
+python -m pytest
+```
+
+Import `normalize_arabic` from `corpus.normalize`. Version `ar-v1` composes Unicode NFC,
+strips Arabic marks and tatweel, folds alef/ya/ta-marbuta variants, and collapses Unicode
+whitespace. Presentation forms, format characters and digits retain their original form.
+This general retrieval key does not provide the adversarial comparison required by the span
+detector. T-411 owns a separate hardened function covering the four Unicode bypass classes;
+it must not use `ar-v1` as its security comparison surface.
+
+Use the result only as an indexing/matching key. Keep `text_ar` unchanged for display and calculate
+its checksum from the original text using the corpus loader's documented encoding. Normalization is
+lossy: equal keys do not authorize religious evidence or settle alignment. No quote checker, alignment,
+span detector, corpus download, loader, or eight-rule validator is implemented here. The loader and
+validator remain Robin's work. Tests use synthetic non-scriptural text and include idempotence across
+every Unicode scalar in blocks.
+
+The normalizer and its tests were developed on October 2, 2026, with organizer permission to start
+development that day (see Disclosure below). TASKS.md records the implementation and the pending
+T-503a quote-safety follow-up: equal normalized keys must never authorize a quotation.
+
 ## Planning
 
 | Document | Contents |

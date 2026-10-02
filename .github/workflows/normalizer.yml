@@ -1,0 +1,20 @@
+name: Normalizer checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  normalizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - shell: bash
+        run: |
+          if [ -f pyproject.toml ]; then
+            python -m pip install -e '.[dev]'
+          else
+            python -m pip install 'pytest>=8,<9'
+          fi
+      - run: python -m pytest

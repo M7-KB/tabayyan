@@ -242,3 +242,11 @@ skeleton) carry the same ids as before; their acceptance tests are updated only 
 §5.2/§5.4 changes required it. T-412 and T-513 are new daily-status slots (the old T-408/T-509/T-609
 pattern didn't have enough ids for five days); T-420, T-508a, T-508b, T-609a and T-608a are also new.
 There is still no T-409 — see the PR #5 history for why.
+
+## Additional pre-work record — October 2, 2026
+
+- Arabic normalizer portion of T-402 and tests: owner requested implementation in #build on October 2
+  (event `8b6a06beac457fea2a6578c52fe47755f10daca38ebbf550d670dcbacbc6869f`). Application pre-work,
+  outside the evaluated October 4–6 window. Branch `feat/arabic-normalizer`, one PR, no agent merge.
+  Loader and eight-rule validator stay with Robin under the newer plan. Baseline merge timing and
+  the SPEC §7 update remain with the owner and lead.

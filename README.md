@@ -12,6 +12,33 @@ names which evidence state applies, keeps source text and generated explanation 
 separate UI blocks, and **abstains and refers** when the corpus does not hold the evidence. Abstention is
 a designed output here, not a failure mode.
 
+## Arabic normalizer (normalizer portion of T-402)
+
+Python 3.11+, standard library only. Run all tests from the repository root:
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+Import `normalize_arabic` from `corpus.normalize`. Version `ar-v1` applies Unicode NFC, strips Arabic
+combining marks and tatweel, folds `أ/إ/آ/ٱ` to `ا`, `ى` to `ي`, and `ة` to `ه`, then collapses Unicode
+whitespace to single spaces and trims it. Other letters, punctuation, digits and non-Arabic accents
+remain intact. Unicode presentation ligatures are preserved, not expanded into generated text.
+
+Use the result only as an indexing/matching key. Keep `text_ar` unchanged for display and calculate
+its checksum from the original text using the corpus loader's documented encoding. Normalization is
+lossy: equal keys do not authorize religious evidence or settle alignment. No quote checker, alignment,
+span detector, corpus download, loader, or eight-rule validator is implemented here. The loader and
+validator remain Robin's work. Tests use synthetic non-scriptural text and include idempotence across
+every Unicode scalar in blocks.
+
+## Pre-event disclosure
+
+The owner requested the Arabic normalizer on October 2, 2026, before the October 4 09:00 Riyadh build
+window. This function and its tests are application pre-work; commit dates remain public. It is
+excluded from evaluated build-window work. This branch remains unmerged for the owner to resolve the
+baseline-tag boundary with the lead. See TASKS.md for the pre-work record.
+
 ## Planning
 
 | Document | Contents |

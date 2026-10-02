@@ -30,8 +30,8 @@ it must not use `ar-v1` as its security comparison surface.
 
 Use the result only as an indexing/matching key. Keep `text_ar` unchanged for display and calculate
 its checksum from the original text using the corpus loader's documented encoding. Normalization is
-lossy: equal keys do not authorize religious evidence or settle alignment. No quote checker, alignment,
-span detector or corpus download is implemented here. Loader and validator usage is below.
+lossy: equal keys do not authorize religious evidence or settle alignment. The normalizer implements no quote checker,
+alignment, span detector or corpus download. Loader and validator usage is below.
 Tests use synthetic non-scriptural text and include idempotence across
 every Unicode scalar in blocks.
 
@@ -58,6 +58,41 @@ Schema validation does not establish original-text equality, corpus provenance, 
 notice domain eligibility, matching evidence IDs, or ordered character/time spans; the runtime gates
 must check those against the approved corpus. The contract includes the §5.2 detector
 status and gate result, nullable Trigger B markers, and §9 referral fallback text.
+
+## Scripture-span detector (T-411)
+
+`api.span_detector.SpanDetector` accepts the whole approved Qur'an/hadith index as `Record`
+objects and a `DetectorConfig.from_files(policy_path, tuning_path)`. The reviewed loader must
+validate provenance and grading before constructing that index; this module does not load or
+approve corpus data. P-08 supplies the committed policy/tuning files.
+Synthetic tests use `DetectorConfig.from_mappings` with the SPEC defaults.
+
+Both marked spans and unmarked sliding windows use a separate `comparison_key`, word edit
+distance, configured budgets, and a whole-index verbatim veto. Arabic presentation forms,
+format characters, U+08CA–U+08D2 marks, and both Arabic-Indic digit sets are covered.
+Punctuation delimits words; original offsets remain in the claim text. Expanded presentation
+ligatures can give multiple comparison words the same original character span.
+
+`detect(text)` returns `span_detector_status` and findings. Each finding's `card_span()`
+produces the §4.1 fields, including a null marker for Trigger B. Short exact matches still
+receive the veto; the minimum-window floor applies only to Trigger B near-misses.
+Overlapping windows against equal/shorter records do not turn an exact quote into a misquote;
+a short exact record cannot suppress a near-miss against a longer record.
+Trigger B also scans inside marked spans, including spans classified UNRELATED after
+commentary padding. Duplicate windows are removed only after matching the same record
+and classification within an established marked match; marker overlap alone never skips a scan.
+`effects(level, note_ar)` exposes the Qur'an forcing condition or a hadith/level-D notice
+copied from the matched record. The composer must apply the detector status and state ratchets,
+then validate every displayed notice/evidence quote against the original approved source,
+including source and hadith grading. Comparison equality never authorizes display.
+
+No model calls, logging, input storage, corpus ingestion, or HTTP endpoints are introduced.
+The scan is exhaustive for the fixture index; full-corpus performance and Trigger B
+false-positive calibration remain unmeasured until licensed data exists (T-508a).
+Run the full checks with `python -m pytest`, `ruff check .`, `ruff format --check .`,
+and `node --test tests/*.test.mjs`. Tests include the seven literal one-word misquotes
+and four twin pairs from Nami's probe v2, plus synthetic config, offset, Unicode, and
+failure cases; those probe strings are test inputs and grant no corpus approval.
 
 ## Planning
 

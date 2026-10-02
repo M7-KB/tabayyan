@@ -59,3 +59,13 @@ caption as editable text, plus a plain outbound link to the original — there i
 no thumbnail, so nothing from the platform ever loads on the result screen.
 
 Run and setup instructions land with the application code (TASKS.md, T-604).
+
+## Source register (P-03)
+
+See [SOURCES.md](SOURCES.md) for candidate sources, uses and licence evidence. All 13 entries
+remain pending: this register grants no ingestion or redistribution permission. P-04 supplies
+the separate acquisition manifest and allowlist. The public raw-package history and
+pending cleanup in PR #13 are disclosed in SOURCES.md.
+
+Run the standalone register contract checks with `node --test tests/*.test.mjs`.
+CI checks headers, unique IDs, required license fields and the closed domain enum.

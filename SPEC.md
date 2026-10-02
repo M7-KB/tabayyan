@@ -767,7 +767,16 @@ that broke the character metric does not exist at the word level, because "one w
 distance 1 by definition, not a ratio. That also removes the need for a separate "a single edit always
 counts" exemption: a length-banded budget that is never smaller than 1 covers it without a special case.
 
-- `W(x)` is the word sequence of `x` after A4 normalization.
+- `W(x)` is the word sequence of `x` after **T-411's hardened comparison normalization** — a separate
+  function from A4's retrieval key (`ar-v1`), built to resist adversarial Unicode input (ZWJ/ZWSP and
+  other `Cf` insertion, Arabic presentation-form retyping, the Qur'anic-annotation-mark gap, Arabic-Indic
+  digits). A4 stays a clean retrieval key for correct input; it is never the detector's comparison
+  surface, because a miss there is fail-open (non-negotiable 1), not fail-safe the way a retrieval miss
+  is. (@Nami, PR #8 documentation blocker.) This applies to **both triggers and the whole-index veto
+  below** — everything in this section built on `W(x)` inherits the hardened function from this one
+  definition. Normalization never authorizes a quotation by itself: a card only shows `quote_ar` when it
+  is an exact, character-for-character copy of the matched corpus record (G1, G2, enforced by T-503),
+  independent of which key matched it.
 - `wd(span, record)` is the word-level edit distance between `W(span)` and `W(record)`: inserting,
   deleting or substituting **one whole word** costs 1.
 - `n = max(|W(span)|, |W(record)|)`. **Pinned to `max`,** not to the cited record, so it is symmetric and

@@ -50,9 +50,15 @@ The reference-pack PDF was **removed from the tree but remains reachable in this
 history at commit `03109af`**. There is no history rewrite.
 
 A Qur'an text archive (`data/raw/kfgqpc_hafs_smart_4/`) was committed directly to `main` on Oct 2, 2026
-(commit `78c7988`), before its licence was confirmed, and is now removed and git-ignored. It remains
-reachable in public history. Whether to rewrite the archive history or accept continued public access is an unanswered owner decision; the PDF decision does not settle this case. The package identifies itself as KFGQPC Hafs Smart (`hafs_smart_v8`); redistribution clearance remains pending in P-03 ([PR #17](https://github.com/M7-KB/tabayyan/pull/17)). A raw file is
-added back to `data/raw/` only once its licence is confirmed and recorded in P-03's `SOURCES.md` (SPEC.md §4.2). Because raw directories are ignored by default, the cleared-source PR must add an explicit per-source negation to `.gitignore` and stage only the licensed files; never force-add an uncleared file.
+(commit `78c7988`), before its licence was confirmed. Owner decision 24 (2026-10-02): removed from the
+tree, no history rewrite. **It remains reachable in this repository's public history**, same disclosure
+as the reference-pack PDF above, at a different scale — this archive is the full Qur'an text, not one
+PDF. This decision does not grant ingestion or redistribution permission. The package identifies itself
+as KFGQPC Hafs Smart (`hafs_smart_v8`); redistribution clearance remains pending in P-03
+([PR #17](https://github.com/M7-KB/tabayyan/pull/17)). A raw file is added back to `data/raw/` only once
+its licence is confirmed and recorded in P-03's `SOURCES.md` (SPEC.md §4.2). Because raw directories are
+ignored by default, the cleared-source PR must add an explicit per-source negation to `.gitignore` and
+stage only the licensed files; never force-add an uncleared file.
 
 ## Privacy
 

@@ -1201,6 +1201,13 @@ dropped `baseline` tag — it is a statement about public git history, not about
 judge running `git log --diff-filter=D` finds it either way; finding it undisclosed would cost more than
 disclosing it.
 
+**The KFGQPC Hafs Smart Qur'an archive.** Committed directly to `main` on Oct 2, 2026 (commit `78c7988`)
+before its licence was confirmed. Owner decision 24: removed from the tree (PR #13), **no history
+rewrite**. Same disclosure pattern as the PDF above, at a different scale — this is the full Qur'an text,
+not one reference PDF — and it remains reachable in the public repository's history. The decision is
+**removal and disclosure only; it does not grant ingestion or redistribution permission.** Redistribution
+clearance for this source stays a separate, pending question in P-03's `SOURCES.md` (PR #17).
+
 ---
 
 ## 8. Providers and configuration  (owner decisions 4 and 13)
@@ -1324,6 +1331,12 @@ days, sets a timebox on PR #5, and answers the remaining §12 items in direction
 | 21 | **No embed player, and no thumbnail.** A TikTok/YouTube link shows only the oEmbed title/caption plus a plain outbound link to the original. A11's click-to-load mechanism is dropped; T-507 and the privacy notice simplify accordingly. | §3, A11 (removed), T-507 |
 | 22 | **Branch protection on `main` is already active** (PR required, no force push, no deletion). Since every agent shares the owner's GitHub account, `CODEOWNERS` cannot make GitHub enforce a distinct reviewer identity; the actual enforcement is procedural — only the owner merges, only after `APPROVE`. G24 and §5.6 point 2 reworded to say so plainly. | §5.6, §6.1 G24 |
 | 23 | **Pre-work go-ahead:** post P-02…P-09 in #build now that the Oct-4 boundary is dropped; they are simply Oct 2–3 tasks in the re-planned schedule, not a separately disclosed category. | TASKS.md |
+
+### 2026-10-02, fourth set — PR #5 process failure and the KFC archive history question
+
+| # | Decision | Where it lands |
+|---|---|---|
+| 24 | **PR #5's skipped `APPROVE` is recorded as a one-time process failure; approval-before-merge is unchanged** (decision 13, G24). **The KFGQPC Hafs Smart archive** (`data/raw/kfgqpc_hafs_smart_4/`, committed at `78c7988`): removal from the tree and disclosure that copies remain in public history, **no history rewrite now**. This does **not** grant ingestion or redistribution permission — that stays a separate, pending question in P-03's `SOURCES.md`. | §0 (status line), §7, §6.1 G24, README, PR #13 |
 
 ---
 

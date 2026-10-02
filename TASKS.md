@@ -242,3 +242,8 @@ skeleton) carry the same ids as before; their acceptance tests are updated only 
 §5.2/§5.4 changes required it. T-412 and T-513 are new daily-status slots (the old T-408/T-509/T-609
 pattern didn't have enough ids for five days); T-420, T-508a, T-508b, T-609a and T-608a are also new.
 There is still no T-409 — see the PR #5 history for why.
+
+## T-401 implementation record
+
+Development started Oct 2 with organizer permission. API scaffold and tests are on
+feat/api-scaffold (PR #7); the policy and tuning artifacts remain P-08 work.

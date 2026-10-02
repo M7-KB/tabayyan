@@ -59,3 +59,37 @@ caption as editable text, plus a plain outbound link to the original — there i
 no thumbnail, so nothing from the platform ever loads on the result screen.
 
 Run and setup instructions land with the application code (TASKS.md, T-604).
+
+## API scaffold (T-401)
+
+Python 3.11+. From the repository root:
+
+```sh
+python -m venv .venv
+# Activate .venv for your shell, then:
+python -m pip install -e '.[dev]'
+python -m pytest
+ruff check .
+ruff format --check .
+uvicorn api.main:app --no-access-log
+```
+
+Set `OPENAI_API_KEY` in the process environment; no `.env` file is loaded automatically.
+`.env.example` lists empty key/model settings. Model IDs are environment configuration, with no
+model calls in this scaffold. Set `CORS_ORIGINS` to a JSON array of exact frontend origins; the default
+allows none. Set `BUILD_SHA` to the deployed commit SHA. Disable server access logs as shown above
+because paths and query strings can contain user text. No request body or exception details are logged
+by application code or included in error responses.
+
+**Integration prerequisite:** install reviewed P-08 files at `api/policy/content_policy.yaml` and
+`api/tuning.yaml` (or set `CONTENT_POLICY_PATH` and `TUNING_PATH`). They belong to a separate task and
+are deliberately not recreated here. Startup fails on a missing API key, missing/invalid config, or
+any word-budget tier exceeding the policy ceiling, zero budgets, or decreasing budgets across length bands. The schema validates confidence floors and the Trigger B minimum window. Startup errors identify the config path and field without echoing values. This reads metadata and limits only; it does
+not implement alignment or span detection.
+
+`GET /health` exposes the policy approval and tuning versions read from those files. Until the corpus
+loader and card schema are integrated, it reports `status: degraded`, `corpus_items: 0` and null
+artifact versions. It is a scaffold liveness response, not a release-readiness claim. Verification,
+transcription and ingestion routes are not implemented by this PR. Errors use the SPEC envelope
+`error: {code, message_ar, message_en}` with fixed text that does not echo input.
+

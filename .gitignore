@@ -5,3 +5,7 @@ __pycache__/
 .venv/
 node_modules/
 dist/
+
+# Raw files with uncleared redistribution licences
+/data/raw/kfgqpc_hafs_smart_4/
+/docs/raw/

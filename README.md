@@ -49,6 +49,11 @@ The corpus-free comparison arm in the eval reports is called `control`.
 The reference-pack PDF was **removed from the tree but remains reachable in this repository's public
 history at commit `03109af`**. There is no history rewrite.
 
+The files under `data/raw/kfgqpc_hafs_smart_4/` and `docs/raw/` were in this public
+repository's history on **Oct 2, 2026**. Their redistribution licences have not been cleared.
+Both paths are excluded from the current tree and ignored; the files remain reachable in public git
+history. Removing them from the tree does not clear their licences or remove earlier copies.
+
 ## Privacy
 
 No accounts. No stored queries. Text, audio and images you submit are sent to an AI provider for

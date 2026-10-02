@@ -84,12 +84,14 @@ by application code or included in error responses.
 **Integration prerequisite:** install reviewed P-08 files at `api/policy/content_policy.yaml` and
 `api/tuning.yaml` (or set `CONTENT_POLICY_PATH` and `TUNING_PATH`). They belong to a separate task and
 are deliberately not recreated here. Startup fails on a missing API key, missing/invalid config, or
-any word-budget tier exceeding the policy ceiling, zero budgets, or decreasing budgets across length bands. The schema validates confidence floors and the Trigger B minimum window. Startup errors identify the config path and field without echoing values. This reads metadata and limits only; it does
-not implement alignment or span detection.
+any word-budget tier exceeding the policy ceiling, zero budgets, or decreasing budgets across
+length bands. The schema validates confidence floors and the Trigger B minimum window. Startup errors
+identify the config path and field without echoing values. This reads metadata and limits only; it does
+not implement alignment or span detection. `span_detector_status` and `misquote_notice` are runtime
+claim/card fields per SPEC.md, not tuning keys; they arrive with the detector/card contract tasks.
 
 `GET /health` exposes the policy approval and tuning versions read from those files. Until the corpus
 loader and card schema are integrated, it reports `status: degraded`, `corpus_items: 0` and null
 artifact versions. It is a scaffold liveness response, not a release-readiness claim. Verification,
 transcription and ingestion routes are not implemented by this PR. Errors use the SPEC envelope
 `error: {code, message_ar, message_en}` with fixed text that does not echo input.
-

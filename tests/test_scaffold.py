@@ -3,6 +3,7 @@
 import json
 
 import pytest
+import yaml
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -16,11 +17,13 @@ def settings(tmp_path):
     policy = tmp_path / "policy.yaml"
     tuning = tmp_path / "tuning.yaml"
     policy.write_text(
-        "policy_version: test-p\napproved_by: pending\nalignment: {near_miss_max_ceiling: 0.35}\n",
+        "policy_version: test-p\napproved_by: pending\nalignment: {word_budget_ceiling: 4}\n",
         encoding="utf-8",
     )
     tuning.write_text(
-        "tuning_version: test-t\nnear_miss_max: 0.25\nunmarked_near_miss_max: 0.12\n",
+        "tuning_version: test-t\ncard_confidence_min: 0.5\nalignment_confidence_min: 0.6\n"
+        'retrieval_score_floor: 8.0\nword_budget_table: {"4": 1, "10": 2, else: 3}\n'
+        "trigger_b_min_window_tokens: 3\n",
         encoding="utf-8",
     )
     return Settings(
@@ -56,20 +59,78 @@ def test_missing_key_fails_startup_without_disclosing_config(settings, key):
             pass
 
 
-@pytest.mark.parametrize("field", ["near_miss_max", "unmarked_near_miss_max"])
-def test_ceiling_violation_is_startup_failure(settings, field):
-    settings.tuning_path.write_text(
-        "tuning_version: test-t\nnear_miss_max: 0.25\nunmarked_near_miss_max: 0.12\n".replace(
-            f"{field}: " + ("0.25" if field == "near_miss_max" else "0.12"), f"{field}: 0.36"
-        ),
-        encoding="utf-8",
-    )
-    with pytest.raises(RuntimeError, match=f"{field} exceeds near_miss_max_ceiling"):
+@pytest.mark.parametrize("band", ["4", "10", "else"])
+def test_ceiling_violation_is_startup_failure(settings, band):
+    data = yaml.safe_load(settings.tuning_path.read_text("utf-8"))
+    bands = ["4", "10", "else"]
+    data["word_budget_table"] = {
+        key: (5 if bands.index(key) >= bands.index(band) else 1) for key in bands
+    }
+    # Retain an ordered table to isolate each policy ceiling boundary.
+    settings.tuning_path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(
+        RuntimeError, match=rf"word_budget_table\.{band} exceeds word_budget_ceiling"
+    ):
         with TestClient(create_app(settings)):
             pass
 
 
-@pytest.mark.parametrize("invalid", ["", "[]", "{bad", "alignment: {near_miss_max_ceiling: .nan}"])
+def test_ceiling_equality_is_accepted(settings):
+    data = yaml.safe_load(settings.tuning_path.read_text("utf-8"))
+    data["word_budget_table"]["else"] = 4
+    settings.tuning_path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/health").status_code == 200
+
+
+@pytest.mark.parametrize(
+    "table",
+    [
+        {"4": 0, "10": 2, "else": 3},
+        {"4": -1, "10": 2, "else": 3},
+        {"4": 1.5, "10": 2, "else": 3},
+        {"4": True, "10": 2, "else": 3},
+        {"4": 3, "10": 2, "else": 3},
+        {"4": 1, "10": 3, "else": 2},
+        {"4": 1},
+        {},
+        {"bad": 1, "else": 3},
+        {"0": 1, "else": 3},
+        {"04": 1, "4": 1, "else": 3},
+    ],
+)
+def test_invalid_budget_table_fails_closed(settings, table):
+    data = yaml.safe_load(settings.tuning_path.read_text("utf-8"))
+    data["word_budget_table"] = table
+    settings.tuning_path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="missing or invalid") as caught:
+        with TestClient(create_app(settings)):
+            pass
+    assert str(settings.tuning_path) in str(caught.value)
+    assert caught.value.__cause__ is not None
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("alignment_confidence_min", 0),
+        ("alignment_confidence_min", 1.1),
+        ("alignment_confidence_min", float("nan")),
+        ("trigger_b_min_window_tokens", 0),
+        ("trigger_b_min_window_tokens", 2.5),
+        ("near_miss_max", 0.25),
+    ],
+)
+def test_invalid_tuning_field_identified(settings, field, value):
+    data = yaml.safe_load(settings.tuning_path.read_text("utf-8"))
+    data[field] = value
+    settings.tuning_path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(RuntimeError, match=field):
+        with TestClient(create_app(settings)):
+            pass
+
+
+@pytest.mark.parametrize("invalid", ["", "[]", "{bad", "alignment: {word_budget_ceiling: .nan}"])
 def test_bad_policy_fails_closed(settings, invalid):
     settings.content_policy_path.write_text(invalid, encoding="utf-8")
     with pytest.raises(RuntimeError, match="missing or invalid"):

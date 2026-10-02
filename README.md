@@ -17,6 +17,7 @@ a designed output here, not a failure mode.
 | Document | Contents |
 |---|---|
 | [SPEC.md](SPEC.md) | Scope, architecture, API contracts, data schemas, input kinds and the question → claim design for all 12 required brief cases, the A–D → card-state mapping with the `alignment` ratchet, the scripture-span detector, the policy/tuning split, untrusted-input rules, providers, referral target, clip privacy, acceptance criteria |
+| [TOOLS.md](TOOLS.md) | AI-tool inventory; Robin collects reports in planning and reconciles by Oct 5 20:00 Riyadh before submission |
 | [TASKS.md](TASKS.md) | Day-by-day task plan for Oct 2–6 |
 | [AGENTS.md](AGENTS.md) | Team, non-negotiable rules, workflow, file-access boundary |
 | [CODEOWNERS](CODEOWNERS) | `api/policy/` is owned by the project owner (gate G24) |
@@ -59,9 +60,3 @@ caption as editable text, plus a plain outbound link to the original — there i
 no thumbnail, so nothing from the platform ever loads on the result screen.
 
 Run and setup instructions land with the application code (TASKS.md, T-604).
-
-## Tools register
-
-[TOOLS.md](TOOLS.md) records verified AI-tool use and outstanding inventory details.
-Each contributor appends their own row in the PR where the tool or model is used.
-Planned product models are listed separately in SPEC.md and are not recorded as actual use.

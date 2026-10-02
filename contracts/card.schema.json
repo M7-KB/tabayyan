@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tabayyan.example/contracts/card.schema.json",
   "title": "Claim card version 1",
-  "$comment": "Structural contract only. Corpus provenance, original-text equality, generated-text isolation, span bounds, evidence-id resolution, and notice eligibility require runtime gates. Fixtures contain synthetic text and do not establish corpus or Sharia approval.",
+  "$comment": "Structural contract only. Corpus provenance, original-text equality, generated-text isolation, span bounds, evidence-id resolution, and corpus-dependent notice eligibility require runtime gates. Fixtures contain synthetic text and do not establish corpus or Sharia approval.",
   "type": "object",
   "properties": {
     "card_id": {
@@ -950,6 +950,116 @@
         "properties": {
           "term": {
             "$ref": "#/$defs/term"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "span_detector_status": {
+                "enum": [
+                  "error",
+                  "timeout",
+                  "index_unavailable",
+                  "corpus_id_unresolved",
+                  "skipped"
+                ]
+              }
+            },
+            "required": [
+              "span_detector_status"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "const": "CANNOT_CONFIRM"
+          },
+          "abstained_reason": {
+            "const": "ALIGNMENT_UNDETERMINED"
+          },
+          "gate_report": {
+            "properties": {
+              "span_detector": {
+                "const": "fail"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "misquote_notice": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "misquote_notice"
+        ]
+      },
+      "then": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "scripture_spans": {
+                "contains": {
+                  "properties": {
+                    "classification": {
+                      "const": "NEAR_MISS"
+                    }
+                  },
+                  "required": [
+                    "classification"
+                  ]
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "scripture_spans"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "level": {
+                "const": "A"
+              }
+            },
+            "required": [
+              "level"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "enum": [
+              "SUPPORTED",
+              "CANNOT_CONFIRM"
+            ]
           }
         }
       }

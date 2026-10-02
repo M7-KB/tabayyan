@@ -45,13 +45,17 @@ T-503a quote-safety follow-up: equal normalized keys must never authorize a quot
 structural contract. [contracts/fixtures/](contracts/fixtures/) contains four valid cards:
 SUPPORTED with each alignment, DISPUTED, and level-D CANNOT_CONFIRM. The CONFIRMS card
 includes a hadith-domain near-miss notice; the level-D card also includes a notice.
-The four `invalid-*.json` files must be rejected (alignment, abstention reason, positions,
-and verification-line count). All evidence text and source identities are synthetic,
-non-scriptural placeholders; these fixtures grant no source or specialist approval.
+The seven `invalid-*.json` files must be rejected (alignment, abstention reason, positions,
+verification-line count, detector status, notice without a near-miss, and level-A disagreement).
+All evidence text and source identities are synthetic, non-scriptural placeholders;
+these fixtures grant no source or specialist approval.
 
-Validate with a Draft 2020-12 validator, enabling URI format checking. Schema validation
-does not establish original-text equality, corpus provenance, quote isolation, notice
-eligibility, matching evidence IDs, or ordered character/time spans; the runtime gates
+Install the development dependencies below and run `python -m pytest` for fixture validation
+and mutation regressions using Draft 2020-12 with URI format checking. Non-`ran` detector
+statuses require CANNOT_CONFIRM, ALIGNMENT_UNDETERMINED, and a failed detector gate.
+A notice requires at least one NEAR_MISS span; level A allows only SUPPORTED or CANNOT_CONFIRM.
+Schema validation does not establish original-text equality, corpus provenance, quote isolation,
+notice domain eligibility, matching evidence IDs, or ordered character/time spans; the runtime gates
 must check those against the approved corpus. The contract includes the §5.2 detector
 status and gate result, nullable Trigger B markers, and §9 referral fallback text.
 

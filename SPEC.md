@@ -544,6 +544,9 @@ download manifest — exact file, exact URL, per domain — and the owner downlo
 `data/raw/` is committed only for sources whose licence permits redistribution; every other raw file is
 git-ignored and the manifest records where it came from. The licence decision per source is recorded in
 `SOURCES.md`. (Confirmed by the owner, decision 13.)
+Raw directories are ignored by default. A cleared-source PR adds an explicit per-source
+negation to `.gitignore` and stages only the files whose redistribution licence is recorded.
+Never force-add an uncleared file. PR #13 owns the default ignore rules; P-04 does not duplicate them.
 
 **Derived fields.** `text_normalized` and `checksum_sha256` are produced by the shared normalizer (T-402).
 Ingestion that runs before the normalizer exists fills the authored fields only and leaves the two

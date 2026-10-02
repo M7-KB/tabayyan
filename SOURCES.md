@@ -1,0 +1,23 @@
+# Source and licence register
+
+P-04 initial register, baseline pre-work, checked 2026-10-02. Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md); the [manual manifest](docs/DOWNLOAD_MANIFEST.md) records acquisition steps. No source files downloaded, no corpus built. **Every licence clearance is pending; no raw or derived content is authorized for public commitment by this register.**
+
+| Source id | Domain/use | Source URL | Licence evidence URL | Licence finding | Redistribution / ingestion |
+|---|---|---|---|---|---|
+| kfc-quran | quran; unchanged Arabic text | https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/ | https://policy.qurancomplex.gov.sa/?Lan=en | General policy reserves rights with exceptions for explicitly released resources; exact package terms pending. Portal timeout; formats confirmed only by official indexed developer-page description. | Pending; local only; do not ingest |
+| sahih-bukhari | hadith; Sultaniyya / Dar Tawq al-Najah reproduction, Shamela 1681 | https://shamela.ws/book/1681 | https://shamela.ws/book/1681 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
+| sahih-muslim | hadith; Abd al-Baqi, 1955 edition, Shamela 1727 | https://shamela.ws/book/1727 | https://shamela.ws/book/1727 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
+| dorar-hadith | hadith; exact grading, grader and reference per item | https://dorar.net/hadith | https://dorar.net/hadith | Rights-reserved footer; no dataset licence established. Edition list: https://dorar.net/hadith/refs . | Pending; local only; do not ingest |
+| jamhara-glossary | glossary; Arabic definition and supplied English equivalent | https://islamic-content.com/dictionary | https://islamic-content.com/page/copyright | Policy describes personal noncommercial scholarly use; public redistribution/application use not established. | Pending; local only; do not ingest |
+| bayyinat | faq; doubts and dialogue, Usul Center 2024 / 1445 AH | https://dawa.center/file/7937 | https://dawa.center/file/7937 | Catalogue has rights-reserved footer. PDF-specific terms not inspected. | Pending; local only; do not ingest |
+| approved-quran-translation | quran_translation; English, linked to Arabic verse | https://quranpedia.net/translations/languages | https://quranpedia.net/translations/languages | Translator, edition, exact file and its licence all pending selection. KFC-approved translation is also permitted by the brief. | Pending; local only; do not ingest |
+| dorar-tafsir | tafsir; separate commentary from scripture | https://dorar.net/tafseer | https://dorar.net/tafseer | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
+| dorar-aqeeda | aqeeda; approved creed material | https://dorar.net/aqeeda | https://dorar.net/aqeeda | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
+| dorar-fiqh | fiqh; general sourced positions, never personal rulings | https://dorar.net/feqhia | https://dorar.net/feqhia | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
+| dorar-history | seerah; history with qualifications | https://dorar.net/history | https://dorar.net/history | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
+| dawa-other | faq; individually selected da'wah resources | https://dawa.center/ | https://dawa.center/ | No particular item selected; item licence must be checked separately. | Pending selection/licence; do not ingest |
+| jamhara-dawah | faq; individually selected da'wah content | https://islamic-content.com/ | https://islamic-content.com/page/copyright | Same personal-use policy; selected item and public-use permission pending. | Pending; do not ingest |
+
+The brief also permits early tafsir/creed/history sources, approved books of the four schools, and other authenticity-checked hadith editions on Shamela. These are **pending exact title/edition selection**, not permission to ingest arbitrary pages from those domains. Register each selection and licence before adding it to the allowlist.
+
+Publisher copyright pages and book cards above are the evidence for the pending decisions, not affirmative licence grants. Unknown permission does not mean permanently prohibited. The owner can supply package terms or rights-holder permission for review; this register then records the permitted scope explicitly.

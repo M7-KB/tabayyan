@@ -5,3 +5,7 @@ __pycache__/
 .venv/
 node_modules/
 dist/
+
+# Raw files remain local until item-specific redistribution permission is recorded.
+data/raw/*
+!data/raw/.gitkeep

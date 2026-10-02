@@ -59,3 +59,11 @@ caption as editable text, plus a plain outbound link to the original — there i
 no thumbnail, so nothing from the platform ever loads on the result screen.
 
 Run and setup instructions land with the application code (TASKS.md, T-604).
+
+## Manual source collection (P-04)
+
+Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner download checklist,
+formats and local paths. [SOURCES.md](SOURCES.md) records licence evidence; all current permissions
+are pending, so raw files are ignored and ingestion is blocked until permission is clear.
+[corpus/approved_sources.json](corpus/approved_sources.json) lists candidate sources by domain;
+it does not grant licensing or Sharia approval. [TOOLS.md](TOOLS.md) logs tools used for this pre-work.

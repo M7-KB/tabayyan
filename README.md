@@ -222,8 +222,9 @@ composer, detector or gates. Those tasks must consume the policy instead of dupl
 T-410 separately owns independent literal pinning; P-08 tests real-file startup integration.
 
 Policy `p1` remains `approved_by: pending`, so G14 is not met. The owner must record specialist
-approval before changing that field. SPEC §12 still lists four specialist decisions: contradiction
-label wording, the hadith narration-by-meaning boundary, ceiling 4 and Trigger B minimum 3. Tuning
+approval before changing that field. SPEC §12 still lists four specialist decisions: Arabic state
+label wording (including the three provisional labels added Oct 3), the hadith narration-by-meaning
+boundary, ceiling 4 and Trigger B minimum 3. Tuning
 `t1` uses the SPEC defaults (confidence 0.5/0.6, retrieval floor 8.0, word budgets 1/2/3); these are
 initial engineering values, not measured performance. T-508a owns calibration against the real index.
 
@@ -264,6 +265,11 @@ evidence. All 13 entries need owner action; licence clearance remains pending an
 confirmed. This register grants no ingestion or redistribution permission. P-04 supplies
 the separate acquisition manifest and allowlist. SOURCES.md preserves the public raw-package
 history disclosure after the tree cleanup in PR #13.
+
+For the owner's Oct 4 noon selection, see the
+[minimal corpus clearance checklist](docs/MINIMAL_CORPUS_CHECKLIST.md): proposed Qur'an,
+Sahihayn with separately cleared gradings, glossary terms and required demo behavior when
+permission is missing. This checklist grants no ingestion or content approval.
 
 The [Jamhara evidence section](SOURCES.md#jamhara-permission-evidence-2026-10-03)
 consolidates the Oct 3 owner report and policy check. Both Jamhara entries remain

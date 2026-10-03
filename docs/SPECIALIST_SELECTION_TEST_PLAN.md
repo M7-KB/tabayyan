@@ -20,8 +20,8 @@ not executable test IDs. All selections and review decisions remain pending.
 |---|---|---|
 | weak-01 | One widely circulated weak or fabricated hadith claim, exact circulated wording, documented reference and matching approved grading page; grade, grader and grading reference copied from that page | CANNOT_CONFIRM with official referral, ready-to-ask question and exactly two verification lines. Never SUPPORTED and no generated narration or grading. Specialist reviews level/reason and the input. |
 | weak-02 | A second distinct widely circulated weak or fabricated claim with the same fields; no invented wording or attribution | Same mandatory abstention/referral behavior as weak-01. |
-| altered-hadith-01 | Choose one of the four selected Sahihayn records; supply its original wording/reference, grading permalink and one explicitly labelled altered-word input, with the changed word identified | Propose SUPPORTED + CONTRADICTS only when the original is retrieved verbatim from a cleared, approved corpus record. Correction notice must carry full source/reference and grade/grader/grading URL. Without that record, CANNOT_CONFIRM + referral; correction coverage remains unmet. Specialist confirms the mutation changes the claim and is detectable under SPEC. |
-| altered-verse-01 | Choose one verse in the selected KFC subset; provide exact surah:ayah, original text and one explicitly labelled altered-word input, with the changed word identified | T11 preparation: same conditional sourced-correction policy, with exact verse provenance and scripture/explanation separation. Missing original evidence means abstention, not a passed T11 correction. |
+| altered-hadith-01 | Choose one of the four selected Sahihayn records; supply its original wording/reference, grading permalink and one explicitly labelled altered-word input, with the changed word identified | Test the hadith NEAR_MISS notice path without forcing contradiction. Any specialist-justified semantic contradiction is a separate variant with corrected text in evidence[] and misquote_notice null; see the distinctions below. Missing cleared original evidence means CANNOT_CONFIRM + referral and unmet correction coverage. |
+| altered-verse-01 | Choose one verse in the selected KFC subset; provide exact surah:ayah, original text and one explicitly labelled altered-word input, with the changed word identified | T11: level A, SUPPORTED + CONTRADICTS when a Quran NEAR_MISS matches cleared, approved evidence; corrected verbatim verse and surah:ayah in evidence[], misquote_notice null. Missing cleared original evidence means CANNOT_CONFIRM + referral, not a passed T11 correction. |
 | disputed-fiqh-01 | One well-known disputed general fiqh question, neutrally worded; exact approved pages and references for at least two positions | Level C, DISPUTED with at least two sourced positions and no ranking, only after the applicable evidence is cleared and approved. Otherwise CANNOT_CONFIRM + referral, with disputed coverage unmet. A personal-case version remains level D and referral only. |
 
 Do not load circulated weak claims or either altered text as trusted religious
@@ -29,6 +29,33 @@ evidence. Their acquisition files are isolated under `data/raw/test-inputs/` and
 excluded from corpus ingestion. Original verse/hadith and position evidence follow
 the separate corpus permission and approval gates. A grading page used to document
 an adversarial input does not make the weak claim a corpus candidate.
+
+### Distinct altered-text expectations
+
+Under [SPEC sections 5.2–5.4](../SPEC.md), a hadith-domain NEAR_MISS does not force
+CONTRADICTS: narration by meaning has a different policy from Quran quotation.
+For the detector-only hadith variant, select wording the specialist considers
+within that boundary and require the retrieved exact wording in
+`misquote_notice.evidence`, with full source/reference and grade/grader/grading URL.
+Alignment follows the ordinary ratchet: SUPPORTED + CONFIRMS needs its evidence
+and confidence thresholds; unresolved alignment abstains. The detector result
+alone is never a semantic contradiction judgment.
+
+If the specialist identifies an altered hadith claim that genuinely contradicts
+the original's meaning, prepare a separately reviewed semantic-contradiction
+variant. SUPPORTED + CONTRADICTS still requires cleared, approved evidence and
+the alignment confidence floor in SPEC 5.4 rule 2. Put the corrected verbatim
+hadith and complete provenance/grading in `evidence[]`; `misquote_notice` must
+be null on any CONTRADICTS card ([card schema](../contracts/card.schema.json)).
+Specialist judgment sets the fixture expectation; it does not bypass runtime gates.
+
+For the selected level-A verse, a Quran-domain NEAR_MISS forces CONTRADICTS
+under SPEC 5.4 rule 1. With cleared, approved evidence and all other gates passed,
+T11 expects SUPPORTED + CONTRADICTS, the exact verse and surah:ayah in
+`evidence[]`, and `misquote_notice: null`. The altered wording stays labelled
+as user input, separate from scripture and generated explanation.
+Both domains abstain with referral when cleared original evidence is missing;
+no correction can be generated to fill that gap.
 
 ## Test preparation after selection
 

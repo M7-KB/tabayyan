@@ -287,6 +287,8 @@ Use the [specialist selection/test plan](docs/SPECIALIST_SELECTION_TEST_PLAN.md)
 and per-item file handoff. Exact religious selections and missing item URLs remain
 pending the specialist. Only the owner downloads; these documents add no corpus or
 executable test inputs and grant no licence or specialist approval.
+The plan separates hadith NEAR_MISS notices from semantic contradiction variants
+and explicitly records T11's Quran correction expectation under SPEC 5.2–5.4.
 
 ## Manual source collection (P-04)
 

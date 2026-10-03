@@ -8,11 +8,30 @@ import disputed from '../../../contracts/fixtures/disputed.json'
 import cannotConfirm from '../../../contracts/fixtures/cannot-confirm.json'
 
 // Synthetic variants built from the P-07 fixtures. Every text here is synthetic (SPEC.md §4.1 fixtures).
+// Shared evidence shape (contracts/card.schema.json $defs/evidence), as used by misquote_notice.evidence.
+const misquoteEvidence = {
+  evidence_id: 'notice-e1',
+  corpus_id: 'synthetic:notice',
+  domain: 'hadith',
+  source_id: 'synthetic-source',
+  source_name_ar: 'مصدر تجريبي للتنبيه',
+  source_url: 'https://example.invalid/notice-source',
+  quote_ar: 'نص تجريبي للتنبيه',
+  translation: null,
+  ref: { collection: 'Synthetic notice collection', number: '7' },
+  grading: {
+    grade_ar: 'حكم تجريبي للتنبيه',
+    grader_ar: 'جهة تجريبية',
+    grading_source_url: 'https://example.invalid/notice-grading',
+  },
+  verbatim_verified: true,
+  retrieval_score: 12.5,
+}
+
 const withMisquote = {
   ...cannotConfirm,
   misquote_notice: {
-    corpus_id: 'synthetic:notice',
-    quote_ar: 'نص تجريبي للتنبيه',
+    evidence: misquoteEvidence,
     note_ar: 'شرح مولّد تجريبي للتنبيه',
   },
 }
@@ -159,9 +178,54 @@ describe('misquote notice', () => {
   it('renders the notice without an alignment badge', () => {
     const { container } = render(<ClaimCard card={withMisquote} />)
     expect(screen.getByText(strings.misquoteHeading)).toBeInTheDocument()
-    expect(screen.getByText(withMisquote.misquote_notice.quote_ar)).toBeInTheDocument()
+    expect(screen.getByText(misquoteEvidence.quote_ar)).toBeInTheDocument()
     expect(container.querySelector('[data-state="supported_contradicts"]')).toBeNull()
     expect(container.querySelector('[data-state="supported_confirms"]')).toBeNull()
+  })
+
+  it('shows the notice source, reference, grading and source link from its own evidence', () => {
+    const { container } = render(<ClaimCard card={withMisquote} />)
+    const notice = container.querySelector('.misquote-notice')
+    expect(within(notice).getByText(misquoteEvidence.source_name_ar, { exact: false })).toBeInTheDocument()
+    expect(within(notice).getByText(/Synthetic notice collection/)).toBeInTheDocument()
+    expect(within(notice).getByText(misquoteEvidence.grading.grade_ar)).toBeVisible()
+    expect(within(notice).getByText(/جهة تجريبية/)).toBeVisible()
+    expect(within(notice).getByRole('link', { name: strings.sourceLink })).toHaveAttribute(
+      'href',
+      misquoteEvidence.source_url,
+    )
+  })
+
+  it('keeps the matched quote in the scripture block and the generated note in the explanation block', () => {
+    const { container } = render(<ClaimCard card={withMisquote} />)
+    const notice = container.querySelector('.misquote-notice')
+    const scripture = within(notice).getByRole('region', { name: strings.scriptureLabel })
+    expect(scripture).toHaveTextContent(misquoteEvidence.quote_ar)
+    const explanation = within(notice).getByText(withMisquote.misquote_notice.note_ar).closest('[data-role="explanation"]')
+    expect(explanation).not.toBeNull()
+    expect(explanation).not.toHaveTextContent(misquoteEvidence.quote_ar)
+  })
+
+  it('does not render the legacy flat notice shape, so no unsourced quote is shown', () => {
+    const legacy = {
+      ...cannotConfirm,
+      misquote_notice: { corpus_id: 'synthetic:legacy', quote_ar: 'نص تجريبي قديم', note_ar: 'شرح قديم' },
+    }
+    const { container } = render(<ClaimCard card={legacy} />)
+    expect(screen.queryByText(strings.misquoteHeading)).toBeNull()
+    expect(screen.queryByText('نص تجريبي قديم')).toBeNull()
+    expect(container.querySelector('.misquote-notice')).toBeNull()
+  })
+
+  it('does not render a hadith notice that has no grading', () => {
+    const ungraded = {
+      ...cannotConfirm,
+      misquote_notice: { evidence: { ...misquoteEvidence, grading: null }, note_ar: 'شرح مولّد تجريبي للتنبيه' },
+    }
+    const { container } = render(<ClaimCard card={ungraded} />)
+    expect(screen.queryByText(strings.misquoteHeading)).toBeNull()
+    expect(screen.queryByText(misquoteEvidence.quote_ar)).toBeNull()
+    expect(container.querySelector('.misquote-notice')).toBeNull()
   })
 })
 

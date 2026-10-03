@@ -192,14 +192,22 @@ collapsible "how to verify" block. An approved English translation renders insid
 `data-role="translation"`, after the Arabic quote and source link, with its own source link (`translation.source_url`).
 It is omitted when the evidence has no translation. Card tests load the P-07 fixtures in `contracts/fixtures/`.
 
+The misquote notice reads the nested `misquote_notice = { evidence, note_ar }` shape from PR #36 (f532439). Its
+`evidence` is shown with the same scripture block as `evidence[]`: source name, reference, grading, quote and source link.
+The notice is not shown when `evidence` is missing, or when a hadith notice has no grading. The legacy flat
+`{ corpus_id, quote_ar, note_ar }` shape is never rendered. Until #36 lands, the P-07 fixtures still hold the flat
+notice, so the preview does not show a notice for `supported_confirms`.
+
 The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
 preview is compiled out of production builds. Arabic labels other than `supported_contradicts` are
 provisional until owner and specialist approval (SPEC.md §12 item 1).
 
 Layout is mobile-first: the base rules are the 375px baseline, with a compact rule at 23.4375rem and below
-and a desktop rule from 48rem that widens the reading column. At 375px the input screen and the four preview
-cards have no horizontal overflow (`scrollWidth` equals the viewport width). That measurement was taken by hand
-in Chrome; `web/src/__tests__/layout.test.js` only checks that the breakpoints exist.
+and a desktop rule from 48rem that widens the reading column. Headless Chrome (puppeteer-core) on 2026-10-03
+measured `scrollWidth` equal to the viewport at 375, 768 and 1280px, on the input screen and on the card preview
+with a nested misquote notice (temporary fixture, not committed). No element extended past the viewport.
+`web/src/__tests__/layout.test.js` only checks that the breakpoints exist. Label approval for the provisional
+Arabic strings is still open (SPEC.md §12 item 1).
 
 ## API scaffold (T-401)
 

@@ -1,16 +1,18 @@
 import { strings } from '../../strings.js'
 import { ExplanationBlock } from './ExplanationBlock.jsx'
+import { ScriptureBlock } from './ScriptureBlock.jsx'
 
-// Shown without an alignment badge (SPEC.md §4.1). The matched text is scripture; the note is generated.
+// Shown without an alignment badge (SPEC.md §4.1). The matched text is scripture: it uses the same
+// evidence block as evidence[], so its source, reference, grading and source link are visible. The note is generated.
+// A notice without that provenance, or a hadith notice without grading, is not shown (AGENTS.md non-negotiable 1).
 export function MisquoteNotice({ notice }) {
+  const evidence = notice?.evidence
+  if (!evidence || (evidence.domain === 'hadith' && !evidence.grading)) return null
+
   return (
     <section className="misquote-notice">
       <h3>{strings.misquoteHeading}</h3>
-      <section className="scripture-block" data-role="scripture" aria-label={strings.scriptureLabel}>
-        <blockquote className="quote" lang="ar" dir="rtl">
-          {notice.quote_ar}
-        </blockquote>
-      </section>
+      <ScriptureBlock item={evidence} />
       <ExplanationBlock textAr={notice.note_ar} />
     </section>
   )

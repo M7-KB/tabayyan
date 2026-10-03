@@ -219,10 +219,11 @@ Render setup references: [FastAPI deployment](https://render.com/docs/deploy-fas
 
 ## Source register (P-03)
 
-See [SOURCES.md](SOURCES.md) for candidate sources, uses and licence evidence. All 13 entries
-remain pending: this register grants no ingestion or redistribution permission. P-04 supplies
-the separate acquisition manifest and allowlist. The public raw-package history and
-pending cleanup in PR #13 are disclosed in SOURCES.md.
+See [SOURCES.md](SOURCES.md) for one readiness status per candidate source, uses and licence
+evidence. All 13 entries need owner action; licence clearance remains pending and none is
+confirmed. This register grants no ingestion or redistribution permission. P-04 supplies
+the separate acquisition manifest and allowlist. SOURCES.md preserves the public raw-package
+history disclosure after the tree cleanup in PR #13.
 
 Run the standalone register contract checks with `node --test tests/*.test.mjs`.
 CI checks headers, unique IDs, required license fields and the closed domain enum.

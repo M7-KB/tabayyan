@@ -196,6 +196,11 @@ The fixtures are synthetic. To preview them locally, run `npm run dev` and open 
 preview is compiled out of production builds. Arabic labels other than `supported_contradicts` are
 provisional until owner and specialist approval (SPEC.md §12 item 1).
 
+Layout is mobile-first: the base rules are the 375px baseline, with a compact rule at 23.4375rem and below
+and a desktop rule from 48rem that widens the reading column. At 375px the input screen and the four preview
+cards have no horizontal overflow (`scrollWidth` equals the viewport width). That measurement was taken by hand
+in Chrome; `web/src/__tests__/layout.test.js` only checks that the breakpoints exist.
+
 ## API scaffold (T-401)
 
 Python 3.11+. From the repository root:

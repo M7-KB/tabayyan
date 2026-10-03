@@ -137,3 +137,23 @@
   border: 2px dashed #8a5a00;
   background: #fff4dc;
 }
+
+@media (max-width: 23.4375rem) {
+  .claim-card {
+    padding: 0.75rem;
+  }
+
+  .scripture-block .quote {
+    font-size: 1.05rem;
+  }
+}
+
+@media (min-width: 48rem) {
+  .claim-card {
+    padding: 1.5rem;
+  }
+
+  .scripture-block .quote {
+    font-size: 1.3rem;
+  }
+}

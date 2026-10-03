@@ -75,3 +75,56 @@ def test_level_state_mapping(level, name):
         "D": {"CANNOT_CONFIRM"},
     }
     assert VALIDATOR.is_valid(value) == (value["state"] in allowed[level])
+
+
+@pytest.mark.parametrize("name", ("supported-confirms", "cannot-confirm"))
+@pytest.mark.parametrize("field", SCHEMA["$defs"]["evidence"]["required"])
+def test_notice_requires_shared_evidence_fields(name, field):
+    value = card(name)
+    del value["misquote_notice"]["evidence"][field]
+    assert not VALIDATOR.is_valid(value)
+
+
+@pytest.mark.parametrize("field", ("grade_ar", "grader_ar", "grading_source_url"))
+def test_hadith_notice_requires_complete_grading(field):
+    value = card("supported-confirms")
+    del value["misquote_notice"]["evidence"]["grading"][field]
+    assert not VALIDATOR.is_valid(value)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("grading", None),
+        ("source_url", "not-a-url"),
+        ("verbatim_verified", False),
+        ("ref", {"section": "synthetic"}),
+    ],
+)
+def test_notice_rejects_incomplete_or_unverified_provenance(field, value):
+    result = card("supported-confirms")
+    result["misquote_notice"]["evidence"][field] = value
+    assert not VALIDATOR.is_valid(result)
+
+
+@pytest.mark.parametrize(
+    "name,fields",
+    [("supported-confirms", ("collection", "number")), ("cannot-confirm", ("surah", "ayah"))],
+)
+def test_notice_requires_domain_reference(name, fields):
+    for field in fields:
+        value = card(name)
+        del value["misquote_notice"]["evidence"]["ref"][field]
+        assert not VALIDATOR.is_valid(value)
+
+
+def test_notice_reuses_evidence_schema_and_rejects_legacy_shape():
+    assert SCHEMA["$defs"]["notice"]["properties"]["evidence"] == {"$ref": "#/$defs/evidence"}
+    value = card("supported-confirms")
+    notice = value["misquote_notice"]
+    value["misquote_notice"] = {
+        "corpus_id": notice["evidence"]["corpus_id"],
+        "quote_ar": notice["evidence"]["quote_ar"],
+        "note_ar": notice["note_ar"],
+    }
+    assert not VALIDATOR.is_valid(value)

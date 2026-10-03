@@ -44,11 +44,19 @@ T-503a quote-safety follow-up: equal normalized keys must never authorize a quot
 [contracts/card.schema.json](contracts/card.schema.json) is the Draft 2020-12 version-1
 structural contract. [contracts/fixtures/](contracts/fixtures/) contains four valid cards:
 SUPPORTED with each alignment, DISPUTED, and level-D CANNOT_CONFIRM. The CONFIRMS card
-includes a hadith-domain near-miss notice; the level-D card also includes a notice.
+includes a hadith-domain near-miss notice; the level-D card includes a Quran-domain notice.
 The seven `invalid-*.json` files must be rejected (alignment, abstention reason, positions,
 verification-line count, detector status, notice without a near-miss, and level-A disagreement).
 All evidence text and source identities are synthetic, non-scriptural placeholders;
 these fixtures grant no source or specialist approval.
+
+Owner clarification (2026-10-03): `misquote_notice` is now `{ evidence, note_ar } | null`.
+Its `evidence` uses the same schema as `evidence[]`, including source name/URL, corpus ID,
+verbatim quote, reference and hadith grading. Quran references require `surah`/`ayah`;
+hadith references require `collection`/`number`. The old flat notice is rejected.
+This revises the unintegrated version-1 contract: consumers must migrate before integration.
+The composer must drop the entire notice and abstain/refer if provenance or verbatim checks fail;
+the UI renders corrected source text separately from the generated `note_ar`.
 
 Install the development dependencies below and run `python -m pytest` for fixture validation
 and mutation regressions using Draft 2020-12 with URI format checking. Non-`ran` detector

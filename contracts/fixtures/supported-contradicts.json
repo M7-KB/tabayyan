@@ -42,7 +42,8 @@
       "quote_ar": "نص تجريبي غير ديني",
       "translation": null,
       "ref": {
-        "section": "synthetic"
+        "surah": 1,
+        "ayah": 1
       },
       "grading": null,
       "verbatim_verified": true,

@@ -47,8 +47,23 @@
     "قارن النص المعروض"
   ],
   "misquote_notice": {
-    "corpus_id": "synthetic:e1",
-    "quote_ar": "نص تجريبي غير ديني",
+    "evidence": {
+      "evidence_id": "e1",
+      "corpus_id": "synthetic:e1",
+      "domain": "quran",
+      "source_id": "synthetic-fixture",
+      "source_name_ar": "مصدر تجريبي غير ديني",
+      "source_url": "https://example.invalid/fixture",
+      "quote_ar": "نص تجريبي غير ديني",
+      "translation": null,
+      "ref": {
+        "surah": 1,
+        "ayah": 1
+      },
+      "grading": null,
+      "verbatim_verified": true,
+      "retrieval_score": 18.4
+    },
     "note_ar": "تنبيه تجريبي"
   },
   "confidence": 0.9,

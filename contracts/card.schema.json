@@ -577,6 +577,81 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "domain": {
+                "const": "quran"
+              }
+            },
+            "required": [
+              "domain"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref": {
+                "type": "object",
+                "properties": {
+                  "surah": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 114
+                  },
+                  "ayah": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "surah",
+                  "ayah"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "domain": {
+                "const": "hadith"
+              }
+            },
+            "required": [
+              "domain"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref": {
+                "type": "object",
+                "properties": {
+                  "collection": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "number": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "collection",
+                  "number"
+                ]
+              }
+            }
+          }
         }
       ]
     },
@@ -668,13 +743,8 @@
     "notice": {
       "type": "object",
       "properties": {
-        "corpus_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "quote_ar": {
-          "type": "string",
-          "minLength": 1
+        "evidence": {
+          "$ref": "#/$defs/evidence"
         },
         "note_ar": {
           "type": "string",
@@ -682,8 +752,7 @@
         }
       },
       "required": [
-        "corpus_id",
-        "quote_ar",
+        "evidence",
         "note_ar"
       ],
       "additionalProperties": false

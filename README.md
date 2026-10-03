@@ -187,7 +187,9 @@ ruff format --check .
 uvicorn api.main:app --no-access-log
 ```
 
-Set `OPENAI_API_KEY` in the process environment; no `.env` file is loaded automatically.
+Set `OPENAI_API_KEY` in the process environment for normal startup; no `.env` file is loaded automatically.
+With `HEALTH_ONLY=true`, startup requires neither an API key nor policy/tuning files;
+only degraded health is available, with API documentation and verification unavailable.
 `.env.example` lists empty key/model settings. Model IDs are environment configuration, with no
 model calls in this scaffold. Set `CORS_ORIGINS` to a JSON array of exact frontend origins; the default
 allows none. Set `BUILD_SHA` to the deployed commit SHA. Disable server access logs as shown above
@@ -195,7 +197,7 @@ because paths and query strings can contain user text. No request body or except
 by application code or included in error responses.
 
 P-08 provides `api/policy/content_policy.yaml` and `api/tuning.yaml`; override their locations with
-`CONTENT_POLICY_PATH` and `TUNING_PATH` when needed. Startup fails on a missing API key, missing/invalid config, or
+`CONTENT_POLICY_PATH` and `TUNING_PATH` when needed. Normal startup fails on a missing API key, missing/invalid config, or
 any word-budget tier exceeding the policy ceiling, zero budgets, or decreasing budgets across
 length bands. The schema validates confidence floors and the Trigger B minimum window. Startup errors
 identify the config path and field without echoing values. This reads metadata and limits only; it does
@@ -226,7 +228,7 @@ transcription and ingestion routes are not implemented by this PR. Errors use th
 - Service type: Python web service `tabayyan-api-v0`, using [render.yaml](render.yaml).
 - Plan: Free; manual deployment.
 - Branch: `main`.
-- Dashboard env vars: `OPENAI_API_KEY` (production key), `HEALTH_ONLY=true`,
+- Dashboard env vars: `HEALTH_ONLY=true` (no `OPENAI_API_KEY` required),
   `CORS_ORIGINS=[]` until the web origin exists, `BUILD_SHA` (deployed commit),
   `PYTHON_VERSION=3.11.9`. Enter values only in Render.
 - Health path: `/health`.

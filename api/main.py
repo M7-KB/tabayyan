@@ -15,9 +15,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        settings.require_key()
         policy, tuning = (None, None)
         if not settings.health_only:
+            settings.require_key()
             policy, tuning = load_config(settings.content_policy_path, settings.tuning_path)
         app.state.policy = policy
         app.state.tuning = tuning

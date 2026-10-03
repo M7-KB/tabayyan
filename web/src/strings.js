@@ -28,4 +28,31 @@ export const strings = {
   uploadNoConsentHint: 'ضع علامة على خانة الموافقة لتفعيل الرفع.',
   uploadSubmit: 'رفع المقطع',
   consent: 'أؤكد أن لدي حق مشاركة هذا المقطع لغرض التحقق',
+
+  // Card UI (T-505). Two strings are owner-given and come from api/policy/content_policy.yaml:
+  // stateLabels.supported_contradicts and sourceTextIntro. Everything else in this block is
+  // PROVISIONAL: it is not in SPEC.md or the policy file yet, and needs owner and Sharia specialist
+  // approval (SPEC.md §12 item 1) before release.
+  stateLabels: {
+    supported_confirms: 'مدعوم بالمصدر المعتمد',
+    supported_contradicts: 'لا يطابق المصدر المعتمد',
+    disputed: 'توجد مواقف مختلفة في المصادر',
+    cannot_confirm: 'لا يمكن التأكد من المصدر المعتمد',
+  },
+  sourceTextIntro: 'النص كما ورد في المصدر:',
+  claimHeading: 'الادعاء كما أُدخل',
+  timestampFrom: 'من',
+  timestampTo: 'إلى',
+  explanationHeading: 'شرح مُولَّد بالذكاء الاصطناعي',
+  scriptureLabel: 'نص من المصدر',
+  sourceLink: 'المصدر',
+  gradingLabel: 'الحكم',
+  positionsHeading: 'المواقف المختلفة، بلا ترتيب',
+  misquoteHeading: 'ملاحظة: نص قريب من نص في المصدر',
+  cannotConfirmBody: 'لم نجد في المصادر المعتمدة ما يكفي للتأكد من هذا الادعاء.',
+  referralHeading: 'جهة مرجعية للفتوى',
+  readyQuestionHeading: 'سؤال جاهز للطرح',
+  termHeading: 'المصطلح',
+  verifyHeading: 'كيف تتحقق بنفسك؟',
+  devPreviewBanner: 'بيانات تجريبية للعرض فقط، ولا تمثل مصدراً معتمداً.',
 }

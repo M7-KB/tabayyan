@@ -183,6 +183,17 @@ only, because those are the input kinds the UI accepts; image input is P2. No AP
 handlers are empty until T-504, and the UI does not read `VITE_API_URL` yet. Fonts are self-hosted (`@fontsource/ibm-plex-sans-arabic`), so the page does not load
 third-party font CDNs.
 
+## Card UI (T-505)
+
+`web/src/components/card/` renders one evidence card per claim: state badge keyed on
+`state_label_key`, the user's claim in `data-role="user-text"`, scripture in `data-role="scripture"`,
+generated explanation in `data-role="explanation"`, plus positions, misquote notice, referral, term and a
+collapsible "how to verify" block. Card tests load the P-07 fixtures in `contracts/fixtures/`.
+
+The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
+preview is compiled out of production builds. Arabic labels other than `supported_contradicts` are
+provisional until owner and specialist approval (SPEC.md §12 item 1).
+
 ## API scaffold (T-401)
 
 Python 3.11+. From the repository root:

@@ -3,6 +3,7 @@ import { strings } from '../strings.js'
 
 function allValues(value) {
   if (Array.isArray(value)) return value.flatMap(allValues)
+  if (value && typeof value === 'object') return Object.values(value).flatMap(allValues)
   return [value]
 }
 

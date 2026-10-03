@@ -1,0 +1,139 @@
+.claim-card {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #b8b3a6;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.claim-card h3 {
+  margin: 1rem 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+.claim-card h4 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.state-badge {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 2px solid currentColor;
+}
+
+.state-badge[data-state='supported_confirms'] {
+  color: #1d5135;
+  background: #e3f1ea;
+}
+
+.state-badge[data-state='supported_contradicts'] {
+  color: #7a1f1f;
+  background: #f8e4e4;
+}
+
+.state-badge[data-state='disputed'] {
+  color: #5a3d00;
+  background: #fbefcf;
+}
+
+.state-badge[data-state='cannot_confirm'] {
+  color: #2d3a4a;
+  background: #e6ebf1;
+}
+
+.claim-block {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-inline-start: 4px solid #6b6b6b;
+  background: #f4f4f2;
+}
+
+.claim-block blockquote {
+  margin: 0;
+}
+
+.timestamp,
+.source-intro,
+.abstain {
+  margin: 0.5rem 0 0;
+}
+
+.scripture-block {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #1f5f4b;
+  border-radius: 0.5rem;
+  background: #f1f8f5;
+}
+
+.scripture-block .quote {
+  margin: 0.25rem 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.quote-en {
+  font-size: 1rem;
+}
+
+.source-meta,
+.grading,
+.source-link {
+  margin: 0.25rem 0;
+  font-size: 0.95rem;
+}
+
+.explanation-block {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-inline-start: 4px dashed #8a5a00;
+  background: #fffaf0;
+}
+
+.explanation-block h3 {
+  margin-top: 0;
+}
+
+.explanation-block p {
+  margin: 0.25rem 0;
+}
+
+.misquote-notice,
+.term-block,
+.referral-block {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #b8b3a6;
+  border-radius: 0.5rem;
+}
+
+.referral-block p,
+.term-block p {
+  margin: 0.25rem 0;
+}
+
+.verify {
+  margin-top: 0.75rem;
+}
+
+.verify summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.dev-banner {
+  margin: 1rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border: 2px dashed #8a5a00;
+  background: #fff4dc;
+}

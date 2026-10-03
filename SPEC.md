@@ -523,12 +523,14 @@ Field rules, enforced by `contracts/card.schema.json` and by the gates:
   "text_en": "verbatim English text, only for domain quran_translation and glossary",
   "translation_of": "quran:2:255",
   "ref": { "collection": "صحيح البخاري", "number": "1", "book_ar": "…" },
-  "grading": { "grade_ar": "صحيح", "grader_ar": "…", "grading_source_url": "https://…" },
+  "grading": { "grade_ar": "صحيح", "grader_ar": "…", "grading_source_id": "dorar-hadith",
+               "grading_source_url": "https://dorar.net/…" },
   "lang": "ar",
   "license": "…",
   "license_url": "https://…",
   "retrieved_at": "2026-10-02",
   "checksum_sha256": "…",
+  "checksum_en_sha256": "… — required iff text_en is required (rule 8)",
   "approved_by": "sharia-reviewer-1 | pending"
 }
 ```
@@ -553,18 +555,33 @@ negation to `.gitignore` and stages only the files whose redistribution licence 
 Never force-add an uncleared file. PR #13 owns the default ignore rules; P-04 does not duplicate them.
 
 **Derived fields.** `text_normalized` and `checksum_sha256` are produced by the shared normalizer (T-402).
-Ingestion that runs before the normalizer exists fills the authored fields only and leaves the two
-derived fields empty; T-403 fills them once T-402 lands, and the validator then enforces rules 3 and 4.
+`checksum_en_sha256` is a plain SHA-256 of `text_en`'s original UTF-8 bytes — no normalization, stripping
+or language concatenation, no normalizer involved, but filled on the same schedule since it needs the
+same ingestion tooling. Ingestion that runs before that tooling exists fills the authored fields only and
+leaves these derived fields empty; T-403 fills them once T-402 lands, and the validator then enforces
+rules 3, 4 and 8's checksum clause.
 
 Validator rules (`corpus/validate.py`, runs in CI):
 1. `source_id` must be in the approved allowlist derived from `docs/challenge-brief.md` §"Approved references by domain". Unknown source → build fails.
-2. `domain == "hadith"` → `grading` required and complete. (Non-negotiable 1.)
+2. `domain == "hadith"` → `grading` required and complete, **and `grading.grading_source_id` must itself
+   resolve through rule 1/5's allowlist-and-register check** (a licence-cleared, registered source, same
+   gate the collection `source_id` passes), **and `grading_source_url` must be an HTTPS URL on that
+   registered source's own host** — the brief names `dorar.net` as the one approved grading authority
+   (`docs/challenge-brief.md`, approved references by domain), so it has to be registered and cleared
+   like any other source, not hard-coded as a string. The hadith *collection* `source_id` being approved
+   never by itself establishes grading provenance — grading is attested by a separate, separately
+   registered source. (Non-negotiable 1; @Nami, PR #22 blocker 1.)
 3. `text_ar` non-empty, and `checksum_sha256` matches `text_ar`. Guards silent edits.
 4. `text_normalized` must be reproducible from `text_ar` by the shared normalizer. Guards hand-edited index drift.
 5. `license` and `license_url` required, and must appear in `SOURCES.md`. (Non-negotiable 5.)
 6. `corpus_id` unique.
 7. No corpus item may be used in a card while `approved_by == "pending"` once the Sharia specialist review is in place.
-8. `domain == "quran_translation"` → `text_en` and `translation_of` required, and `translation_of` must resolve to an existing `quran` item. `domain == "glossary"` → `text_en` required.
+8. `domain == "quran_translation"` → `text_en` and `translation_of` required, and `translation_of` must
+   resolve to an existing `quran` item. `domain == "glossary"` → `text_en` required. **Either way,
+   `checksum_en_sha256` must match `text_en`'s original UTF-8 bytes, unnormalized** — the same
+   silent-edit guard rule 3 gives `text_ar`, extended to the other language the product displays
+   verbatim. A record with `text_en` and a stale or absent `checksum_en_sha256` fails this rule. (@Nami,
+   PR #22 blocker 2.)
 
 ### 4.3 Test-set item  (`eval/testset.jsonl`, one object per line)
 

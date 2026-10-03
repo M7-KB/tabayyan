@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     content_policy_path: Path = ROOT / "api/policy/content_policy.yaml"
     tuning_path: Path = ROOT / "api/tuning.yaml"
     build_sha: str = "unknown"
+    health_only: bool = False
 
     @field_validator("cors_origins")
     @classmethod

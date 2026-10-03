@@ -149,6 +149,54 @@ artifact versions. It is a scaffold liveness response, not a release-readiness c
 transcription and ingestion routes are not implemented by this PR. Errors use the SPEC envelope
 `error: {code, message_ar, message_en}` with fixed text that does not echo input.
 
+## First Render API deployment (T-420)
+
+The [Render Blueprint](render.yaml) runs the scaffold in explicit `HEALTH_ONLY=true` mode.
+This mode requires the dashboard key but makes no model calls and does not load policy, tuning,
+corpus or synthetic fixtures. Only `GET /health` is registered; verification, ingestion,
+transcription and documentation routes are unavailable. Normal scaffold startup remains strict:
+with `HEALTH_ONLY` unset or false, missing/invalid policy and tuning still fail startup.
+
+The owner creates the Render account and enters the production key directly in its dashboard.
+Never send it in chat or put it in a file. In Render, create a Blueprint from this public repository,
+select branch `ops/deploy-api-v0`, and use `render.yaml`. Its free plan and disabled auto-deploy
+are explicit. Do not provision a second service if `tabayyan-api-v0` already exists; configure the
+existing service with the same build/start commands and branch instead.
+
+Enter these values in the Render dashboard only (the Blueprint contains names, no values):
+
+| Variable | Dashboard value |
+|---|---|
+| `OPENAI_API_KEY` | Owner's production key; required at startup, unused by health-only mode |
+| `HEALTH_ONLY` | `true` |
+| `CORS_ORIGINS` | `[]` until the web origin exists, then a JSON array of exact HTTPS web origins |
+| `BUILD_SHA` | Exact reviewed commit being deployed, from `git rev-parse HEAD` |
+| `PYTHON_VERSION` | `3.11.9` (the version used for local validation) |
+
+Build command: `python -m pip install .`. Start command:
+`uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log`.
+Health check path: `/health`. Leave root directory at repository root, use no persistent disk,
+and trigger deployment manually after Nami's exact-head review. Match the Render deployment's
+commit with `BUILD_SHA`; that field is configured metadata, not independent proof of the deployed code.
+
+After Render shows the service live, record its actual public URL and smoke-test:
+
+```sh
+curl --fail --silent --show-error https://YOUR-SERVICE.onrender.com/health
+curl --silent --show-error -X POST https://YOUR-SERVICE.onrender.com/verify
+```
+
+The first request must return HTTP 200 with `status: degraded`, `corpus_items: 0`,
+`policy_approved_by: pending`, null `corpus_version`, `policy_version`, `tuning_version` and
+`card_schema_version`, and the reviewed `build` SHA. The second must return HTTP 404 in the fixed
+error envelope; never send real user input during this smoke test. Once a frontend origin is set,
+check `/health` with its `Origin` header and confirm only that origin receives the CORS allow header.
+The owner inspects Render logs for G11 and posts the evidence. A local smoke pass or this runbook
+does not prove a public deployment, G11, or G18 dashboard setup; record those separately.
+
+Render setup references: [FastAPI deployment](https://render.com/docs/deploy-fastapi) and
+[Blueprint fields](https://render.com/docs/blueprint-spec).
+
 ## Source register (P-03)
 
 See [SOURCES.md](SOURCES.md) for candidate sources, uses and licence evidence. All 13 entries

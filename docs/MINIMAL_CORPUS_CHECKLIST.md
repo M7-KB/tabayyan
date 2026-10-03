@@ -26,6 +26,12 @@ behavior explicit; do not describe this selection as a passing 80–100-item eva
 
 ## Owner file handoff
 
+The [specialist selection and safety test plan](SPECIALIST_SELECTION_TEST_PLAN.md)
+adds five test-input-only selections requested in the owner's Oct 3 night update.
+They are not corpus additions. The [per-item owner download list](OWNER_DOWNLOAD_LIST.md)
+defines target filenames and exact local paths; missing item URLs remain pending
+specialist selection. The owner performs every download and sends the handoff.
+
 1. Place only selected, permission-cleared source files in the manifest's `data/raw/`
    directories. Keep permission evidence with the source metadata. Unclear files remain
    excluded from ingestion and public commits, including derived excerpts and indexes.

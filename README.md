@@ -280,6 +280,18 @@ corpus selections belong to the separate [checklist PR #33](https://github.com/M
 Run the standalone register contract checks with `node --test tests/*.test.mjs`.
 CI checks headers, unique IDs, required license fields and the closed domain enum.
 
+The [dated organizer reply](SOURCES.md#partner-approval-for-challenge-use-2026-10-03)
+records partner approval for challenge use; redistribution remains **needs owner action**.
+Use the [specialist selection/test plan](docs/SPECIALIST_SELECTION_TEST_PLAN.md) and
+[owner download list](docs/OWNER_DOWNLOAD_LIST.md) for the five additional safety inputs
+and per-item file handoff. Exact religious selections and missing item URLs remain
+pending the specialist. Only the owner downloads; these documents add no corpus or
+executable test inputs and grant no licence or specialist approval.
+The plan separates hadith NEAR_MISS notices from semantic contradiction variants
+and explicitly records T11's conditional Quran correction policy under SPEC 5.2–5.4.
+Both altered-word slots leave their final level/state/alignment as open specialist
+questions; missing cleared evidence always requires abstention and referral.
+
 ## Manual source collection (P-04)
 
 Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner download checklist,

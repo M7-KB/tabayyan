@@ -49,6 +49,7 @@ export const strings = {
   translationLabel: 'ترجمة من المصدر',
   translationSourceLink: 'مصدر الترجمة',
   gradingLabel: 'الحكم',
+  gradingSourceLink: 'مصدر الحكم',
   positionsHeading: 'المواقف المختلفة، بلا ترتيب',
   misquoteHeading: 'ملاحظة: نص قريب من نص في المصدر',
   cannotConfirmBody: 'لم نجد في المصادر المعتمدة ما يكفي للتأكد من هذا الادعاء.',

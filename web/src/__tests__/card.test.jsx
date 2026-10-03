@@ -217,6 +217,32 @@ describe('misquote notice', () => {
     expect(container.querySelector('.misquote-notice')).toBeNull()
   })
 
+  it('shows the grading source as its own labelled link, distinct from the collection source link', () => {
+    const { container } = render(<ClaimCard card={withMisquote} />)
+    const notice = container.querySelector('.misquote-notice')
+    const gradingLink = within(notice).getByRole('link', { name: strings.gradingSourceLink })
+    const sourceLink = within(notice).getByRole('link', { name: strings.sourceLink })
+    expect(gradingLink).toHaveAttribute('href', misquoteEvidence.grading.grading_source_url)
+    expect(sourceLink).toHaveAttribute('href', misquoteEvidence.source_url)
+    expect(gradingLink.getAttribute('href')).not.toBe(sourceLink.getAttribute('href'))
+  })
+
+  it.each([
+    ['an empty grading object', {}],
+    ['a grading object missing grader_ar', { grade_ar: 'حكم تجريبي', grading_source_url: 'https://example.invalid/g' }],
+    ['a grading object with an empty grade_ar', { grade_ar: '  ', grader_ar: 'جهة', grading_source_url: 'https://example.invalid/g' }],
+    ['a grading source that is not https', { grade_ar: 'حكم', grader_ar: 'جهة', grading_source_url: 'http://example.invalid/g' }],
+  ])('does not render a hadith notice with %s', (_label, grading) => {
+    const partial = {
+      ...cannotConfirm,
+      misquote_notice: { evidence: { ...misquoteEvidence, grading }, note_ar: 'شرح مولّد تجريبي للتنبيه' },
+    }
+    const { container } = render(<ClaimCard card={partial} />)
+    expect(screen.queryByText(strings.misquoteHeading)).toBeNull()
+    expect(screen.queryByText(misquoteEvidence.quote_ar)).toBeNull()
+    expect(container.querySelector('.misquote-notice')).toBeNull()
+  })
+
   it('does not render a hadith notice that has no grading', () => {
     const ungraded = {
       ...cannotConfirm,

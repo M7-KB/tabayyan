@@ -193,8 +193,10 @@ collapsible "how to verify" block. An approved English translation renders insid
 It is omitted when the evidence has no translation. Card tests load the P-07 fixtures in `contracts/fixtures/`.
 
 The misquote notice reads the nested `misquote_notice = { evidence, note_ar }` shape from PR #36 (f532439). Its
-`evidence` is shown with the same scripture block as `evidence[]`: source name, reference, grading, quote and source link.
-The notice is not shown when `evidence` is missing, or when a hadith notice has no grading. The legacy flat
+`evidence` is shown with the same scripture block as `evidence[]`: source name, reference, grading (grade and grader),
+the grading source link (`grading.grading_source_url`, labelled separately from the collection source link), quote and source link.
+The notice is not shown when `evidence` is missing, or when a hadith notice does not have complete grading (`grade_ar`,
+`grader_ar` and an https `grading_source_url`, all non-empty). The legacy flat
 `{ corpus_id, quote_ar, note_ar }` shape is never rendered. Until #36 lands, the P-07 fixtures still hold the flat
 notice, so the preview does not show a notice for `supported_confirms`.
 

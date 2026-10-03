@@ -16,6 +16,11 @@ describe('product strings', () => {
     expect(strings.consent).toBe('أؤكد أن لدي حق مشاركة هذا المقطع لغرض التحقق')
   })
 
+  it('do not promise image handling, since image input is P2 and not in the UI', () => {
+    const privacy = strings.privacyLines.join(' ')
+    expect(privacy).not.toContain('صور')
+  })
+
   it('use the exact AI disclosure text (SPEC.md §8)', () => {
     expect(strings.aiNotice).toBe('هذه أداة ذكاء اصطناعي، وليست فتوى.')
   })

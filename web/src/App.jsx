@@ -13,6 +13,7 @@ export default function App() {
       <a className="skip-link" href="#main">
         {strings.skipToContent}
       </a>
+      <p className="preview-banner">{strings.previewBanner}</p>
       <header className="app-header">
         <h1>{strings.appName}</h1>
         <p>{strings.tagline}</p>

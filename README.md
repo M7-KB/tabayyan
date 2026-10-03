@@ -183,6 +183,34 @@ only, because those are the input kinds the UI accepts; image input is P2. No AP
 handlers are empty until T-504, and the UI does not read `VITE_API_URL` yet. Fonts are self-hosted (`@fontsource/ibm-plex-sans-arabic`), so the page does not load
 third-party font CDNs.
 
+## Card UI (T-505)
+
+`web/src/components/card/` renders one evidence card per claim: state badge keyed on
+`state_label_key`, the user's claim in `data-role="user-text"`, scripture in `data-role="scripture"`,
+generated explanation in `data-role="explanation"`, plus positions, misquote notice, referral, term and a
+collapsible "how to verify" block. An approved English translation renders inside the scripture block in
+`data-role="translation"`, after the Arabic quote and source link, with its own source link (`translation.source_url`).
+It is omitted when the evidence has no translation. Card tests load the P-07 fixtures in `contracts/fixtures/`.
+
+The misquote notice reads the nested `misquote_notice = { evidence, note_ar }` shape from PR #36 (f532439). Its
+`evidence` is shown with the same scripture block as `evidence[]`: source name, reference, grading (grade and grader),
+the grading source link (`grading.grading_source_url`, labelled separately from the collection source link), quote and source link.
+The notice is not shown when `evidence` is missing, or when a hadith notice does not have complete grading (`grade_ar`,
+`grader_ar` and an https `grading_source_url`, all non-empty). The legacy flat
+`{ corpus_id, quote_ar, note_ar }` shape is never rendered. The P-07 fixtures use the nested shape, so the
+`supported_confirms` preview shows a notice.
+
+The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
+preview is compiled out of production builds. The state labels follow the SPEC.md §12 item 1 table; all
+except `supported_contradicts` are provisional until owner and specialist approval.
+
+Layout is mobile-first: the base rules are the 375px baseline, with a compact rule at 23.4375rem and below
+and a desktop rule from 48rem that widens the reading column. Headless Chrome (puppeteer-core) on 2026-10-03
+measured `scrollWidth` equal to the viewport at 375, 768 and 1280px, on the input screen and on the card preview
+with a nested misquote notice (temporary fixture, not committed). No element extended past the viewport.
+`web/src/__tests__/layout.test.js` only checks that the breakpoints exist. Label approval for the provisional
+Arabic strings is still open (SPEC.md §12 item 1).
+
 ## API scaffold (T-401)
 
 Python 3.11+. From the repository root:

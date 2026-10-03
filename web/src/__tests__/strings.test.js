@@ -3,6 +3,7 @@ import { strings } from '../strings.js'
 
 function allValues(value) {
   if (Array.isArray(value)) return value.flatMap(allValues)
+  if (value && typeof value === 'object') return Object.values(value).flatMap(allValues)
   return [value]
 }
 
@@ -23,5 +24,15 @@ describe('product strings', () => {
 
   it('use the exact AI disclosure text (SPEC.md §8)', () => {
     expect(strings.aiNotice).toBe('هذه أداة ذكاء اصطناعي، وليست فتوى.')
+  })
+
+  it('use the state labels from the SPEC.md §12 table', () => {
+    expect(strings.stateLabels).toEqual({
+      supported_confirms: 'يؤيده المصدر المعتمد',
+      supported_contradicts: 'لا يطابق المصدر المعتمد',
+      disputed: 'مسألة مختلف فيها',
+      cannot_confirm: 'لا يمكن التأكد من المصادر المتاحة',
+    })
+    expect(strings.sourceTextIntro).toBe('النص كما ورد في المصدر:')
   })
 })

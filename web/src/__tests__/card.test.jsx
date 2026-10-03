@@ -33,6 +33,21 @@ const hadithContradicts = {
   ],
 }
 
+const withTranslation = {
+  ...supportedContradicts,
+  evidence: [
+    {
+      ...supportedContradicts.evidence[0],
+      translation: {
+        corpus_id: 'quran_translation:synthetic:1',
+        text_en: 'Synthetic English translation',
+        source_id: 'synthetic-translation',
+        source_url: 'https://example.invalid/translation',
+      },
+    },
+  ],
+}
+
 const timedClaim = {
   ...supportedConfirms,
   claim: { ...supportedConfirms.claim, time_span: { start_s: 41.2, end_s: 48.9 } },
@@ -105,6 +120,27 @@ describe('evidence and grading', () => {
       'href',
       supportedConfirms.evidence[0].source_url,
     )
+  })
+
+  it('shows the English translation with its own source link, separate from the Arabic source', () => {
+    const { container } = render(<ClaimCard card={withTranslation} />)
+    const translation = container.querySelector('[data-role="translation"]')
+    expect(translation).toHaveTextContent('Synthetic English translation')
+    expect(translation.closest('[data-role="scripture"]')).not.toBeNull()
+    expect(within(translation).getByRole('link', { name: strings.translationSourceLink })).toHaveAttribute(
+      'href',
+      withTranslation.evidence[0].translation.source_url,
+    )
+    expect(screen.getByRole('link', { name: strings.sourceLink })).toHaveAttribute(
+      'href',
+      withTranslation.evidence[0].source_url,
+    )
+  })
+
+  it('renders no translation block when the evidence has no approved translation', () => {
+    const { container } = render(<ClaimCard card={supportedConfirms} />)
+    expect(container.querySelector('[data-role="translation"]')).toBeNull()
+    expect(screen.queryByRole('link', { name: strings.translationSourceLink })).toBeNull()
   })
 })
 

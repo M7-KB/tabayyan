@@ -188,7 +188,9 @@ third-party font CDNs.
 `web/src/components/card/` renders one evidence card per claim: state badge keyed on
 `state_label_key`, the user's claim in `data-role="user-text"`, scripture in `data-role="scripture"`,
 generated explanation in `data-role="explanation"`, plus positions, misquote notice, referral, term and a
-collapsible "how to verify" block. Card tests load the P-07 fixtures in `contracts/fixtures/`.
+collapsible "how to verify" block. An approved English translation renders inside the scripture block in
+`data-role="translation"`, after the Arabic quote and source link, with its own source link (`translation.source_url`).
+It is omitted when the evidence has no translation. Card tests load the P-07 fixtures in `contracts/fixtures/`.
 
 The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
 preview is compiled out of production builds. Arabic labels other than `supported_contradicts` are

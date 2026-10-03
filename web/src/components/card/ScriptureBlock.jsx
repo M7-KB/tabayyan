@@ -19,16 +19,23 @@ export function ScriptureBlock({ item }) {
       <blockquote className="quote" lang="ar" dir="rtl">
         {item.quote_ar}
       </blockquote>
-      {item.translation && (
-        <blockquote className="quote quote-en" lang="en" dir="ltr">
-          {item.translation.text_en}
-        </blockquote>
-      )}
       <p className="source-link">
         <a href={item.source_url} rel="noopener noreferrer">
           {strings.sourceLink}
         </a>
       </p>
+      {item.translation && (
+        <section className="translation-block" data-role="translation" aria-label={strings.translationLabel}>
+          <blockquote className="quote quote-en" lang="en" dir="ltr">
+            {item.translation.text_en}
+          </blockquote>
+          <p className="source-link">
+            <a href={item.translation.source_url} rel="noopener noreferrer">
+              {strings.translationSourceLink}
+            </a>
+          </p>
+        </section>
+      )}
     </section>
   )
 }

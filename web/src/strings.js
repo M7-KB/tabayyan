@@ -46,6 +46,8 @@ export const strings = {
   explanationHeading: 'شرح مُولَّد بالذكاء الاصطناعي',
   scriptureLabel: 'نص من المصدر',
   sourceLink: 'المصدر',
+  translationLabel: 'ترجمة من المصدر',
+  translationSourceLink: 'مصدر الترجمة',
   gradingLabel: 'الحكم',
   positionsHeading: 'المواقف المختلفة، بلا ترتيب',
   misquoteHeading: 'ملاحظة: نص قريب من نص في المصدر',

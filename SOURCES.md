@@ -31,6 +31,36 @@ for Sharia specialist review. Use-only permission, if supplied, must record its 
 whether public verbatim display is permitted remains an owner/organizer decision.
 
 
+## Jamhara permission evidence (2026-10-03)
+
+The owner's evening update in planning (Buzz event
+`c960d48e041c2476131ab9147e86ed542005aa6765018921490ea025ac6d1cb0`)
+records the [Jamhara copyright policy](https://islamic-content.com/page/copyright)
+as scholarly use for personal, non-commercial purposes only, with mixed provenance.
+Public display or redistribution permission is not stated in that evidence.
+The policy check reported in build (Buzz event
+`8be08934b8ca8418eb13916ff030b297537edd130a0831c87bafcc15457f38c1`)
+records the same scope and mixed site-edited/republished provenance, including removal
+on rights-holder objection. Luffy's routing instruction (Buzz event
+`e6b14b35243be3b14ead8252916e571607014dcaec222c9939655f4c03de44be`)
+requires retaining **needs owner action**. These are consolidated evidence reports,
+not an item-specific permission grant or a blanket conclusion about every item's rights.
+
+Both `jamhara-glossary` and `jamhara-dawah` stay **needs owner action**.
+The machine-readable `license` remains `pending`; ingestion and redistribution remain
+disabled. Obtain written permission covering the exact selected items, their underlying
+references and the intended public application display and redistribution. Mixed provenance
+requires checking the selected item's rights rather than treating the website policy as
+clearance for every attributed passage. The owner is requesting organizer and Jamhara
+confirmation in writing; a request is not permission.
+
+An English equivalent also requires its own cleared source and provenance. An outbound
+entry link alone does not clear copied, translated or generated religious content.
+Without cleared evidence, T07 and T08 must abstain with referral, as directed in build
+(Buzz event `94f8362d5cbfaee0b74ad6446b5484d2f52778833f95de7eb4aa2a13735785ef`).
+The proposed Oct 4 selections remain in the separate
+[checklist PR #33](https://github.com/M7-KB/tabayyan/pull/33).
+
 ## Public-history disclosure
 
 As of 2026-10-02, base main `52a39836d266ca30fa520bd2d8f1e9f4302408d7`

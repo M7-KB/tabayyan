@@ -1,14 +1,10 @@
 # Per-item owner download list
 
-Prepared 2026-10-03 for the owner to fill after specialist selection.
-Authority: the owner-provided acquisition request dated 2026-10-03.
+Updated from owner late October 3 selection, planning event `d729c72249f924f9d0e64e3220f943b15b0b36037e5f35f02d4ad7743e102f26`.
 **Only the owner downloads and places files. No agent downloads anything.**
-No selected verse range, numbered hadith, grading permalink, altered input or fiqh
-question has been supplied to this task. `Pending` is a missing exact item URL,
-not a download link. Collection/search home pages in
-[DOWNLOAD_MANIFEST.md](DOWNLOAD_MANIFEST.md) are starting points only; never substitute
-them for an exact selected page. The known Tawhid Arabic page below is an existing
-manifest reference, not a new download or verification.
+Numbers and grading URLs are owner-supplied; specialist review remains pending.
+Exact KFC package and edition-page URLs still await owner handoff. Pending is
+not a download link. Permission and ingestion gates remain unchanged.
 
 ## Original evidence files
 
@@ -18,15 +14,15 @@ record its actual extension and update the exact target path before acquisition.
 
 | Item | Exact page/file URL | Target filename | Exact path relative to repo root |
 |---|---|---|---|
-| Selected KFC Hafs package | Pending exact package URL/version | SELECTED_HAFS_PACKAGE.json | `data/raw/kfc-mushaf/SELECTED_HAFS_PACKAGE.json` |
-| Bukhari 1 selected numbered page | Pending specialist selection | BUKHARI_01.html | `data/raw/sahih-bukhari/BUKHARI_01.html` |
-| Bukhari 2 selected numbered page | Pending specialist selection | BUKHARI_02.html | `data/raw/sahih-bukhari/BUKHARI_02.html` |
-| Muslim 1 selected numbered page | Pending specialist selection | MUSLIM_01.html | `data/raw/sahih-muslim/MUSLIM_01.html` |
-| Muslim 2 selected numbered page | Pending specialist selection | MUSLIM_02.html | `data/raw/sahih-muslim/MUSLIM_02.html` |
-| Bukhari 1 matching Dorar grading | Pending exact matching permalink | BUKHARI_01_GRADING.html | `data/raw/dorar-hadith/BUKHARI_01_GRADING.html` |
-| Bukhari 2 matching Dorar grading | Pending exact matching permalink | BUKHARI_02_GRADING.html | `data/raw/dorar-hadith/BUKHARI_02_GRADING.html` |
-| Muslim 1 matching Dorar grading | Pending exact matching permalink | MUSLIM_01_GRADING.html | `data/raw/dorar-hadith/MUSLIM_01_GRADING.html` |
-| Muslim 2 matching Dorar grading | Pending exact matching permalink | MUSLIM_02_GRADING.html | `data/raw/dorar-hadith/MUSLIM_02_GRADING.html` |
+| KFC Hafs package: 2:255; 51:56-60; 35:28; 112:1-4; no tafsir | Pending exact KFC package URL/version | SELECTED_HAFS_PACKAGE.json | `data/raw/kfc-mushaf/SELECTED_HAFS_PACKAGE.json` |
+| Bukhari 8 edition text | Pending exact selected edition file/page | BUKHARI_8.html | `data/raw/sahih-bukhari/BUKHARI_8.html` |
+| Bukhari 8 Dorar grading | https://dorar.net/h/JDqeTpYd | BUKHARI_8_GRADING.html | `data/raw/dorar-hadith/BUKHARI_8_GRADING.html` |
+| Bukhari 7556 edition text | Pending exact selected edition file/page | BUKHARI_7556.html | `data/raw/sahih-bukhari/BUKHARI_7556.html` |
+| Bukhari 7556 Dorar grading | https://dorar.net/h/f5wEbcxS | BUKHARI_7556_GRADING.html | `data/raw/dorar-hadith/BUKHARI_7556_GRADING.html` |
+| Bukhari 63 edition text | Pending exact selected edition file/page | BUKHARI_63.html | `data/raw/sahih-bukhari/BUKHARI_63.html` |
+| Bukhari 63 Dorar grading | https://dorar.net/h/QPGgH3Qa | BUKHARI_63_GRADING.html | `data/raw/dorar-hadith/BUKHARI_63_GRADING.html` |
+| Bukhari 1399 edition text | Pending exact selected edition file/page | BUKHARI_1399.html | `data/raw/sahih-bukhari/BUKHARI_1399.html` |
+| Bukhari 1399 Dorar grading | https://dorar.net/h/pUrPIlDN | BUKHARI_1399_GRADING.html | `data/raw/dorar-hadith/BUKHARI_1399_GRADING.html` |
 | Tawhid Arabic entry | https://islamic-content.com/dictionary/word/3529 | TAWHID_AR.html | `data/raw/jamhara-glossary/TAWHID_AR.html` |
 | Tawhid publisher English entry | Pending exact supplied English URL | TAWHID_EN.html | `data/raw/jamhara-glossary/TAWHID_EN.html` |
 | Sharia Arabic entry | Pending specialist selection | SHARIA_AR.html | `data/raw/jamhara-glossary/SHARIA_AR.html` |
@@ -40,19 +36,32 @@ Fiqh paths assume selected Dorar pages; if the specialist chooses an approved
 school-book edition instead, update the source ID, exact URL, format, path and
 permission register before collection. Add rows for any further positions.
 The altered verse and hadith reuse their selected originals above; record which
-verse and Sahihayn slot they use rather than downloading an invented correction.
+verse reference they use. Bukhari 8 is the proposed altered-hadith base.
+Canonical references are Bukhari numbers; displayed wording comes from the
+edition file, Dorar supplies grading. The owner verified grader and source as
+Bukhari on each page; exact grade text must come from the supplied file.
 
 ## Test-input-only files; never corpus
 
 | Item | Exact page/file URL | Target filename | Exact path relative to repo root |
 |---|---|---|---|
-| weak-01 circulated input | Pending specialist-selected page or supplied file; record `human supplied` if no web URL | WEAK_01_INPUT.txt | `data/raw/test-inputs/WEAK_01_INPUT.txt` |
-| weak-01 documented grading | Pending matching approved grading permalink | WEAK_01_GRADING.html | `data/raw/test-inputs/WEAK_01_GRADING.html` |
-| weak-02 circulated input | Pending specialist-selected page or supplied file; record `human supplied` if no web URL | WEAK_02_INPUT.txt | `data/raw/test-inputs/WEAK_02_INPUT.txt` |
-| weak-02 documented grading | Pending matching approved grading permalink | WEAK_02_GRADING.html | `data/raw/test-inputs/WEAK_02_GRADING.html` |
+| ramadan-fake-01 input | Pending owner-selected exact Dorar fake-hadith page | RAMADAN_FAKE_01_INPUT.txt | `data/raw/test-inputs/RAMADAN_FAKE_01_INPUT.txt` |
+| ramadan-fake-01 provenance | Same exact page; URL pending | RAMADAN_FAKE_01_SOURCE.html | `data/raw/test-inputs/RAMADAN_FAKE_01_SOURCE.html` |
+| ramadan-fake-02 input | Pending owner-selected exact Dorar fake-hadith page | RAMADAN_FAKE_02_INPUT.txt | `data/raw/test-inputs/RAMADAN_FAKE_02_INPUT.txt` |
+| ramadan-fake-02 provenance | Same exact page; URL pending | RAMADAN_FAKE_02_SOURCE.html | `data/raw/test-inputs/RAMADAN_FAKE_02_SOURCE.html` |
+| ramadan-fake-03 input | Pending owner-selected exact Dorar fake-hadith page | RAMADAN_FAKE_03_INPUT.txt | `data/raw/test-inputs/RAMADAN_FAKE_03_INPUT.txt` |
+| ramadan-fake-03 provenance | Same exact page; URL pending | RAMADAN_FAKE_03_SOURCE.html | `data/raw/test-inputs/RAMADAN_FAKE_03_SOURCE.html` |
+| ramadan-fake-04 input | Pending owner-selected exact Dorar fake-hadith page | RAMADAN_FAKE_04_INPUT.txt | `data/raw/test-inputs/RAMADAN_FAKE_04_INPUT.txt` |
+| ramadan-fake-04 provenance | Same exact page; URL pending | RAMADAN_FAKE_04_SOURCE.html | `data/raw/test-inputs/RAMADAN_FAKE_04_SOURCE.html` |
+| ramadan-fake-05 input | Pending owner-selected exact Dorar fake-hadith page | RAMADAN_FAKE_05_INPUT.txt | `data/raw/test-inputs/RAMADAN_FAKE_05_INPUT.txt` |
+| ramadan-fake-05 provenance | Same exact page; URL pending | RAMADAN_FAKE_05_SOURCE.html | `data/raw/test-inputs/RAMADAN_FAKE_05_SOURCE.html` |
 | altered-hadith-01 input | Pending specialist-supplied file; no publisher URL for a mutation | ALTERED_HADITH_01_INPUT.txt | `data/raw/test-inputs/ALTERED_HADITH_01_INPUT.txt` |
 | altered-verse-01 input | Pending specialist-supplied file; no publisher URL for a mutation | ALTERED_VERSE_01_INPUT.txt | `data/raw/test-inputs/ALTERED_VERSE_01_INPUT.txt` |
 | disputed-fiqh-01 question | Pending specialist-supplied file; exact position URLs recorded above | DISPUTED_FIQH_01_INPUT.txt | `data/raw/test-inputs/DISPUTED_FIQH_01_INPUT.txt` |
+
+The five Ramadan inputs expect CANNOT_CONFIRM with referral; never corpus.
+Altered-word verdicts stay open: interim abstention/referral and no executable
+fixtures until specialist answers and approves the altered text.
 
 For a human-authored input, a supplied file is the source: record that provenance
 instead of inventing a page URL. Have the specialist identify altered words and

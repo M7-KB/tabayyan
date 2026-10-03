@@ -1,36 +1,54 @@
 # Oct 4 minimal corpus clearance checklist
 
-Prepared for the owner's **2026-10-04 12:00 Riyadh** file-selection decision.
-Authority: owner evening update, 2026-10-03, planning event
-`c960d48e041c2476131ab9147e86ed542005aa6765018921490ea025ac6d1cb0`;
-[challenge brief](challenge-brief.md), [source register](../SOURCES.md),
-[manual acquisition manifest](DOWNLOAD_MANIFEST.md) and [SPEC](../SPEC.md).
-This is a proposed small selection, not a corpus artifact or permission grant.
-Only files placed by humans in `data/raw/` may become corpus input. No scraping.
+Updated from the owner's late October 3 selection, planning event `d729c72249f924f9d0e64e3220f943b15b0b36037e5f35f02d4ad7743e102f26`.
+This supersedes the earlier proposed verse and Sahihayn selection. Specialist
+review remains pending. Selection grants no licence or runtime approval.
+Only human-provided files in data/raw/ may become corpus input; no scraping.
+See [challenge brief](challenge-brief.md), [SOURCES.md](../SOURCES.md) and [SPEC](../SPEC.md).
 
-## Proposed minimum
+## Owner-selected minimum
 
 | Candidate | Proposed size | Selection and evidence required | Demo purpose |
 |---|---|---|---|
-| `kfc-mushaf` | One exact Hafs text package; initially index a small specialist-selected verse subset | Exact package/version, unchanged Arabic text, surah:ayah references, source URLs and package-specific permission. Specialist selects verse IDs; none is invented here. | Verbatim verse match and a corrected misquote with complete provenance (T11). |
-| `sahih-bukhari` | Two specialist-selected hadith records | Exact edition text, collection + number, source URL and edition-specific permission. Separate matching Dorar records for each item. | Sourced hadith matching. |
-| `sahih-muslim` | Two specialist-selected hadith records | Same per-item requirements as Bukhari, for the selected Muslim edition. | Sourced hadith matching across both collections. |
+| `kfc-mushaf` | 2:255; 51:56-60; 35:28; 112:1-4 (11 verses) | KFC file only, no tafsir. Exact package/version, unchanged text, references and package-specific permission required. Specialist review pending. | Verbatim verse matching; altered-verse verdict remains open, interim abstention/referral, no executable fixture. |
+| `sahih-bukhari` | Bukhari 8, 7556, 63, 1399 | Exact edition files/pages and permission. Canonical ref is the Bukhari number. Displayed wording comes from the edition file; matching Dorar pages supply grading. | Sourced hadith matching after all gates pass. |
 | `dorar-hadith` | One matching grading record per selected hadith | Verbatim grading, named grader, grading reference, exact grading URL and separate permission. Do not infer grading from a collection title. | Required grading provenance for every displayed hadith. |
 | `jamhara-glossary` | Three terms: Tawhid, Sharia, Worship | Exact Arabic entries and publisher-supplied English equivalents, source/reference and permission for each selected item. Tawhid entry: https://islamic-content.com/dictionary/word/3529 . Other exact entry and English URLs remain pending owner selection. | T07/T08 and the culturally loaded term path in T12. |
 
-Counts are an engineering proposal for a short demo, not a religious selection or a
-claim of complete brief coverage. Hadith texts, numbers, gradings and verse selections
-remain pending the human files and specialist review. The minimum does not cover all
-history, disagreement or introductory explanation cases. Keep their missing-source
-behavior explicit; do not describe this selection as a passing 80–100-item evaluation.
+## Exact owner-supplied grading links
+
+| Canonical reference | Dorar grading URL |
+|---|---|
+| Bukhari 8 | https://dorar.net/h/JDqeTpYd |
+| Bukhari 7556 | https://dorar.net/h/f5wEbcxS |
+| Bukhari 63 | https://dorar.net/h/QPGgH3Qa |
+| Bukhari 1399 | https://dorar.net/h/pUrPIlDN |
+
+The owner reports verifying grader and source as Bukhari on each page. This is
+owner-supplied metadata, not agent website verification. Copy exact grade,
+grader and reference only from supplied files; never infer a grade.
+
+## Test inputs only; never corpus
+
+- Five distinct Ramadan claims from Dorar's fake-hadith section, slots
+  ramadan-fake-01 through ramadan-fake-05. Exact wording/page URLs await owner
+  files. Expect CANNOT_CONFIRM with official referral, ready-to-ask question and
+  exactly two verification lines. These are never authentic corpus evidence.
+- Propose Bukhari 8 as the base of altered-hadith-01. The specialist approves
+  the exact altered text, level and verdict; no mutation is authored here.
+- Select altered-verse-01 from the KFC subset with specialist review. Both
+  altered-word verdicts stay open: abstention with referral until answered,
+  no executable fixtures, and no claim of correction coverage.
+- Glossary and disputed-fiqh requests remain pending. This selection does not
+  establish complete brief coverage or a passing 80-100-item evaluation.
 
 ## Owner file handoff
 
 The [specialist selection and safety test plan](SPECIALIST_SELECTION_TEST_PLAN.md)
-adds five test-input-only selections requested in the owner's Oct 3 night update.
+records five Ramadan test-input-only slots and separate altered-word questions.
 They are not corpus additions. The [per-item owner download list](OWNER_DOWNLOAD_LIST.md)
 defines target filenames and exact local paths; missing item URLs remain pending
-specialist selection. The owner performs every download and sends the handoff.
+owner handoff or specialist selection as indicated. The owner performs every download and sends the handoff.
 
 1. Place only selected, permission-cleared source files in the manifest's `data/raw/`
    directories. Keep permission evidence with the source metadata. Unclear files remain
@@ -54,7 +72,7 @@ health-only API already implements verification.
 | Missing clearance | Required demo behavior |
 |---|---|
 | Qur'an package or selected verse | Do not show a source quote or corrected verse. Abstain with CANNOT_CONFIRM, the configured official referral, a ready-to-ask question and two verification lines. T11's sourced correction remains blocked; do not count it as passed. |
-| Either hadith edition or its grading source | Exclude the affected hadith. Never show it with an inferred grade or a grade from an uncleared source. If no other cleared matching evidence exists, use CANNOT_CONFIRM with referral and verification guidance. |
+| Bukhari edition or its grading source | Exclude the affected hadith. Never show it with an inferred grade or a grade from an uncleared source. If no other cleared matching evidence exists, use CANNOT_CONFIRM with referral and verification guidance. |
 | Jamhara glossary | No copied definition, translated definition or generated substitute. Luffy owns the requested T07/T08 fallback: English equivalent plus an outbound entry link. A permitted, verified equivalent and its provenance must be identified before display; the fallback does not create a SUPPORTED definition or close the full sourced-explanation requirement. Missing verified equivalent or exact entry URL remains explicit and abstains. |
 | No cleared and specialist-approved records | Demonstrate the abstention/referral path only. Report empty corpus and unmet source/content gates; do not claim sourced verification or a passing evaluation. |
 

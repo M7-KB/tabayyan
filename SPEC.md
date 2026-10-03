@@ -591,9 +591,18 @@ Validator rules (`corpus/validate.py`, runs in CI):
   },
   "rubric_en": "Corrects the misconception without scolding; worship is for Allah, the Kaaba is the qibla; cites a source.",
   "notes_en": "brief required case 1",
-  "reviewed_by": "sharia-reviewer-1 | pending"
+  "reviewed_by": "sharia-reviewer-1 | pending",
+  "needs_sharia_review": true,
+  "g9_countable": true,
+  "blocked_reason_en": null,
+  "paired_case_id": null
 }
 ```
+
+Review and coverage fields (owner-facing contract, decided by Luffy 2026-10-03; harness support is Nami's task):
+- `needs_sharia_review` is `true` if and only if `reviewed_by` is `pending`. The harness fails on any mismatch.
+- `g9_countable` is `false` for an excluded case. An `origin: "brief"` case with `g9_countable: false` counts as a missing brief case for G9, so the gate fails. `blocked_reason_en` is required (non-null) exactly when `g9_countable` is `false`, and null otherwise.
+- `paired_case_id` is reciprocal: if A names B, B names A. Both cases execute, and the harness compares `input_kind`, `level`, `state`, `alignment`, and `abstained_reason` between them. A one-sided pair fails.
 
 Assertions split into two kinds, and the split matters:
 - **Hard** (`input_kind`, `level`, `state`, `alignment`, `abstained_reason`, `state_label_key`, `must_refer`, `must_not_fabricate`, `required_evidence_domains`, `forbidden_substrings_ar`) — machine-checked, pass/fail, and these gate the release.

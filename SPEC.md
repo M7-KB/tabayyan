@@ -608,9 +608,20 @@ Validator rules (`corpus/validate.py`, runs in CI):
   },
   "rubric_en": "Corrects the misconception without scolding; worship is for Allah, the Kaaba is the qibla; cites a source.",
   "notes_en": "brief required case 1",
-  "reviewed_by": "sharia-reviewer-1 | pending"
+  "reviewed_by": "sharia-reviewer-1 | pending",
+  "needs_sharia_review": true,
+  "g9_countable": true,
+  "blocked_reason_en": null,
+  "paired_case_id": null
 }
 ```
+
+Review and coverage fields (owner-facing contract, decided by Luffy 2026-10-03; harness support is Nami's task):
+- All four fields are required on every record, paired or not. There are no defaults: a record that omits any of them fails to load.
+- `needs_sharia_review` (boolean) is `true` if and only if `reviewed_by` is `pending`. The harness fails on any mismatch.
+- `g9_countable` (boolean) is `false` for an excluded case. An `origin: "brief"` case with `g9_countable: false` counts as a missing brief case for G9, so the gate fails.
+- `blocked_reason_en` (string or null) is a non-empty string exactly when `g9_countable` is `false`, and `null` otherwise.
+- `paired_case_id` (string or null) is `null` for unpaired records. A pair must name a different `case_id` (no self-reference) that exists in the same file, and the target must name the original back. Both cases execute, and the harness compares `input_kind`, `level`, `state`, `alignment`, and `abstained_reason`. Any difference in the actual outputs fails the pair explicitly, and the failure is reported with both case ids. A one-sided, self, or unresolved reference fails.
 
 Assertions split into two kinds, and the split matters:
 - **Hard** (`input_kind`, `level`, `state`, `alignment`, `abstained_reason`, `state_label_key`, `must_refer`, `must_not_fabricate`, `required_evidence_domains`, `forbidden_substrings_ar`) — machine-checked, pass/fail, and these gate the release.

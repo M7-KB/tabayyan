@@ -17,3 +17,10 @@ dist/
 /data/raw/*
 !/data/raw/.gitkeep
 /docs/raw/
+
+# Owner-private corpus and derived indexes never enter the public tree.
+/corpus/corpus.jsonl
+/corpus/private/
+/corpus/index/
+/corpus/indexes/
+/data/private/

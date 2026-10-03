@@ -9,11 +9,13 @@
         "quran"
       ],
       "entry_url": "https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/",
-      "license_status": "pending",
+      "license_status": "confirmed",
       "redistribution_allowed": false,
-      "ingestion_allowed": false,
+      "ingestion_allowed": true,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution"
     },
     {
       "source_id": "sahih-bukhari",
@@ -21,11 +23,13 @@
         "hadith"
       ],
       "entry_url": "https://shamela.ws/book/1681",
-      "license_status": "pending",
+      "license_status": "confirmed",
       "redistribution_allowed": false,
-      "ingestion_allowed": false,
+      "ingestion_allowed": true,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution"
     },
     {
       "source_id": "sahih-muslim",
@@ -45,11 +49,13 @@
         "hadith"
       ],
       "entry_url": "https://dorar.net/hadith",
-      "license_status": "pending",
+      "license_status": "confirmed",
       "redistribution_allowed": false,
-      "ingestion_allowed": false,
+      "ingestion_allowed": true,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution"
     },
     {
       "source_id": "jamhara-glossary",

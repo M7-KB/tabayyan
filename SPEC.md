@@ -233,7 +233,7 @@ This is a public unauthenticated endpoint making requests from inside Render's n
 guard lives in the HTTP client and is covered by tests, not in a prompt or a code comment.
 
 ### `GET /health`
-`200 → {"status": "ok", "corpus_version": "v1", "corpus_items": 1234, "policy_version": "p1", "policy_approved_by": "pending", "tuning_version": "t1", "card_schema_version": "1", "build": "<sha>"}`
+`200 → {"status": "ok", "corpus_version": "v1", "corpus_items": 1234, "policy_version": "p1", "policy_approved_by": "pending", "allow_pending_review": false, "tuning_version": "t1", "card_schema_version": "1", "build": "<sha>"}`
 
 `policy_version` and `policy_approved_by` come from `api/policy/content_policy.yaml` (A7) and make the
 running policy auditable from the live demo. `tuning_version` comes from `api/tuning.yaml` (§5.5), so a
@@ -581,20 +581,24 @@ Never force-add an uncleared file. PR #13 owns the default ignore rules; P-04 do
 **How the deployed API gets the corpus.** A source allowed for *use* but not *redistribution* cannot live
 in the public repo, so the deployed API does not read it from git or bake it into a container image (an
 image layer is as public as the repo). Instead:
-- The owner keeps the artifact in a **private store** (private object storage). The Render service gets
-  its URL and read token as dashboard-only environment variables — never in the repo, `render.yaml` or a
-  Dockerfile (G12, G18).
-- The repo commits only **hashes**: a manifest of each artifact's SHA-256 and `corpus_version`. Hashes
-  are not content.
-- At startup the API downloads the artifact, verifies it against the committed manifest, and runs the same
-  `load_corpus` checks as CI (rules 1–8). A missing artifact, a hash mismatch or any rule failure enters
-  degraded mode: `/health` reports `degraded` with `corpus_items: 0`, and the API never serves a partial
-  corpus.
-- A source whose redistribution status is not cleared is left out of the deployed artifact, so the
-  missing-source abstain path (non-negotiable 2) applies to any claim it would have supported.
-- **Open owner question, not decided here:** whether verbatim display in a public app counts as
-  redistribution for a source licensed for use only. That is a licence question for the owner and the
-  organizers. Until it is answered, such a source stays out of the deployed artifact.
+- The owner uploads the JSONL artifact as a **Render Secret File**. `PRIVATE_CORPUS_PATH`
+  names its mounted file path in the service environment. No URL, token or download path is used.
+- The repo commits only `corpus/manifest.json`, containing exactly `sha256` (lowercase SHA-256
+  of the complete artifact bytes) and `corpus_version` (1-64 ASCII letters/digits/dots/underscores/hyphens,
+  starting with a letter or digit). No source text is included. Robin supplies the real hash/version
+  after building the artifact; a missing manifest is not replaced by a placeholder.
+- Startup reads at most 64 MiB, hashes those bytes, then validates the same bytes against rules 1-8.
+  Missing files, invalid manifests, mismatched hashes or any invalid row leave zero corpus items.
+  Health-only mode never reads the artifact or manifest, even when a path is configured.
+- The dated owner decision in `SOURCES.md` permits private challenge-app ingestion of `kfc-mushaf`,
+  `sahih-bukhari` and `dorar-hadith`, without permitting redistribution. Private-use validation requires
+  confirmed ingestion permission for both the collection and grading source; public-distribution
+  validation still requires redistribution permission. Unrelated sources retain their existing gates.
+- `ALLOW_PENDING_REVIEW` defaults to false everywhere. The owner enables it only on the judging
+  service. It additionally permits literal `approved_by: pending`, never writes or promotes that field,
+  and never bypasses licence, grading, checksum, normalization or verbatim checks. `/health` reports
+  `allow_pending_review` even in health-only mode. G14 remains **NOT MET** until real specialist approval.
+  The setting authorizes no quotation by itself; the downstream verbatim gate remains mandatory.
 
 **Derived fields.** `text_normalized` and `checksum_sha256` are produced by the shared normalizer (T-402).
 `checksum_en_sha256` is a plain SHA-256 of `text_en`'s original UTF-8 bytes — no normalization, stripping

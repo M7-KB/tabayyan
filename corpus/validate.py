@@ -85,7 +85,7 @@ def _source_url(value, source, *, section=False):
     )
 
 
-def _grading_provenance(grading, sources, register):
+def _grading_provenance(grading, sources, register, *, require_redistribution=True):
     # The brief permits Dorar hadith gradings; collection IDs are not grading authority.
     source_id = grading.get("grading_source_id")
     if source_id != "dorar-hadith" or source_id not in sources or source_id not in register:
@@ -98,7 +98,7 @@ def _grading_provenance(grading, sources, register):
         and row["domain"] == "hadith"
         and source.get("license_status") == "confirmed"
         and source.get("ingestion_allowed") is True
-        and source.get("redistribution_allowed") is True
+        and (not require_redistribution or source.get("redistribution_allowed") is True)
         and _text(row.get("license"))
         and row["license"].strip().lower() not in {"pending", "unknown"}
         and _https(row.get("license_url"))
@@ -131,9 +131,17 @@ def _json(path):
 def read_records(path: Path) -> list[dict]:
     """Read JSONL without rewriting any text. Missing/empty artifacts fail closed."""
     try:
-        lines = path.read_text("utf-8").splitlines()
-    except (OSError, UnicodeError) as exc:
-        raise CorpusValidationError(f"Cannot read corpus artifact: {path.name}") from exc
+        return parse_records(path.read_bytes())
+    except OSError as exc:
+        raise CorpusValidationError("Cannot read corpus artifact") from exc
+
+
+def parse_records(data: bytes) -> list[dict]:
+    """Parse the same bytes whose artifact checksum was verified."""
+    try:
+        lines = data.decode("utf-8").splitlines()
+    except UnicodeError as exc:
+        raise CorpusValidationError("Invalid corpus encoding") from exc
     records = []
     for line_number, line in enumerate(lines, 1):
         _require(bool(line.strip()), f"row {line_number}: blank JSONL record")
@@ -218,10 +226,12 @@ def validate_records(
     register: dict[str, dict],
     *,
     allow_pending_review: bool = False,
+    require_redistribution: bool = True,
 ) -> None:
     """All eight rules, plus fail-closed ingestion permission from P-04.
 
-    Offline review mode never waives licence clearance. Runtime loader never uses it.
+    Pending review never waives licence clearance. Public distribution is the default.
+    Private challenge use requires confirmed ingestion permission for source and grader.
     Metadata approval is an owner-recorded assertion, not independent proof of sign-off.
     """
     _require(bool(records), "Corpus artifact is empty")
@@ -252,7 +262,9 @@ def validate_records(
                 f"{prefix}: complete grading required (rule 2)",
             )
             _require(
-                _grading_provenance(grading, sources, register),
+                _grading_provenance(
+                    grading, sources, register, require_redistribution=require_redistribution
+                ),
                 f"{prefix}: approved grading provenance required (rule 2)",
             )
         original = record.get("text_ar")
@@ -277,7 +289,7 @@ def validate_records(
         _require(
             source.get("license_status") == "confirmed"
             and source.get("ingestion_allowed") is True
-            and source.get("redistribution_allowed") is True,
+            and (not require_redistribution or source.get("redistribution_allowed") is True),
             f"{prefix}: source ingestion/redistribution not cleared (rule 5)",
         )
         corpus_id = record.get("corpus_id")
@@ -341,7 +353,12 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--allow-pending-review",
         action="store_true",
-        help="Offline specialist review only; never waives licence clearance",
+        help="Permit literal pending approval; never waives licence clearance",
+    )
+    parser.add_argument(
+        "--private-use",
+        action="store_true",
+        help="Challenge-app use only; still requires confirmed ingestion permission",
     )
     args = parser.parse_args(argv)
     try:
@@ -351,6 +368,7 @@ def main(argv=None) -> int:
             read_sources(args.sources),
             read_register(args.register),
             allow_pending_review=args.allow_pending_review,
+            require_redistribution=not args.private_use,
         )
     except CorpusValidationError as exc:
         print(f"Corpus validation failed: {exc}")

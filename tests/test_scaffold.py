@@ -43,6 +43,7 @@ def test_health_reports_config_and_unavailable_artifacts(settings):
         "status": "degraded",
         "corpus_version": None,
         "corpus_items": 0,
+        "allow_pending_review": False,
         "policy_version": "test-p",
         "policy_approved_by": "pending",
         "tuning_version": "test-t",

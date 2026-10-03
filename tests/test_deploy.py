@@ -32,6 +32,7 @@ def test_health_only_without_artifacts_or_config(tmp_path, monkeypatch):
             "status": "degraded",
             "corpus_version": None,
             "corpus_items": 0,
+            "allow_pending_review": False,
             "policy_version": None,
             "policy_approved_by": "pending",
             "tuning_version": None,

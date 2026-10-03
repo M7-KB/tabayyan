@@ -256,9 +256,11 @@ boundary, ceiling 4 and Trigger B minimum 3. Tuning
 `t1` uses the SPEC defaults (confidence 0.5/0.6, retrieval floor 8.0, word budgets 1/2/3); these are
 initial engineering values, not measured performance. T-508a owns calibration against the real index.
 
-`GET /health` exposes the policy approval and tuning versions read from those files. Until the corpus
-loader and card schema are integrated, it reports `status: degraded`, `corpus_items: 0` and null
-artifact versions. It is a scaffold liveness response, not a release-readiness claim. Verification,
+`GET /health` exposes the policy approval and tuning versions read from those files. The private file
+loader reports the loaded count and corpus version after full validation.
+It still reports `status: degraded` while verification endpoints and the card schema are not integrated;
+loading data is not evidence that the pipeline is ready. It is a scaffold liveness response, not a
+release-readiness claim. Verification,
 transcription and ingestion routes are not implemented by this PR. Errors use the SPEC envelope
 `error: {code, message_ar, message_en}` with fixed text that does not echo input.
 
@@ -366,15 +368,16 @@ python -m pytest
 ```
 
 The validator cross-checks `corpus/approved_sources.json` and the explicit machine-readable table in
-`SOURCES.md`. For a cleared source, its allowlist row must have `license_status: confirmed`,
+`SOURCES.md`. For public-distribution validation, its allowlist row must have `license_status: confirmed`,
 `ingestion_allowed: true` and `redistribution_allowed: true`; its exact licence and licence URL must
-match the register. Existing candidate rows remain pending and cannot pass. Only an owner-cleared
+match the register. The private-use mode described below does not require redistribution; it still
+requires confirmed ingestion. Unrelated candidate rows remain pending. Only an owner-cleared
 source PR changes these flags and records permission for derived corpus/application display. This
 validator trusts that reviewed metadata; it cannot prove the permission document or textual provenance.
 
 Offline review of a licence-cleared artifact may use `python -m corpus.validate --allow-pending-review`
-to admit `approved_by: pending`. This option never waives licence checks and is unavailable on
-`load_corpus`: runtime records always require `sharia-reviewer-1`. The owner records actual specialist
+to admit `approved_by: pending`. This option never waives licence checks. `load_corpus` has the
+analogous explicit `allow_pending_review` keyword, default false. The owner records actual specialist
 approval in the content PR; a string in a fixture is not sign-off. Use `--corpus`, `--sources` and
 `--register` for explicit offline paths. The loader's analogous keyword paths support tests/integration.
 
@@ -416,3 +419,34 @@ All records explicitly provide `needs_sharia_review`, `g9_countable`, `blocked_r
 and `paired_case_id`, following the proposed contract in PR #28 at `63ab1a3`.
 That SPEC dependency and Nami's harness support remain pending; these data checks
 alone do not close the evaluation requirement.
+
+## Private corpus file and pending review
+
+The owner uploads Robin's built JSONL artifact as a Render Secret File and sets
+`PRIVATE_CORPUS_PATH` to its mounted path in the service environment. Commit only
+`corpus/manifest.json` with exactly `{"sha256": "<64 lowercase hex digits>", "corpus_version": "v1"}`;
+the SHA-256 is over the complete file bytes, including line endings. `CORPUS_MANIFEST_PATH`
+can override that public manifest path. No URL/read token is needed. No actual manifest is supplied
+until the private artifact exists. Keep real artifacts under `corpus/private/` locally; built JSONL,
+raw files and indexes are ignored and checked for accidental tracked files in CI.
+
+Startup reads at most 64 MiB and validates the same bytes it hashed. All rows must pass before any
+records reach app state. Missing files, hash mismatch or an invalid row leave `corpus_items: 0` and
+`corpus_version: null`. `HEALTH_ONLY=true` skips all artifact/config reads. The application logs no
+private path, parser exception or source text. `/health` stays degraded until the pipeline is integrated.
+
+`ALLOW_PENDING_REVIEW=false` is the default. Only the owner-managed judging service may set it true.
+`/health` always reports `allow_pending_review`. Enabling it permits only literal `pending` in addition
+to `sharia-reviewer-1`; no `approved_by` value is changed. **G14 remains NOT MET** while review is pending.
+Licensing, grading, integrity and downstream verbatim checks still apply. This flag implements no
+quote or card generation and cannot authorize display of generated religious content.
+
+The source register records scoped owner-reported challenge-app ingestion for `kfc-mushaf`,
+`sahih-bukhari` and `dorar-hadith`; redistribution remains prohibited. All other permissions remain
+unchanged. `python -m corpus.validate --private-use --allow-pending-review --corpus <private-path>`
+checks such artifacts offline. Without `--private-use`, public-distribution validation still requires
+redistribution permission. Runtime uses the private mode only via the explicit file loader.
+
+Run `python -m pytest`, `ruff check .`, `ruff format --check .`,
+`node --test tests/*.test.mjs` and `python -m corpus.check_public_tree` from the repo root.
+Tests use synthetic non-scriptural fixtures; no private artifacts or credentials are used by public CI.

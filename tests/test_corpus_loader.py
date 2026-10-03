@@ -215,7 +215,7 @@ def test_duplicate_corpus_id_rejected():
         validate_records([record(), record()], *metadata("faq"))
 
 
-def test_pending_review_only_allowed_offline():
+def test_pending_review_requires_explicit_opt_in():
     item = record()
     item["approved_by"] = "pending"
     validate_records([item], *metadata("faq"), allow_pending_review=True)
@@ -330,7 +330,7 @@ def test_loader_preserves_original_and_does_not_mutate_artifact(artifacts):
     assert checksum_text(record()["text_ar"].strip()) != record()["checksum_sha256"]
 
 
-def test_loader_never_returns_pending_records(artifacts):
+def test_loader_default_rejects_pending_records(artifacts):
     path, sources, register = artifacts
     item = record()
     item["approved_by"] = "pending"

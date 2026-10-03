@@ -1,6 +1,34 @@
 # Source and licence register
 
-P-03 source register, checked 2026-10-02. Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md). Acquisition steps belong to P-04. This register does not build a corpus. **Every licence clearance is pending; no raw or derived content is authorized for public commitment by this register.**
+P-03 source register, status checked 2026-10-03 against the evidence recorded below and [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md). Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md). Acquisition steps belong to P-04. This register does not build a corpus. **No source has confirmed licence clearance; no raw or derived content is authorized for public commitment by this register.**
+
+## Current source status
+
+Each line covers source readiness, not approval in the challenge brief. `confirmed` requires
+written permission on file for the exact item/edition and intended use, with an evidence path
+and permitted scope recorded here. `pending` means that evidence review is incomplete;
+`needs owner action` identifies a missing selection, file or permission the owner must supply.
+Neither status permits ingestion. All 13 sources currently need owner action; none is confirmed.
+The owner's request for organizer confirmation is not itself written permission on file.
+
+- `kfc-mushaf` — **needs owner action**: supply exact Hafs Smart package terms or written permission covering ingestion and public application display/redistribution; the general policy below is insufficient.
+- `sahih-bukhari` — **needs owner action**: supply edition-specific permission, selected source files and matching Dorar grading records; the Shamela book card establishes no licence grant.
+- `sahih-muslim` — **needs owner action**: supply edition-specific permission, selected source files and matching Dorar grading records; the Shamela book card establishes no licence grant.
+- `dorar-hadith` — **needs owner action**: supply permission for the selected grading records and their exact saved references; the rights-reserved footer establishes no dataset grant.
+- `jamhara-glossary` — **needs owner action**: supply permission for public application use and selected Arabic/English term files; the personal-use policy does not establish that scope.
+- `bayyinat` — **needs owner action**: supply the selected PDF and its terms or written permission for excerpts and application display; catalogue evidence is insufficient.
+- `approved-quran-translation` — **needs owner action**: select translator, edition and exact file, and supply its licence evidence; no translation artifact is selected.
+- `dorar-tafsir` — **needs owner action**: supply selected files and written permission for ingestion and public application display/redistribution; no grant is recorded below.
+- `dorar-aqeeda` — **needs owner action**: supply selected files and written permission for ingestion and public application display/redistribution; no grant is recorded below.
+- `dorar-fiqh` — **needs owner action**: supply selected files and written permission for ingestion and public application display/redistribution; no grant is recorded below.
+- `dorar-history` — **needs owner action**: supply selected files and written permission for ingestion and public application display/redistribution; no grant is recorded below.
+- `dawa-other` — **needs owner action**: select exact items and supply their files and item-specific permission; a domain entry is not clearance.
+- `jamhara-dawah` — **needs owner action**: select exact items and supply their files and permission for public application use; the personal-use policy is insufficient.
+
+The machine-readable licence fields below and the candidate allowlist remain `pending` with
+ingestion/redistribution disabled. A readiness status does not change those gates or substitute
+for Sharia specialist review. Use-only permission, if supplied, must record its exact scope;
+whether public verbatim display is permitted remains an owner/organizer decision.
 
 
 ## Public-history disclosure
@@ -11,9 +39,9 @@ contains eight files under `data/raw/kfgqpc_hafs_smart_4/`, merged by
 KFGQPC Hafs Uthmanic package: six data formats, `read.me`, and `HafsSmart_08.docx`.
 The JSON file is 4,192,442 bytes (`git ls-tree -r --long 52a3983 data/raw/kfgqpc_hafs_smart_4/`).
 These source files are already in public history despite pending licence clearance.
-[PR #13](https://github.com/M7-KB/tabayyan/pull/13) proposes removing the raw
-package and `docs/raw/` from the tree, ignoring both paths, and adding the README
-disclosure. Removal is pending; it will not erase public history. No ingestion or
+[PR #13](https://github.com/M7-KB/tabayyan/pull/13) removed the raw
+package and `docs/raw/` from the tree, ignored both paths, and added the README
+disclosure. Removal does not erase public history. No ingestion or
 redistribution permission follows from their presence.
 
 ## Machine-readable register
@@ -26,7 +54,7 @@ satisfy ingestion clearance. A policy URL with `license: pending` does not estab
 
 | Source id | domain | use | Source URL | license | license_url | Licence evidence URL | Licence finding | Redistribution / ingestion |
 |---|---|---|---|---|---|---|---|---|
-| kfc-mushaf | quran | unchanged Arabic text | https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/ | pending | https://policy.qurancomplex.gov.sa/?Lan=en | https://policy.qurancomplex.gov.sa/?Lan=en | General policy reserves rights with exceptions for explicitly released resources; exact package terms pending. Portal timeout; formats confirmed only by official indexed developer-page description. | Public raw files in base main; removal pending #13. No further ingestion or redistribution authorized. |
+| kfc-mushaf | quran | unchanged Arabic text | https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/ | pending | https://policy.qurancomplex.gov.sa/?Lan=en | https://policy.qurancomplex.gov.sa/?Lan=en | General policy reserves rights with exceptions for explicitly released resources; exact package terms pending. Portal timeout; formats confirmed only by official indexed developer-page description. | Raw files removed by #13 but remain in public history. No further ingestion or redistribution authorized. |
 | sahih-bukhari | hadith | Sultaniyya / Dar Tawq al-Najah reproduction, Shamela 1681 | https://shamela.ws/book/1681 | pending | pending | https://shamela.ws/book/1681 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
 | sahih-muslim | hadith | Abd al-Baqi, 1955 edition, Shamela 1727 | https://shamela.ws/book/1727 | pending | pending | https://shamela.ws/book/1727 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
 | dorar-hadith | hadith | exact grading, grader and reference per item | https://dorar.net/hadith | pending | pending | https://dorar.net/hadith | Rights-reserved footer; no dataset licence established. Edition list: https://dorar.net/hadith/refs . | Pending; local only; do not ingest |

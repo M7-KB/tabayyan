@@ -316,3 +316,40 @@ def test_unmarked_offsets_around_punctuation_and_unicode_insertions():
     result = engine.detect(user)
     finding = next(f for f in result.findings if f.match.classification == "NEAR_MISS")
     assert user[finding.start : finding.end] == "م\u200dكتب قديم واسع"
+
+
+@pytest.mark.parametrize("domain", ["quran", "hadith"])
+@pytest.mark.parametrize("marker", ['"{}"', "قال تعالى: {}", "قال النبي: {}"])
+@pytest.mark.parametrize("placement", ["before", "after", "both"])
+def test_marked_commentary_cannot_hide_embedded_near_miss(domain, marker, placement):
+    engine = detector([Record("synthetic", domain, "alpha beta gamma")])
+    padding = "followed by unrelated explanation with many extra words and further commentary"
+    body = "alpha wrong gamma"
+    if placement in {"before", "both"}:
+        body = padding + " " + body
+    if placement in {"after", "both"}:
+        body += " " + padding
+    text = marker.format(body)
+    result = engine.detect(text)
+    assert result.span_detector_status == "ran"
+    assert any(f.marker and f.match.classification == "UNRELATED" for f in result.findings)
+    embedded = next(f for f in result.findings if f.match.classification == "NEAR_MISS")
+    assert text[embedded.start : embedded.end] == "alpha wrong gamma"
+    assert embedded.marker is None
+    effects = result.effects("A", "Synthetic notice")
+    assert effects["force_quran_contradicts"] == (domain == "quran")
+    assert (effects["misquote_notice"] is not None) == (domain == "hadith")
+    assert not result.effects("D", "Synthetic notice")["force_quran_contradicts"]
+
+
+@pytest.mark.parametrize("marker", ['"{}"', "قال تعالى: {}"])
+def test_padded_correct_quote_retains_verbatim_veto(marker):
+    records = [
+        Record("left", "quran", "alpha beta gamma"),
+        Record("twin", "quran", "alpha delta gamma"),
+    ]
+    text = marker.format("alpha beta gamma followed by unrelated explanation with many extra words")
+    result = detector(records).detect(text)
+    assert any(f.match.classification == "VERBATIM" for f in result.findings)
+    assert not any(f.match.classification == "NEAR_MISS" for f in result.findings)
+    assert not result.effects("A", "Synthetic notice")["force_quran_contradicts"]

@@ -306,12 +306,10 @@ class SpanDetector:
             for i in range(len(tokens) - length + 1):
                 window = tokens[i : i + length]
                 start, end = window[0][1], window[-1][2]
-                if any(start < b and end > a for a, b, _ in marked):
-                    continue
                 match = self._classify(tuple(t[0] for t in window), "B")
                 if match.classification != "UNRELATED":
                     candidates.append(Finding(start, end, None, match))
-        verbatim = [f for f in candidates if f.match.classification == "VERBATIM"]
+        verbatim = [f for f in findings + candidates if f.match.classification == "VERBATIM"]
         target_lengths = {record.corpus_id: len(target) for record, target in self.index}
         # Do not reclassify cropped/extended windows inside a known correct quote.
         near = [
@@ -330,7 +328,20 @@ class SpanDetector:
         for finding in sorted(near, key=lambda f: (f.match.distance, f.match.length_difference)):
             if not any(finding.start < f.end and finding.end > f.start for f in selected):
                 selected.append(finding)
-        return tuple(sorted(findings + verbatim + selected, key=lambda f: (f.start, f.end)))
+        # Deduplicate only classified matches, never coarse UNRELATED marked spans.
+        windows = [f for f in candidates if f.match.classification == "VERBATIM"] + selected
+        windows = [
+            f
+            for f in windows
+            if not any(
+                m.start <= f.start
+                and f.end <= m.end
+                and m.match.classification == f.match.classification
+                and m.match.record.corpus_id == f.match.record.corpus_id
+                for m in findings
+            )
+        ]
+        return tuple(sorted(findings + windows, key=lambda f: (f.start, f.end)))
 
     def detect(self, text: str, required_corpus_ids: Sequence[str] = ()) -> Detection:
         """Catch detector failures without logging or returning input/exception text."""

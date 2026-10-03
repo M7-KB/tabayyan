@@ -33,13 +33,13 @@ describe('text input', () => {
     expect(screen.getByText(strings.textEmptyHint)).toBeInTheDocument()
   })
 
-  it('submits the trimmed text', async () => {
+  it('submits the original text, untrimmed', async () => {
     const user = userEvent.setup()
     const onSubmitText = vi.fn()
     render(<InputScreen onSubmitText={onSubmitText} onSubmitMedia={vi.fn()} />)
     await user.type(screen.getByLabelText(strings.textLabel), '  نص تجريبي  ')
     await user.click(screen.getByRole('button', { name: strings.textSubmit }))
-    expect(onSubmitText).toHaveBeenCalledWith('نص تجريبي')
+    expect(onSubmitText).toHaveBeenCalledWith('  نص تجريبي  ')
   })
 })
 

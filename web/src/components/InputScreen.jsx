@@ -19,7 +19,7 @@ export function InputScreen({ onSubmitText, onSubmitMedia }) {
 
   function handleTextSubmit(event) {
     event.preventDefault()
-    if (hasText) onSubmitText(text.trim())
+    if (hasText) onSubmitText(text)
   }
 
   function handleUploadSubmit(event) {

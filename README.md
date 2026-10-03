@@ -197,12 +197,12 @@ The misquote notice reads the nested `misquote_notice = { evidence, note_ar }` s
 the grading source link (`grading.grading_source_url`, labelled separately from the collection source link), quote and source link.
 The notice is not shown when `evidence` is missing, or when a hadith notice does not have complete grading (`grade_ar`,
 `grader_ar` and an https `grading_source_url`, all non-empty). The legacy flat
-`{ corpus_id, quote_ar, note_ar }` shape is never rendered. Until #36 lands, the P-07 fixtures still hold the flat
-notice, so the preview does not show a notice for `supported_confirms`.
+`{ corpus_id, quote_ar, note_ar }` shape is never rendered. The P-07 fixtures use the nested shape, so the
+`supported_confirms` preview shows a notice.
 
 The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
-preview is compiled out of production builds. Arabic labels other than `supported_contradicts` are
-provisional until owner and specialist approval (SPEC.md §12 item 1).
+preview is compiled out of production builds. The state labels follow the SPEC.md §12 item 1 table; all
+except `supported_contradicts` are provisional until owner and specialist approval.
 
 Layout is mobile-first: the base rules are the 375px baseline, with a compact rule at 23.4375rem and below
 and a desktop rule from 48rem that widens the reading column. Headless Chrome (puppeteer-core) on 2026-10-03

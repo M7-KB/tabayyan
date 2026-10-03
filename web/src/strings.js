@@ -29,15 +29,14 @@ export const strings = {
   uploadSubmit: 'رفع المقطع',
   consent: 'أؤكد أن لدي حق مشاركة هذا المقطع لغرض التحقق',
 
-  // Card UI (T-505). Two strings are owner-given and come from api/policy/content_policy.yaml:
-  // stateLabels.supported_contradicts and sourceTextIntro. Everything else in this block is
-  // PROVISIONAL: it is not in SPEC.md or the policy file yet, and needs owner and Sharia specialist
-  // approval (SPEC.md §12 item 1) before release.
+  // Card UI (T-505). stateLabels and sourceTextIntro follow the SPEC.md §12 item 1 table. Only
+  // supported_contradicts and sourceTextIntro are owner-given; the other three labels are PROVISIONAL
+  // and need Sharia specialist approval before release.
   stateLabels: {
-    supported_confirms: 'مدعوم بالمصدر المعتمد',
+    supported_confirms: 'يؤيده المصدر المعتمد',
     supported_contradicts: 'لا يطابق المصدر المعتمد',
-    disputed: 'توجد مواقف مختلفة في المصادر',
-    cannot_confirm: 'لا يمكن التأكد من المصدر المعتمد',
+    disputed: 'مسألة مختلف فيها',
+    cannot_confirm: 'لا يمكن التأكد من المصادر المتاحة',
   },
   sourceTextIntro: 'النص كما ورد في المصدر:',
   claimHeading: 'الادعاء كما أُدخل',

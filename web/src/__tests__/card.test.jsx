@@ -134,8 +134,9 @@ describe('evidence and grading', () => {
   })
 
   it('shows the source link as a plain outbound link', () => {
-    render(<ClaimCard card={supportedConfirms} />)
-    expect(screen.getByRole('link', { name: strings.sourceLink })).toHaveAttribute(
+    const { container } = render(<ClaimCard card={supportedConfirms} />)
+    const scripture = container.querySelector('[data-role="scripture"]')
+    expect(within(scripture).getByRole('link', { name: strings.sourceLink })).toHaveAttribute(
       'href',
       supportedConfirms.evidence[0].source_url,
     )

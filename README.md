@@ -302,3 +302,8 @@ passing evaluation or the final 80–100-item set. See [eval/TESTSET_NOTES.md](e
 Run the complete local data-check suite with `node --test` (Node.js 24, no packages).
 These checks validate the draft's contract and review safeguards; they do not run the model
 or establish source readiness. The single tools register belongs to P-10, PR #18.
+
+T09 and T13 refer to each other in both pairing metadata and review rubrics. The
+`needs_sharia_review`, coverage-blocker and pairing metadata still require Luffy's
+SPEC contract and verification in the evaluation harness; these data checks alone
+do not close that review requirement.

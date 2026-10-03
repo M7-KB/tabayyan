@@ -44,6 +44,21 @@ test('brief records are present and draft expectations obey pinned policy invari
     }
     assert.equal(record.reviewed_by, 'pending');
     assert.equal(record.needs_sharia_review, record.reviewed_by === 'pending');
+    assert.equal(typeof record.needs_sharia_review, 'boolean');
+    assert.equal(typeof record.g9_countable, 'boolean');
+    assert.ok(Object.hasOwn(record, 'blocked_reason_en'));
+    assert.ok(Object.hasOwn(record, 'paired_case_id'));
+    if (record.g9_countable) {
+      assert.equal(record.blocked_reason_en, null);
+    } else {
+      assert.equal(typeof record.blocked_reason_en, 'string');
+      assert.ok(record.blocked_reason_en.trim().length > 0);
+    }
+    if (record.paired_case_id !== null) {
+      assert.equal(typeof record.paired_case_id, 'string');
+      assert.notEqual(record.paired_case_id, record.case_id);
+      assert.equal(cases.get(record.paired_case_id)?.paired_case_id, record.case_id);
+    }
     assert.equal(Object.hasOwn(record, 'baseline'), false);
   }
 });

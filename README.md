@@ -304,6 +304,7 @@ These checks validate the draft's contract and review safeguards; they do not ru
 or establish source readiness. The single tools register belongs to P-10, PR #18.
 
 T09 and T13 refer to each other in both pairing metadata and review rubrics. The
-`needs_sharia_review`, coverage-blocker and pairing metadata still require Luffy's
-SPEC contract and verification in the evaluation harness; these data checks alone
-do not close that review requirement.
+All records explicitly provide `needs_sharia_review`, `g9_countable`, `blocked_reason_en`
+and `paired_case_id`, following the proposed contract in PR #28 at `63ab1a3`.
+That SPEC dependency and Nami's harness support remain pending; these data checks
+alone do not close the evaluation requirement.

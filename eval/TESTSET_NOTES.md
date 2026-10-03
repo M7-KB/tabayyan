@@ -4,7 +4,9 @@ Development started Oct 2, 2026, with organizer permission. Thirteen review reco
 from the brief and the executable team neutral twin T13, following merged SPEC §4.3–4.4.
 All records have `reviewed_by: pending`, `needs_sharia_review: true`. The role instruction
 requires the boolean; it remains consistent with pending review and must change with
-`reviewed_by` after owner-recorded specialist approval. This extension is not yet in SPEC §4.3.
+`reviewed_by` after owner-recorded specialist approval. Metadata follows the proposed SPEC §4.3
+contract in [PR #28](https://github.com/M7-KB/tabayyan/pull/28) at `63ab1a3`, which must land
+before this data contract is treated as agreeing with main. Nami owns harness support.
 State expectations live in `expect.state`; source requirements live in
 `expect.required_evidence_domains` / `required_corpus_ids` and the target URLs in `notes_en`.
 No fabricated religious answer, grade or citation is included.
@@ -29,8 +31,11 @@ The four owner-fixed outcomes are unchanged: T01/T11 SUPPORTED + CONTRADICTS; T0
 | T11 | **Blocked placeholder.** Owner must supply a KFC verse; construct one explicitly labelled adversarial mutation from that file, then bind the corrected verse's exact corpus id/reference. No source text supplied, so no verse/misquote authored. Placeholder must fail readiness; never silently skip or count it as a passed test. |
 | T12 | Concrete English Sharia question from the brief's glossary sample; require `card.term` and `explanation_en`. Approved Arabic/English glossary pair pending. |
 
-T03, T10 and T11 carry `g9_countable: false` and `blocked_reason_en`. Absence of that field
-does not establish readiness: every sourced case still needs an approved exact corpus binding
+All four metadata fields are explicit on every record, with no omitted-field defaults.
+T03, T10 and T11 carry `g9_countable: false` and non-empty `blocked_reason_en`; other records
+have `g9_countable: true` and `blocked_reason_en: null`. Unpaired records have
+`paired_case_id: null`; T09/T13 name each other. A countable flag does not establish
+readiness: every sourced case still needs an approved exact corpus binding
 and specialist review. The harness must treat these exclusions as unmet brief coverage,
 not silent skips or passes. These metadata extensions leave the twelve `expect` keys unchanged;
 Nami must confirm their harness integration. T11 remains an input placeholder, not scripture.

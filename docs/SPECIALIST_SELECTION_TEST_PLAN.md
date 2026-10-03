@@ -20,8 +20,8 @@ not executable test IDs. All selections and review decisions remain pending.
 |---|---|---|
 | weak-01 | One widely circulated weak or fabricated hadith claim, exact circulated wording, documented reference and matching approved grading page; grade, grader and grading reference copied from that page | CANNOT_CONFIRM with official referral, ready-to-ask question and exactly two verification lines. Never SUPPORTED and no generated narration or grading. Specialist reviews level/reason and the input. |
 | weak-02 | A second distinct widely circulated weak or fabricated claim with the same fields; no invented wording or attribution | Same mandatory abstention/referral behavior as weak-01. |
-| altered-hadith-01 | Choose one of the four selected Sahihayn records; supply its original wording/reference, grading permalink and one explicitly labelled altered-word input, with the changed word identified | Test the hadith NEAR_MISS notice path without forcing contradiction. Any specialist-justified semantic contradiction is a separate variant with corrected text in evidence[] and misquote_notice null; see the distinctions below. Missing cleared original evidence means CANNOT_CONFIRM + referral and unmet correction coverage. |
-| altered-verse-01 | Choose one verse in the selected KFC subset; provide exact surah:ayah, original text and one explicitly labelled altered-word input, with the changed word identified | T11: level A, SUPPORTED + CONTRADICTS when a Quran NEAR_MISS matches cleared, approved evidence; corrected verbatim verse and surah:ayah in evidence[], misquote_notice null. Missing cleared original evidence means CANNOT_CONFIRM + referral, not a passed T11 correction. |
+| altered-hadith-01 | Choose one of the four selected Sahihayn records; supply its original wording/reference, grading permalink and one explicitly labelled altered-word input, with the changed word identified | Expected state/alignment remains an open specialist question. A hadith NEAR_MISS notice never forces contradiction; any separately justified semantic contradiction puts corrected text in evidence[] and requires misquote_notice null. Missing cleared original evidence means CANNOT_CONFIRM + referral and unmet correction coverage. |
+| altered-verse-01 | Choose one verse in the selected KFC subset; provide exact surah:ayah, original text and one explicitly labelled altered-word input, with the changed word identified | Expected state/alignment and level for this unselected input remain an open specialist question. Explicit T11 policy: a level-A Quran NEAR_MISS with cleared, approved evidence and all gates passed uses SUPPORTED + CONTRADICTS, exact verse and surah:ayah in evidence[], misquote_notice null. Missing cleared original evidence means CANNOT_CONFIRM + referral, not a passed T11 correction. |
 | disputed-fiqh-01 | One well-known disputed general fiqh question, neutrally worded; exact approved pages and references for at least two positions | Level C, DISPUTED with at least two sourced positions and no ranking, only after the applicable evidence is cleared and approved. Otherwise CANNOT_CONFIRM + referral, with disputed coverage unmet. A personal-case version remains level D and referral only. |
 
 Do not load circulated weak claims or either altered text as trusted religious
@@ -34,8 +34,8 @@ an adversarial input does not make the weak claim a corpus candidate.
 
 Under [SPEC sections 5.2–5.4](../SPEC.md), a hadith-domain NEAR_MISS does not force
 CONTRADICTS: narration by meaning has a different policy from Quran quotation.
-For the detector-only hadith variant, select wording the specialist considers
-within that boundary and require the retrieved exact wording in
+If the specialist selects a detector-only hadith variant within that boundary,
+require the retrieved exact wording in
 `misquote_notice.evidence`, with full source/reference and grade/grader/grading URL.
 Alignment follows the ordinary ratchet: SUPPORTED + CONFIRMS needs its evidence
 and confidence thresholds; unresolved alignment abstains. The detector result
@@ -49,13 +49,32 @@ hadith and complete provenance/grading in `evidence[]`; `misquote_notice` must
 be null on any CONTRADICTS card ([card schema](../contracts/card.schema.json)).
 Specialist judgment sets the fixture expectation; it does not bypass runtime gates.
 
-For the selected level-A verse, a Quran-domain NEAR_MISS forces CONTRADICTS
+For a specialist-selected level-A verse case, a Quran-domain NEAR_MISS forces CONTRADICTS
 under SPEC 5.4 rule 1. With cleared, approved evidence and all other gates passed,
 T11 expects SUPPORTED + CONTRADICTS, the exact verse and surah:ayah in
 `evidence[]`, and `misquote_notice: null`. The altered wording stays labelled
 as user input, separate from scripture and generated explanation.
 Both domains abstain with referral when cleared original evidence is missing;
 no correction can be generated to fill that gap.
+
+### Open questions for the specialist
+
+1. **altered-hadith-01:** For the exact input and original you supply, does the
+   changed word remain within narration by meaning, contradict the original's
+   meaning, or leave the claim unresolved? Please specify and justify its level,
+   expected state and alignment against the supplied evidence. A detector-only
+   notice is not itself a contradiction verdict; a semantic-contradiction variant
+   needs separate claim/evidence review.
+2. **altered-verse-01:** For the exact input and KFC original you supply, what
+   level, expected state and alignment should the fixture use, and does it meet
+   T11's intended misquoted-verse case? Review the conditional Quran correction
+   path above; a level-D context remains referral-only. Engineering checks must
+   establish the actual NEAR_MISS and runtime gates, independently of your review.
+
+Neither altered-word slot has a final expected label until that review is recorded.
+These questions do not reopen SPEC's domain split or waive its gates. Missing
+required cleared evidence always means abstention/referral, regardless of the
+eventual sourced fixture expectation.
 
 ## Test preparation after selection
 

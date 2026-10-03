@@ -1,0 +1,104 @@
+# Source: SPEC.md sections 5.1-5.5 and 9. Specialist review pending.
+policy_version: p1
+approved_by: pending          # set to sharia-reviewer-1 by the owner on specialist approval
+levels:
+  A: { min_evidence: 1, allowed_states: [SUPPORTED, CANNOT_CONFIRM] }
+  B: { min_evidence: 1, allowed_states: [SUPPORTED, DISPUTED, CANNOT_CONFIRM] }
+  C: { min_positions: 2, allowed_states: [DISPUTED, CANNOT_CONFIRM] }
+  D: { allowed_states: [CANNOT_CONFIRM], force_referral: true }
+alignment:
+  allowed_values: [CONFIRMS, CONTRADICTS]   # PARTIAL deferred, §5.3
+  default: null                             # no default is permitted; §5.4 rule 4
+  model_may_propose_confirms: true          # proposal only; §5.4 rule 3 decides
+  model_may_set_confirms: false             # the ratchet
+  force_contradicts_on_near_miss_span: true # §5.4 rule 1, quran-domain NEAR_MISS only
+  contradicts_requires_confidence_floor: true # §5.4 rule 2 — model-proposed CONTRADICTS needs the floor too
+  hadith_near_miss_shows_notice_not_contradicts: true # §5.2 Qur'an/hadith split, owner 2026-10-02 item D3
+  word_budget_ceiling: 4                    # no tuning.yaml budget tier may exceed this
+scripture_span_markers:
+  ornate_brackets: ["﴾", "﴿"]
+  quote_marks: ["«", "»", "\"", "'", "“", "”"]
+  attribution_allah:  ["قال الله تعالى", "قال تعالى", "قال الله", "يقول الله", "في قوله تعالى", "قال عز وجل"]
+  attribution_prophet: ["قال رسول الله", "قال النبي", "عن النبي", "قال ﷺ", "في الحديث", "روى البخاري", "روى مسلم"]
+  nothing_outside_markers_is_a_quote: true  # §5.2
+tone_affects_level: false                   # §5.1, §4.4 case 9
+# Ordered evidence rows from §5.1. Counts include only verified, graded evidence.
+# State guards run before the alignment ratchet; alignment cannot raise a state.
+state_rules:
+  A:
+    - { min_evidence: 1, state: SUPPORTED }
+    - { state: CANNOT_CONFIRM }
+  B:
+    - { min_evidence: 2, min_positions: 2, state: DISPUTED }
+    - { min_evidence: 1, recorded_disagreement: false, state: SUPPORTED, hedge: true }
+    - { state: CANNOT_CONFIRM }
+  C:
+    - { min_evidence: 2, min_positions: 2, evidence_gap: false, state: DISPUTED }
+    - { state: CANNOT_CONFIRM }
+  D:
+    - { state: CANNOT_CONFIRM, abstained_reason: LEVEL_D_PERSONAL_CASE }
+state_guards:
+  verbatim_gate_failure_state: CANNOT_CONFIRM
+  below_card_confidence_min_state: CANNOT_CONFIRM
+  classifier_resolution: more_restrictive_level
+  level_order: [A, B, C, D]
+  level_d_general_info_only: true
+  hadith_requires_source_and_grading: true
+  disputed_min_positions: 2
+  disputed_min_evidence_per_position: 1
+  disputed_position_order: corpus_order
+  disputed_rank_positions: false
+# §5.2 requires a completed detector run, even when findings are empty.
+# Check this prerequisite before accepting any model alignment proposal.
+span_detector:
+  required_status: ran
+  failure_state: CANNOT_CONFIRM
+  failure_reason: ALIGNMENT_UNDETERMINED
+  comparison_domains: [quran, hadith]
+  comparison_scope: whole_corpus_index
+  verbatim_veto_first: true
+  near_miss_notice_when_not_expressed_as_contradicts: true
+# §5.4 rules 1-4, first matching rule wins; only applied to SUPPORTED.
+alignment_rules:
+  - id: quran_near_miss
+    when: { classification: NEAR_MISS, domain: quran, triggers: [A, B] }
+    result: CONTRADICTS
+    model_overridable: false
+  - id: model_contradicts
+    when: { proposal: CONTRADICTS, confidence_at_least: alignment_confidence_min }
+    result: CONTRADICTS
+  - id: model_confirms
+    when:
+      proposal: CONFIRMS
+      quran_near_miss: false
+      retrieval_score_at_least: retrieval_score_floor
+      confidence_at_least: alignment_confidence_min
+    result: CONFIRMS
+  - id: unresolved
+    result: null
+    state: CANNOT_CONFIRM
+    abstained_reason: ALIGNMENT_UNDETERMINED
+alignment_output:
+  applies_to_state: SUPPORTED
+  other_states_value: null
+  report_alignment_confidence_in_every_state: true
+# §5.4 rules 5-6. Absence of evidence is never a contradiction.
+missing_requested_hadith:
+  state: CANNOT_CONFIRM
+  abstained_reason: NO_MATCHING_EVIDENCE
+user_text:
+  data_role: user-text
+  render_as_scripture: false
+  allowed_in_evidence_quote: false
+  allowed_in_misquote_notice_quote: false
+# §12 item 1: owner-provided working copy, pending specialist wording.
+state_labels_ar:
+  supported_contradicts: "لا يطابق المصدر المعتمد"
+  source_text_intro: "النص كما ورد في المصدر:"
+referral:
+  body_name_ar: "الرئاسة العامة للبحوث العلمية والإفتاء"
+  body_url: "https://alifta.gov.sa/ar/home"
+  fallback_line_ar: "أو الجهة الرسمية للفتوى في بلدك"
+  required_states: [CANNOT_CONFIRM]
+  required_levels: [D]
+  ready_to_ask_question: generated_per_claim_without_source_quotes

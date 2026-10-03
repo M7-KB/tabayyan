@@ -9,7 +9,8 @@ written permission on file for the exact item/edition and intended use, with an 
 and permitted scope recorded here. `pending` means that evidence review is incomplete;
 `needs owner action` identifies a missing selection, file or permission the owner must supply.
 Neither status permits ingestion. All 13 sources currently need owner action; none is confirmed.
-The owner's request for organizer confirmation is not itself written permission on file.
+The dated partner approval below covers challenge use; public redistribution remains
+**needs owner action** and is not established by that approval.
 
 - `kfc-mushaf` — **needs owner action**: supply exact Hafs Smart package terms or written permission covering ingestion and public application display/redistribution; the general policy below is insufficient.
 - `sahih-bukhari` — **needs owner action**: supply edition-specific permission, selected source files and matching Dorar grading records; the Shamela book card establishes no licence grant.
@@ -29,6 +30,24 @@ The machine-readable licence fields below and the candidate allowlist remain `pe
 ingestion/redistribution disabled. A readiness status does not change those gates or substitute
 for Sharia specialist review. Use-only permission, if supplied, must record its exact scope;
 whether public verbatim display is permitted remains an owner/organizer decision.
+
+## Partner approval for challenge use (2026-10-03)
+
+The owner reports that the organizers replied: the sources are approved by the
+challenge partner and may be used within the challenge scope. Evidence: the
+owner-provided organizer-reply report dated 2026-10-03; the correspondence remains
+with the owner.
+This records the owner's report of the reply, not an independently inspected copy
+of the organizers' correspondence or an item-specific licence document.
+
+**Partner approval: use within the challenge. Redistribution licence: needs owner
+action.** Public redistribution in the repository was not addressed. The owner is
+asking a follow-up; until answered, no full third-party text goes into the public
+repository. Raw files, derived excerpts/indexes and public verbatim display still
+require their applicable scope to be recorded per item. The machine-readable
+`license` fields remain `pending`; ingestion/redistribution flags are unchanged.
+This approval does not select religious records or supply Sharia specialist approval.
+Only the owner downloads and places selected files in `data/raw/`.
 
 
 ## Jamhara permission evidence (2026-10-03)
@@ -52,7 +71,8 @@ disabled. Obtain written permission covering the exact selected items, their und
 references and the intended public application display and redistribution. Mixed provenance
 requires checking the selected item's rights rather than treating the website policy as
 clearance for every attributed passage. The owner is requesting organizer and Jamhara
-confirmation in writing; a request is not permission.
+confirmation in writing. The earlier request alone was not permission; the later
+challenge-use reply is recorded above and still does not settle redistribution.
 
 An English equivalent also requires its own cleared source and provenance. An outbound
 entry link alone does not clear copied, translated or generated religious content.

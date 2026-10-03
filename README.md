@@ -231,6 +231,9 @@ transcription and ingestion routes are not implemented by this PR. Errors use th
   `PYTHON_VERSION=3.11.9`. Enter values only in Render.
 - Health path: `/health`.
 - Live health-only API: <https://tabayyan-api.onrender.com> (degraded, `corpus_items: 0`, build `f696a50`).
+- Live web preview: <https://tabayyan.pages.dev> (development preview; verification is not active yet).
+  Cloudflare Pages: root directory `web`, build command `npm run build`, output directory `dist`,
+  `NODE_VERSION=22`, `VITE_API_URL` set to the Render API URL. The UI does not read `VITE_API_URL` yet.
 - Smoke test after deployment (replace the URL):
 
 ```sh

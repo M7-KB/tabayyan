@@ -230,6 +230,7 @@ transcription and ingestion routes are not implemented by this PR. Errors use th
   `CORS_ORIGINS=[]` until the web origin exists, `BUILD_SHA` (deployed commit),
   `PYTHON_VERSION=3.11.9`. Enter values only in Render.
 - Health path: `/health`.
+- Live health-only API: <https://tabayyan-api.onrender.com> (degraded, `corpus_items: 0`, build `f696a50`).
 - Smoke test after deployment (replace the URL):
 
 ```sh

@@ -295,8 +295,9 @@ the separate acquisition manifest and allowlist. SOURCES.md preserves the public
 history disclosure after the tree cleanup in PR #13.
 
 For the owner's Oct 4 noon selection, see the
-[minimal corpus clearance checklist](docs/MINIMAL_CORPUS_CHECKLIST.md): proposed Qur'an,
-Sahihayn with separately cleared gradings, glossary terms and required demo behavior when
+[minimal corpus clearance checklist](docs/MINIMAL_CORPUS_CHECKLIST.md): owner-selected
+KFC verses (no tafsir), Bukhari 8, 7556, 63, 1399 with separate Dorar grading,
+glossary terms and required demo behavior when
 permission is missing. This checklist grants no ingestion or content approval.
 
 The [Jamhara evidence section](SOURCES.md#jamhara-permission-evidence-2026-10-03)
@@ -311,9 +312,13 @@ CI checks headers, unique IDs, required license fields and the closed domain enu
 The [dated organizer reply](SOURCES.md#partner-approval-for-challenge-use-2026-10-03)
 records partner approval for challenge use; redistribution remains **needs owner action**.
 Use the [specialist selection/test plan](docs/SPECIALIST_SELECTION_TEST_PLAN.md) and
-[owner download list](docs/OWNER_DOWNLOAD_LIST.md) for the five additional safety inputs
-and per-item file handoff. Exact religious selections and missing item URLs remain
-pending the specialist. Only the owner downloads; these documents add no corpus or
+[owner download list](docs/OWNER_DOWNLOAD_LIST.md) for five Ramadan claims from Dorar's
+fake-hadith section as test inputs only, expected CANNOT_CONFIRM with referral,
+and the per-item file handoff. The four Dorar codes are owner-supplied and unverified;
+exact files, number-to-code matches, missing item URLs and specialist review remain
+pending. Bukhari 8 is proposed as the altered-hadith base; only the specialist
+approves the altered text. The handoff stays unsent in OUTBOX while the specialist
+is unavailable; documentation work proceeds. Only the owner downloads; these documents add no corpus or
 executable test inputs and grant no licence or specialist approval.
 The plan separates hadith NEAR_MISS notices from semantic contradiction variants
 and explicitly records T11's conditional Quran correction policy under SPEC 5.2–5.4.

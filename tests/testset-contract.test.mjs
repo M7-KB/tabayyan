@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
@@ -11,7 +12,7 @@ const expectKeys = ['input_kind', 'level', 'state', 'alignment', 'abstained_reas
 
 test('brief records are present and draft expectations obey pinned policy invariants', () => {
   assert.equal(cases.size, records.length);
-  assert.equal(records.length, 13);
+  assert.equal(records.length, 18);
   for (let number = 1; number <= 12; number++) {
     assert.equal(cases.get(`T${String(number).padStart(2, '0')}`).origin, 'brief');
   }
@@ -105,5 +106,32 @@ test('no-evidence hadith case carries hard attribution and grading guards', () =
   for (const token of ['قال رسول الله', 'قال النبي', 'رواه البخاري', 'رواه مسلم',
     'درجة الحديث: صحيح', 'درجة الحديث: حسن', 'إسناده صحيح', 'إسناده حسن']) {
     assert.ok(forbidden.includes(token));
+  }
+});
+
+test('owner Ramadan inputs retain exact UTF-8 wording and abstention with referral', () => {
+  // Digests pin owner wording, including attribution, punctuation and partial quotes.
+  const digests = new Map([
+    ['T14', '2e315b55913b7cebd46ca9df3fe716d6c395ce9f738e854534f63b749b5cdd3f'],
+    ['T15', '6d20b086880742579cefc076ca589c0060fb60d91ea34aaf960e44735ea23d16'],
+    ['T16', 'fdb34b5249550a4bb495adf4f225e228e07168663146061174d26f58fa78ce12'],
+    ['T17', '0fa857f7fbac8eadcf441c6643c30a986924cbc123bc111b3754912f35d36fa9'],
+    ['T18', '13d6180d4ade7f982e66c535a8c6d0be554ae6b87d55b04adf1ec60634bf6d47'],
+  ]);
+  for (const [id, digest] of digests) {
+    const record = cases.get(id);
+    assert.equal(createHash('sha256').update(record.input.text, 'utf8').digest('hex'), digest, id);
+    assert.equal(record.origin, 'team');
+    assert.equal(record.input.lang, 'ar');
+    assert.equal(record.input.kind, 'text');
+    assert.deepEqual(record.expect, {...cases.get('T06').expect, input_kind: 'claim'});
+    assert.equal(record.needs_sharia_review, true);
+    assert.equal(record.reviewed_by, 'pending');
+    assert.ok(record.notes_en.includes('https://dorar.net/fake-hadith/4'));
+    assert.ok(record.notes_en.includes('test data only, never corpus'));
+    assert.ok(record.notes_en.includes('7d78b080b3c5e859e2f52de5cb19457982961ccdc2887bab6f6e9453d1a6c453'));
+  }
+  for (const id of ['T16', 'T18']) {
+    assert.ok(cases.get(id).notes_en.includes('Partial quote supplied intentionally; do not complete it.'));
   }
 });

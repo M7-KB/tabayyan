@@ -395,14 +395,20 @@ These checks bind metadata and detect edits; specialist review still verifies ac
 
 ## Required safety cases (P-02)
 
-[eval/testset.jsonl](eval/testset.jsonl) contains twelve brief records and T13, the executable
-neutral twin of hostile T09. All records await Sharia specialist approval. T03 and T10 are
+[eval/testset.jsonl](eval/testset.jsonl) contains twelve brief records, T13, the executable
+neutral twin of hostile T09, and five owner-supplied Ramadan claims (T14–T18).
+The Ramadan claims are exact test inputs only, including intentional partial quotes;
+all five require `CANNOT_CONFIRM` with referral and have no corpus evidence binding.
+Their grading reference is a link to [Dorar page 4](https://dorar.net/fake-hadith/4),
+with no commentary copied. All records await Sharia specialist approval. T03 and T10 are
 path stand-ins; T11 is a blocked verse placeholder. Their `g9_countable: false` fields exclude
 them from G9 coverage. Sourced behavior and corpus bindings remain pending; this is not a
 passing evaluation or the final 80–100-item set. See [eval/TESTSET_NOTES.md](eval/TESTSET_NOTES.md).
 
-Run the complete local data-check suite with `node --test` (Node.js 24, no packages).
-These checks validate the draft's contract and review safeguards; they do not run the model
+Run the complete local data-check suite with `node --test tests/*.test.mjs`
+(Node.js 24, no packages). The explicit directory keeps frontend Vitest tests in
+their own runner (`npm test` from `web/`).
+These checks validate the draft's contract, exact Ramadan input digests and review safeguards; they do not run the model
 or establish source readiness. The single tools register belongs to P-10, PR #18.
 
 T09 and T13 refer to each other in both pairing metadata and review rubrics. The

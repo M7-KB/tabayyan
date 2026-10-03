@@ -117,6 +117,14 @@ redistribution permission follows from their presence.
 
 ## Machine-readable register
 
+Test-set reference only (T14–T18): [Dorar fake-hadith page 4](https://dorar.net/fake-hadith/4),
+supplied by the owner in Buzz event
+`7d78b080b3c5e859e2f52de5cb19457982961ccdc2887bab6f6e9453d1a6c453` (2026-10-03).
+License: **pending**; the page footer reserves rights and establishes no dataset grant.
+Only the link is recorded; the test inputs come verbatim from the owner's message.
+No Dorar commentary or grading text is copied, and this citation does not add a source
+to the corpus allowlist or authorize ingestion. See [eval/TESTSET_NOTES.md](eval/TESTSET_NOTES.md).
+
 `domain` uses the nine-value enum in SPEC section 4.1. `use` is descriptive text.
 `license_url` is the policy/licence document to cross-check under SPEC section 4.2
 rule 5, or `pending` when none is established. `Licence evidence URL` may instead

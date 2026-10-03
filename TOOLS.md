@@ -17,7 +17,7 @@ Never put credentials, private prompts, user queries or personal data in this re
 |---|---|---|---|---|---|---|
 | 2026-10-02 | P-04 source documentation | Codex / OpenAI | Pending verification; no provider API identifier recorded in the contribution | Metadata research and documentation; no religious source downloads or ingestion | PR [#6](https://github.com/M7-KB/tabayyan/pull/6), source documentation and tests | Tool service terms pending verification; source permissions belong in SOURCES.md |
 | 2026-10-02 | P-03 register split and tools register | Codex / OpenAI | Pending verification; runtime display labels are not provider API identifiers | Documentation edits and repository checks | Branches `docs/sources-v0` and `docs/tools-register` | Tool service terms pending verification |
-| 2026-10-02 | Planning edits and PR/review coordination: PR #5, #13, #14 | Claude Code / Anthropic (Luffy contributor report) | `claude-sonnet-5` (Claude Sonnet 5), contributor-confirmed; not independently checked against provider/runtime evidence | SPEC.md, TASKS.md, README.md and .gitignore; no application code or corpus/scripture content authored, per report | Planning message `6c1e5f7bde9dfefcf8fb6e2e01bfaf06f839aff6ba5e4d66e2a33a3f88616c47`, Luffy, 2026-10-02 14:09:26 UTC; PR [#5](https://github.com/M7-KB/tabayyan/pull/5), [#13](https://github.com/M7-KB/tabayyan/pull/13), [#14](https://github.com/M7-KB/tabayyan/pull/14) | Service terms pending verification; Robin collects evidence by Oct 5 18:00 Riyadh |
+| 2026-10-02 | Planning edits and PR/review coordination: PR #5, #13, #14 | Claude Code / Anthropic (Luffy contributor report) | Pending verification; contributor report is not independent provider/runtime evidence | SPEC.md, TASKS.md, README.md and .gitignore; no application code or corpus/scripture content authored, per report | Contributor claims `claude-sonnet-5` (Claude Sonnet 5), not independently verified. Planning message `6c1e5f7bde9dfefcf8fb6e2e01bfaf06f839aff6ba5e4d66e2a33a3f88616c47`, Luffy, 2026-10-02 14:09:26 UTC; PR [#5](https://github.com/M7-KB/tabayyan/pull/5), [#13](https://github.com/M7-KB/tabayyan/pull/13), [#14](https://github.com/M7-KB/tabayyan/pull/14) | Service terms pending verification; Robin collects evidence by Oct 5 18:00 Riyadh |
 
 Supporting tools used for Robin's contributions: Buzz CLI, Git, GitHub CLI, PowerShell and Node.js
 (source-register checks). Versions and licence evidence are not yet recorded; Robin collects contributor evidence for them
@@ -28,8 +28,8 @@ Luffy reports Git, GitHub CLI (gh), Buzz CLI and standard file read/edit/grep fo
 ## Reconciliation before submission
 
 Robin owns this register and its completion checklist under the TOOLS.md assignment
-in [PR #14](https://github.com/M7-KB/tabayyan/pull/14). The TASKS id and acceptance
-criteria are pending Luffy's update in #14; this PR does not assign a new task id.
+in merged [PR #14](https://github.com/M7-KB/tabayyan/pull/14) at `a72a122`.
+[TASKS.md P-10](TASKS.md) records the task id and acceptance criteria.
 Contributor reports are due **2026-10-05 18:00 Riyadh (UTC+03:00)**. Robin reconciles
 all reports by **20:00**, before the **22:00 first submission** (TASKS T-608a).
 Any unresolved entry at 20:00 is escalated to Luffy and the owner in planning;

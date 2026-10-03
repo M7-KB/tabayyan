@@ -554,6 +554,24 @@ Raw directories are ignored by default. A cleared-source PR adds an explicit per
 negation to `.gitignore` and stages only the files whose redistribution licence is recorded.
 Never force-add an uncleared file. PR #13 owns the default ignore rules; P-04 does not duplicate them.
 
+**How the deployed API gets the corpus.** A source allowed for *use* but not *redistribution* cannot live
+in the public repo, so the deployed API does not read it from git or bake it into a container image (an
+image layer is as public as the repo). Instead:
+- The owner keeps the artifact in a **private store** (private object storage). The Render service gets
+  its URL and read token as dashboard-only environment variables — never in the repo, `render.yaml` or a
+  Dockerfile (G12, G18).
+- The repo commits only **hashes**: a manifest of each artifact's SHA-256 and `corpus_version`. Hashes
+  are not content.
+- At startup the API downloads the artifact, verifies it against the committed manifest, and runs the same
+  `load_corpus` checks as CI (rules 1–8). A missing artifact, a hash mismatch or any rule failure enters
+  degraded mode: `/health` reports `degraded` with `corpus_items: 0`, and the API never serves a partial
+  corpus.
+- A source whose redistribution status is not cleared is left out of the deployed artifact, so the
+  missing-source abstain path (non-negotiable 2) applies to any claim it would have supported.
+- **Open owner question, not decided here:** whether verbatim display in a public app counts as
+  redistribution for a source licensed for use only. That is a licence question for the owner and the
+  organizers. Until it is answered, such a source stays out of the deployed artifact.
+
 **Derived fields.** `text_normalized` and `checksum_sha256` are produced by the shared normalizer (T-402).
 `checksum_en_sha256` is a plain SHA-256 of `text_en`'s original UTF-8 bytes — no normalization, stripping
 or language concatenation, no normalizer involved, but filled on the same schedule since it needs the

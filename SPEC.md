@@ -116,7 +116,7 @@ No request touches a source website. Retrieval runs against a committed, checksu
 Any scripture span leaving the API must match a corpus record character-for-character after a fixed normalization, and must carry that record's id. A span that fails is not repaired and not re-asked for: the card drops to CANNOT_CONFIRM. Prompt instructions are a convenience; the gate is the guarantee. (Non-negotiable 1 and 2.)
 
 **A3. Scripture and generated text live in different fields.**
-`evidence[].quote_ar` is the **only** field in the response permitted to hold scripture, a hadith text, or any quoted source text. `explanation_ar` is generated and is rejected by the gate if it contains a quoted span. The UI renders them in visually distinct blocks that are never merged. (Non-negotiable 3.)
+`evidence[].quote_ar` and `misquote_notice.evidence.quote_ar` are the **only Arabic source-text** fields in the response permitted to hold scripture, a hadith text, or any quoted source text. `explanation_ar` is generated and is rejected by the gate if it contains a quoted span. The UI renders them in visually distinct blocks that are never merged. (Non-negotiable 3.)
 
 **A4. Retrieval is lexical first.**
 Arabic normalization (strip tashkeel and tatweel, unify alef/ya/ta-marbuta forms, keep the unnormalized text for display) plus BM25. Deterministic, debuggable, no embedding infrastructure on day 1. Embeddings are a P2 addition behind the same interface, not a rewrite.
@@ -452,9 +452,22 @@ disagree, the schema is wrong and is fixed in the same PR as the prose.
   "how_to_verify_ar": ["line 1", "line 2"],
 
   "misquote_notice": {
-    "corpus_id": "hadith:bukhari:1",
-    "quote_ar": "verbatim text of the matched record, same verbatim rule as evidence[].quote_ar",
-    "note_ar": "generated, contains no quoted text beyond quote_ar"
+    "evidence": {
+      "evidence_id": "notice-e1",
+      "corpus_id": "hadith:bukhari:1",
+      "domain": "hadith",
+      "source_id": "sahih-bukhari",
+      "source_name_ar": "source name copied from the matched record",
+      "source_url": "https://example.invalid/source",
+      "quote_ar": "verbatim text copied from the matched record",
+      "translation": null,
+      "ref": { "collection": "collection copied from the record", "number": "1" },
+      "grading": { "grade_ar": "grade from the record", "grader_ar": "grader from the record",
+                   "grading_source_url": "https://example.invalid/grading" },
+      "verbatim_verified": true,
+      "retrieval_score": 18.4
+    },
+    "note_ar": "generated note, contains no quoted source text"
   },
 
   "confidence": 0.62,
@@ -469,8 +482,8 @@ disagree, the schema is wrong and is fixed in the same PR as the prose.
 
 Field rules, enforced by `contracts/card.schema.json` and by the gates:
 
-- `quote_ar` and `misquote_notice.quote_ar` are the only fields that may contain Arabic source text.
-  `translation.text_en` is the only field that may contain English source text, and it must itself be a
+- `evidence[].quote_ar` and `misquote_notice.evidence.quote_ar` are the only fields that may contain Arabic source text.
+  `evidence[].translation.text_en` and `misquote_notice.evidence.translation.text_en` are the only fields that may contain English source text, and it must itself be a
   verbatim corpus record from an approved translation (`domain: "quran_translation"`). **There is no
   machine-translated scripture anywhere in the response.** If no approved translation record exists,
   `translation` is `null` and the English reader gets the Arabic quote plus generated explanation only.
@@ -479,10 +492,21 @@ Field rules, enforced by `contracts/card.schema.json` and by the gates:
   `term.*` and `referral.*` are generated and must not contain a quoted span. `term.term_en` is the
   exception: it is copied verbatim from the approved glossary record named by `term.glossary_corpus_id`,
   never generated.
-- `misquote_notice` is non-null exactly when the span detector (§5.2) reports `NEAR_MISS` from either
+- `misquote_notice` is eligible only when the span detector (§5.2) reports `NEAR_MISS` from either
   trigger and that finding is not already expressed as `alignment: "CONTRADICTS"` — i.e. on a level-D card,
   or whenever the matched record's domain is `hadith`. It is `null` on every other card, including a
   SUPPORTED + CONTRADICTS card, where the same information already lives in `evidence`.
+- Owner clarification (2026-10-03): `misquote_notice.evidence` uses exactly the shared
+  `$defs/evidence` object used by `evidence[]`. Field names are `evidence_id`, `corpus_id`,
+  `domain`, `source_id`, `source_name_ar`, `source_url`, `quote_ar`, `translation`, `ref`,
+  `grading`, `verbatim_verified`, and `retrieval_score`. Quran references require `ref.surah`
+  and `ref.ayah`; hadith references require `ref.collection` and `ref.number`, plus complete
+  `grading.grade_ar`, `grading.grader_ar`, and `grading.grading_source_url`.
+  The composer copies provenance from the matched approved corpus record, never from model output.
+  If provenance, grading, or verbatim verification fails, drop the whole notice, keep the detector
+  finding, and abstain/refer; never ship an altered quote or fall back to the old flat notice.
+  Runtime gates must resolve the notice corpus ID to the detected NEAR_MISS record and check
+  all provenance against it. Structural validation alone cannot establish these facts.
 - `evidence[].verbatim_verified` must be `true` for every item; an unverified item is removed, not shipped.
 - `domain: "hadith"` requires a non-null `grading` with `grade_ar`, `grader_ar`, and `grading_source_url`. No grading → the evidence item is dropped. If dropping it empties `evidence`, the card becomes CANNOT_CONFIRM.
 - `positions` is non-empty **only** when `state == "DISPUTED"`, and needs ≥ 2 positions, each with ≥ 1 evidence id. Positions are returned in corpus order and carry no ranking, score, or "stronger/preferred" marker.
@@ -918,9 +942,9 @@ detector stubbed to raise.
 "Level D with a misquote"; @Nami, word-budget probe v2, point 5.) A `NEAR_MISS` is surfaced to the user
 even when it cannot or does not force `CONTRADICTS` — on a level-D card (`state` is always CANNOT_CONFIRM
 there, `alignment` is `null`, and rule 1 has nothing to set), and on the hadith row above.
-`card.misquote_notice` is `{ "corpus_id": "...", "quote_ar": "...", "note_ar": "..." } | null`, non-null
+`card.misquote_notice` is `{ "evidence": { ... }, "note_ar": "..." } | null`, non-null
 whenever any trigger reports `NEAR_MISS` and `alignment` is not already `CONTRADICTS` for that finding.
-`misquote_notice.quote_ar` is held to the same verbatim rule as `evidence[].quote_ar` (G1, G2): copied
+`misquote_notice.evidence.quote_ar` is held to the same verbatim rule as `evidence[].quote_ar` (G1, G2): copied
 character-for-character from the matched record, or the field is dropped. `misquote_notice` is covered by
 the red-team set (P-09) and by G21, same as every other field a model or a gate can touch.
 
@@ -995,7 +1019,7 @@ Two further rules, unchanged:
    claim; it is never used for absence of evidence.
 6. The user's altered wording stays in the claim block, marked as the user's words with an explicit
    `data-role="user-text"`. It is never styled as scripture and never enters `evidence[].quote_ar` or
-   `misquote_notice.quote_ar` (G16). `alignment` is `null` for DISPUTED and CANNOT_CONFIRM, and DISPUTED
+   `misquote_notice.evidence.quote_ar` (G16). `alignment` is `null` for DISPUTED and CANNOT_CONFIRM, and DISPUTED
    still ranks nothing.
 
 ### 5.5 Policy file and tuning file  (A7; owner decision 12; Nami findings 3 and 4)
@@ -1119,9 +1143,9 @@ Every gate names **who produces the evidence**, so @Nami's sign-off asserts only
 
 | ID | Gate | How it is verified | Evidence of record |
 |---|---|---|---|
-| G1 | No scripture or quoted source text outside `evidence[].quote_ar` and `evidence[].translation.text_en` | Automated: every card from a full test-set run is scanned; any quoted span found in `explanation_ar`, `explanation_en`, `positions[].summary_ar`, `how_to_verify_ar`, `term.*` or `referral.*` fails the build | CI |
+| G1 | No scripture or quoted source text outside `evidence[].quote_ar`, `evidence[].translation.text_en`, `misquote_notice.evidence.quote_ar` and `misquote_notice.evidence.translation.text_en` | Automated: every card from a full test-set run is scanned; any quoted span found in `explanation_ar`, `explanation_en`, `positions[].summary_ar`, `how_to_verify_ar`, `term.*` or `referral.*` fails the build | CI |
 | G2 | Every displayed quote is verbatim, in both languages | Automated: each `quote_ar` is matched character-for-character against its `corpus_id` record after normalization; each `translation.text_en` is matched against its own approved-translation record. **No machine-translated scripture may appear anywhere**; if no approved translation record exists, `translation` is `null` | CI |
-| G3 | No hadith without source and grading | Automated: every `domain == "hadith"` evidence item has complete `grading`; corpus validator plus a response-level assertion | CI |
+| G3 | No hadith without source and grading | Automated: every `domain == "hadith"` item in `evidence[]` or `misquote_notice.evidence` has complete `grading`; corpus validator plus a response-level assertion | CI |
 | G4 | Level D never SUPPORTED or DISPUTED | Automated: property over all cards; plus brief case 5 | CI |
 | G5 | Level C never SUPPORTED | Automated: property over all cards | CI |
 | G6 | No fabrication when the corpus has nothing | Automated: brief case 6 returns CANNOT_CONFIRM with a referral, and the response contains no hadith text | CI |
@@ -1134,7 +1158,7 @@ Every gate names **who produces the evidence**, so @Nami's sign-off asserts only
 | G13 | Every source in `corpus.jsonl` is logged in `SOURCES.md` with its license; every used model, provider, framework, font and data/development tool is logged in `TOOLS.md` with model/version evidence and licence/terms | Source cross-check remains automated. Robin reconciles contributor reports by Oct 5 20:00 Riyadh (reports due 18:00). Nami checks inventory against the tree and contributor evidence before first submission and again at Oct 6 18:00 freeze. Missing or unresolved inventory fails this check and is escalated | CI + Robin inventory, checked by Nami |
 | G14 | Corpus and test set carry Sharia specialist approval | `approved_by` / `reviewed_by` equal `sharia-reviewer-1`, recorded by the owner in the PR. **Passes only with real approval.** If still `pending` at submission, G14 is reported **NOT MET** and disclosed in the README and the deck — never softened into a pass (owner decision 13) | Owner |
 | G15 | Deployed demo works end to end | @Nami runs the 12 cases against the live demo, not only locally | @Nami |
-| G16 | A span of the user's input is never rendered as scripture and never appears in a quote field | Automated **property over all cards**: no `evidence[].quote_ar`, `translation.text_en` or `misquote_notice.quote_ar` may contain any span of the input that is not itself a verbatim corpus record, compared after normalization — not a raw substring check on one fixture. Frontend: the claim block carries `data-role="user-text"` and the evidence block `data-role="scripture"`, asserted by marker plus snapshot, **not by component identity** (two different components can style identically) | CI |
+| G16 | A span of the user's input is never rendered as scripture and never appears in a quote field | Automated **property over all cards**: no `evidence[].quote_ar`, `evidence[].translation.text_en`, `misquote_notice.evidence.quote_ar` or `misquote_notice.evidence.translation.text_en` may contain any span of the input that is not itself a verbatim corpus record, compared after normalization — not a raw substring check on one fixture. Frontend: the claim block carries `data-role="user-text"` and the evidence block `data-role="scripture"`, asserted by marker plus snapshot, **not by component identity** (two different components can style identically) | CI |
 | G17 | `alignment` never confirms a misquote | Automated **property over all cards**: `alignment` is non-null exactly when `state == "SUPPORTED"`; it never defaults to `CONFIRMS`; and **for every SUPPORTED card, if either §5.2 trigger reports `NEAR_MISS` against a `quran`-domain record anywhere in the whole corpus index, `alignment` is not `CONFIRMS`** — Trigger A for a marked span, Trigger B for unmarked near-verbatim text. A `NEAR_MISS` against a `hadith`-domain record is exempt by design (§5.2 Qur'an/hadith split) and is checked separately via `misquote_notice`. A one-word-altered verse with no quote marks and no attribution formula is covered, which is the case that passed all eighteen original gates. Brief cases 1 and 11 are instances of this property, not the definition of the gate | CI |
 | G18 | The provider key exists only in the environment, and the privacy + AI notice is shown before the user submits | Automated: no key literal in the tree, settings read from env; frontend test asserts the notice renders on the input screen; @Nami confirms on the live demo | CI + @Nami |
 | G19 | Questions and terms produce correct cards | Automated: every brief case produces its expected `input_kind`; a question with a false presupposition produces a claim with `origin: "presupposition"`; a term request fills `card.term` from the glossary; input with no checkable proposition returns a CANNOT_CONFIRM card with `NO_CHECKABLE_CLAIM`, not a 400 and not a 500 (§4.4) | CI |

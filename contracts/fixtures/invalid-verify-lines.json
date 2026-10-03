@@ -42,7 +42,8 @@
       "quote_ar": "نص تجريبي غير ديني",
       "translation": null,
       "ref": {
-        "section": "synthetic"
+        "collection": "Synthetic collection",
+        "number": "1"
       },
       "grading": {
         "grade_ar": "تصنيف تجريبي",
@@ -62,8 +63,27 @@
     "افتح المصدر المحدد"
   ],
   "misquote_notice": {
-    "corpus_id": "synthetic:e1",
-    "quote_ar": "نص تجريبي غير ديني",
+    "evidence": {
+      "evidence_id": "e1",
+      "corpus_id": "synthetic:e1",
+      "domain": "hadith",
+      "source_id": "synthetic-fixture",
+      "source_name_ar": "مصدر تجريبي غير ديني",
+      "source_url": "https://example.invalid/fixture",
+      "quote_ar": "نص تجريبي غير ديني",
+      "translation": null,
+      "ref": {
+        "collection": "Synthetic collection",
+        "number": "1"
+      },
+      "grading": {
+        "grade_ar": "تصنيف تجريبي",
+        "grader_ar": "اختبار",
+        "grading_source_url": "https://example.invalid/grading"
+      },
+      "verbatim_verified": true,
+      "retrieval_score": 18.4
+    },
     "note_ar": "تنبيه تجريبي"
   },
   "confidence": 0.9,

@@ -2,7 +2,8 @@
 
 Updated 2026-10-03 from owner selection routed in build event
 `401979dc9d4628f2a6dd59b09d6f923f1395147d707a5a2c3b3742e922e46b04`.
-Selections and Dorar codes are owner-supplied, not verified by us.
+The owner confirmed the Bukhari-to-Dorar pairs in build event
+`d1ca230495eeeb02218c21be73825d975b9a7af7494651623f6cd5fec32bb5ec`. Text and grading still await human files and specialist review.
 Specialist review remains pending; the handoff stays unsent in OUTBOX.
 **Only the owner downloads and places files. No agent downloads anything.**
 Selected verses: 2:255, 51:56-60, 35:28, 112:1-4, KFC file only, no tafsir.
@@ -14,6 +15,17 @@ not a download link. Collection/search home pages in
 [DOWNLOAD_MANIFEST.md](DOWNLOAD_MANIFEST.md) are starting points only; never substitute
 them for an exact selected page. The known Tawhid Arabic page below is an existing
 manifest reference, not a new download or verification.
+
+## Local handoff
+
+Save under `C:\Users\m7md2\.buzz\REPOS\tabayyan\data\raw\` in the persistent clone.
+The table gives exact local target names. The KFC target assumes JSON; retain the actual
+format/extension if the publisher supplies CSV or an archive. Keep original filenames
+and exact page URLs in acquisition metadata. Save the numbered Shamela pages from
+book 1681; do not infer page indices from hadith numbers.
+
+Owner decision routed in build event d1ca230495eeeb02218c21be73825d975b9a7af7494651623f6cd5fec32bb5ec: challenge-app ingestion is allowed for kfc-mushaf, sahih-bukhari and dorar-hadith; redistribution is prohibited. Raw files and the built corpus never enter the public repository. Content review remains pending. Machine-readable gates and runtime support are a separate backend task.
+See [SOURCES.md](../SOURCES.md#owner-licence-decision-2026-10-03-night).
 
 ## Original evidence files
 
@@ -28,10 +40,10 @@ record its actual extension and update the exact target path before acquisition.
 | Bukhari 7556 edition page | Pending exact edition page URL | BUKHARI_7556.html | `data/raw/sahih-bukhari/BUKHARI_7556.html` |
 | Bukhari 63 edition page | Pending exact edition page URL | BUKHARI_63.html | `data/raw/sahih-bukhari/BUKHARI_63.html` |
 | Bukhari 1399 edition page | Pending exact edition page URL | BUKHARI_1399.html | `data/raw/sahih-bukhari/BUKHARI_1399.html` |
-| Owner-supplied code JDqeTpYd; Bukhari match unverified | https://dorar.net/h/JDqeTpYd | DORAR_JDqeTpYd.html | `data/raw/dorar-hadith/DORAR_JDqeTpYd.html` |
-| Owner-supplied code f5wEbcxS; Bukhari match unverified | https://dorar.net/h/f5wEbcxS | DORAR_f5wEbcxS.html | `data/raw/dorar-hadith/DORAR_f5wEbcxS.html` |
-| Owner-supplied code QPGgH3Qa; Bukhari match unverified | https://dorar.net/h/QPGgH3Qa | DORAR_QPGgH3Qa.html | `data/raw/dorar-hadith/DORAR_QPGgH3Qa.html` |
-| Owner-supplied code pUrPIlDN; Bukhari match unverified | https://dorar.net/h/pUrPIlDN | DORAR_pUrPIlDN.html | `data/raw/dorar-hadith/DORAR_pUrPIlDN.html` |
+| Bukhari 8; Dorar pair confirmed by owner | https://dorar.net/h/JDqeTpYd | DORAR_JDqeTpYd.html | `data/raw/dorar-hadith/DORAR_JDqeTpYd.html` |
+| Bukhari 7556; Dorar pair confirmed by owner | https://dorar.net/h/f5wEbcxS | DORAR_f5wEbcxS.html | `data/raw/dorar-hadith/DORAR_f5wEbcxS.html` |
+| Bukhari 63; Dorar pair confirmed by owner | https://dorar.net/h/QPGgH3Qa | DORAR_QPGgH3Qa.html | `data/raw/dorar-hadith/DORAR_QPGgH3Qa.html` |
+| Bukhari 1399; Dorar pair confirmed by owner | https://dorar.net/h/pUrPIlDN | DORAR_pUrPIlDN.html | `data/raw/dorar-hadith/DORAR_pUrPIlDN.html` |
 | Tawhid Arabic entry | https://islamic-content.com/dictionary/word/3529 | TAWHID_AR.html | `data/raw/jamhara-glossary/TAWHID_AR.html` |
 | Tawhid publisher English entry | Pending exact supplied English URL | TAWHID_EN.html | `data/raw/jamhara-glossary/TAWHID_EN.html` |
 | Sharia Arabic entry | Pending specialist selection | SHARIA_AR.html | `data/raw/jamhara-glossary/SHARIA_AR.html` |

@@ -13,10 +13,11 @@ chooses religious examples or downloads source files.
 Owner selections, not verified by us: KFC 2:255, 51:56-60, 35:28, 112:1-4,
 text from the KFC file only, no tafsir; Bukhari 8, 7556, 63, 1399, text from the
 edition file and grading from Dorar. Bukhari number is the canonical reference.
-Owner-supplied Dorar codes: JDqeTpYd, f5wEbcxS, QPGgH3Qa, pUrPIlDN,
-using `https://dorar.net/h/` plus each code; their correspondence to the numbers
-is unverified. Specialist review and exact-file/permission checks remain pending.
-Muslim is removed from this selection. Retain the requests for
+Owner-confirmed pairs: 8=JDqeTpYd, 7556=f5wEbcxS, 63=QPGgH3Qa,
+1399=pUrPIlDN, using `https://dorar.net/h/` plus each code. Authority: build
+event `d1ca230495eeeb02218c21be73825d975b9a7af7494651623f6cd5fec32bb5ec`. Text, grading and exact-file checks still await human files;
+specialist review remains pending. See SOURCES.md for challenge-app ingestion
+permission and the redistribution prohibition. Muslim is not in current selection. Retain the requests for
 Tawhid, Sharia and Worship Arabic/English entries; all four provisional state/alignment
 labels in SPEC section 12; and the T07/T08 abstention fallback expectations.
 Approve/revise these independently of source permissions.

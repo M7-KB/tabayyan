@@ -1,6 +1,6 @@
 # Source and licence register
 
-P-03 source register, status checked 2026-10-03 against the evidence recorded below and [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md). Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md). Acquisition steps belong to P-04. This register does not build a corpus. **No source has confirmed licence clearance; no raw or derived content is authorized for public commitment by this register.**
+P-03 source register, status checked 2026-10-03 against the evidence recorded below and [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md). Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md). Acquisition steps belong to P-04. This register does not build a corpus. **The dated owner decision below permits challenge-app ingestion for three selected sources, with redistribution prohibited. Raw files and built corpus never enter the public repo. Machine-readable gates await the separate backend change.**
 
 ## Current source status
 
@@ -8,9 +8,10 @@ Each line covers source readiness, not approval in the challenge brief. `confirm
 written permission on file for the exact item/edition and intended use, with an evidence path
 and permitted scope recorded here. `pending` means that evidence review is incomplete;
 `needs owner action` identifies a missing selection, file or permission the owner must supply.
-Neither status permits ingestion. All 13 sources currently need owner action; none is confirmed.
-The dated partner approval below covers challenge use; public redistribution remains
-**needs owner action** and is not established by that approval.
+The historical statuses below describe evidence still needed per item. The later
+owner decision overrides ingestion restrictions for kfc-mushaf, sahih-bukhari and
+dorar-hadith within the challenge app only; redistribution is prohibited.
+Other permissions and specialist review remain pending.
 
 - `kfc-mushaf` — **needs owner action**: supply exact Hafs Smart package terms or written permission covering ingestion and public application display/redistribution; the general policy below is insufficient.
 - `sahih-bukhari` — **needs owner action**: supply edition-specific permission, selected source files and matching Dorar grading records; the Shamela book card establishes no licence grant.
@@ -49,6 +50,26 @@ require their applicable scope to be recorded per item. The machine-readable
 This approval does not select religious records or supply Sharia specialist approval.
 Only the owner downloads and places selected files in `data/raw/`.
 
+
+## Owner licence decision (2026-10-03 night)
+
+Owner decision routed in build event d1ca230495eeeb02218c21be73825d975b9a7af7494651623f6cd5fec32bb5ec: challenge-app ingestion is allowed for kfc-mushaf, sahih-bukhari and dorar-hadith; redistribution is prohibited. Raw files and the built corpus never enter the public repository. Content review remains pending. Machine-readable gates and runtime support are a separate backend task.
+This records the routed owner's scope decision, not independently inspected publisher
+licences. It supersedes the earlier unresolved ingestion/redistribution status for
+these three sources. The private artifact uses committed hashes only, following
+[PR #25](https://github.com/M7-KB/tabayyan/pull/25).
+
+The machine-readable table and approved_sources.json still contain pending licence
+gates. Vegapunk owns their coordinated update with the loader; this docs change
+does not claim runtime ingestion works. Do not set approved_by to sharia-reviewer-1:
+owner-selected records stay pending; new test items require needs_sharia_review: true.
+Pending-review runtime use requires the separately implemented explicit config flag,
+reported by /health. Owner selection is not specialist approval.
+
+Sahih Muslim remains an approved reference under the challenge brief, retained in
+this register and approved_sources.json. It is **not in current selection** in the
+manifest; its edition-specific permission remains pending. The three-source decision
+does not extend to Muslim.
 
 ## Jamhara permission evidence (2026-10-03)
 

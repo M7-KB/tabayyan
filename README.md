@@ -122,6 +122,22 @@ no thumbnail, so nothing from the platform ever loads on the result screen.
 
 API setup and run instructions are below; full application setup is tracked in TASKS.md, T-604.
 
+## Web scaffold (T-406)
+
+React + Vite, Arabic RTL (`lang="ar"`, `dir="rtl"`). Node 24. From the `web/` directory:
+
+```sh
+npm ci
+npm test
+npm run dev
+npm run build
+```
+
+The input screen has the AI-not-a-fatwa notice (always visible), the privacy notice before submit, and
+the upload consent checkbox that gates the upload button. No API calls yet: submit handlers are empty
+until T-504. Fonts are self-hosted (`@fontsource/ibm-plex-sans-arabic`), so the page does not load
+third-party font CDNs.
+
 ## API scaffold (T-401)
 
 Python 3.11+. From the repository root:

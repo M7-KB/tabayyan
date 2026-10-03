@@ -249,6 +249,12 @@ confirmed. This register grants no ingestion or redistribution permission. P-04 
 the separate acquisition manifest and allowlist. SOURCES.md preserves the public raw-package
 history disclosure after the tree cleanup in PR #13.
 
+The [Jamhara evidence section](SOURCES.md#jamhara-permission-evidence-2026-10-03)
+consolidates the Oct 3 owner report and policy check. Both Jamhara entries remain
+**needs owner action**; English equivalents require separately cleared source evidence.
+T07 and T08 abstain with referral when cleared evidence is missing. Proposed minimum
+corpus selections belong to the separate [checklist PR #33](https://github.com/M7-KB/tabayyan/pull/33).
+
 Run the standalone register contract checks with `node --test tests/*.test.mjs`.
 CI checks headers, unique IDs, required license fields and the closed domain enum.
 

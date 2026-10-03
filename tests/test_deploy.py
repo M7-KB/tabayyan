@@ -64,7 +64,7 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
     blueprint = yaml.safe_load((Path(__file__).resolve().parents[1] / "render.yaml").read_text())
     (service,) = blueprint["services"]
     assert service["plan"] == "free"
-    assert service["branch"] == "ops/deploy-api-v0"
+    assert service["branch"] == "main"
     assert service["autoDeployTrigger"] == "off"
     assert service["healthCheckPath"] == "/health"
     assert service["buildCommand"] == "python -m pip install ."

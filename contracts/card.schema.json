@@ -1,0 +1,1068 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tabayyan.example/contracts/card.schema.json",
+  "title": "Claim card version 1",
+  "$comment": "Structural contract only. Corpus provenance, original-text equality, generated-text isolation, span bounds, evidence-id resolution, and corpus-dependent notice eligibility require runtime gates. Fixtures contain synthetic text and do not establish corpus or Sharia approval.",
+  "type": "object",
+  "properties": {
+    "card_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "card_schema_version": {
+      "const": "1"
+    },
+    "input_kind": {
+      "enum": [
+        "claim",
+        "question",
+        "term"
+      ]
+    },
+    "claim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text_original": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lang": {
+          "enum": [
+            "ar",
+            "en"
+          ]
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        },
+        "time_span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timeSpan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin": {
+          "enum": [
+            "stated",
+            "presupposition",
+            "question_subject",
+            "term_lookup"
+          ]
+        },
+        "level": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        "level_rationale_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scripture_spans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scriptureSpan"
+          }
+        },
+        "span_detector_status": {
+          "enum": [
+            "ran",
+            "error",
+            "timeout",
+            "index_unavailable",
+            "corpus_id_unresolved",
+            "skipped"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "text_ar",
+        "text_original",
+        "lang",
+        "span",
+        "time_span",
+        "origin",
+        "level",
+        "level_rationale_en",
+        "scripture_spans",
+        "span_detector_status"
+      ],
+      "additionalProperties": false
+    },
+    "state": {
+      "enum": [
+        "SUPPORTED",
+        "DISPUTED",
+        "CANNOT_CONFIRM"
+      ]
+    },
+    "alignment": {
+      "enum": [
+        "CONFIRMS",
+        "CONTRADICTS",
+        null
+      ]
+    },
+    "alignment_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "state_label_key": {
+      "enum": [
+        "supported_confirms",
+        "supported_contradicts",
+        "disputed",
+        "cannot_confirm"
+      ]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/position"
+      }
+    },
+    "term": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/term"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "explanation_ar": {
+      "type": "string",
+      "minLength": 1
+    },
+    "explanation_en": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "referral": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/referral"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "how_to_verify_ar": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "misquote_notice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/notice"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "abstained_reason": {
+      "enum": [
+        "NO_MATCHING_EVIDENCE",
+        "LOW_CONFIDENCE",
+        "LEVEL_D_PERSONAL_CASE",
+        "VERBATIM_GATE_FAILED",
+        "CONFLICTING_EVIDENCE",
+        "ALIGNMENT_UNDETERMINED",
+        "NO_CHECKABLE_CLAIM",
+        null
+      ]
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tuning_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gate_report": {
+      "type": "object",
+      "properties": {
+        "verbatim": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "separation": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "grading": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "two_line_verify": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "alignment": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "user_quote_isolation": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "untrusted_input": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "span_detector": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        }
+      },
+      "required": [
+        "verbatim",
+        "separation",
+        "grading",
+        "two_line_verify",
+        "alignment",
+        "user_quote_isolation",
+        "untrusted_input",
+        "span_detector"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "card_id",
+    "card_schema_version",
+    "input_kind",
+    "claim",
+    "state",
+    "alignment",
+    "alignment_confidence",
+    "state_label_key",
+    "evidence",
+    "positions",
+    "term",
+    "explanation_ar",
+    "explanation_en",
+    "referral",
+    "how_to_verify_ar",
+    "misquote_notice",
+    "confidence",
+    "abstained_reason",
+    "policy_version",
+    "tuning_version",
+    "gate_report"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "span": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "timeSpan": {
+      "type": "object",
+      "properties": {
+        "start_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end_s": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "start_s",
+        "end_s"
+      ],
+      "additionalProperties": false
+    },
+    "scriptureSpan": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "marker": {
+          "enum": [
+            "quote_marks",
+            "ornate_brackets",
+            "attribution_formula",
+            null
+          ]
+        },
+        "nearest_corpus_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "normalized_distance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "classification": {
+          "enum": [
+            "VERBATIM",
+            "NEAR_MISS",
+            "UNRELATED"
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "marker",
+        "nearest_corpus_id",
+        "normalized_distance",
+        "classification"
+      ],
+      "additionalProperties": false
+    },
+    "grading": {
+      "type": "object",
+      "properties": {
+        "grade_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "grader_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "grading_source_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s]+$"
+        }
+      },
+      "required": [
+        "grade_ar",
+        "grader_ar",
+        "grading_source_url"
+      ],
+      "additionalProperties": false
+    },
+    "translation": {
+      "type": "object",
+      "properties": {
+        "corpus_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s]+$"
+        }
+      },
+      "required": [
+        "corpus_id",
+        "text_en",
+        "source_id",
+        "source_url"
+      ],
+      "additionalProperties": false
+    },
+    "reference": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "integer",
+            "minimum": 1
+          }
+        ]
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "corpus_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "enum": [
+            "quran",
+            "hadith",
+            "tafsir",
+            "aqeeda",
+            "fiqh",
+            "seerah",
+            "glossary",
+            "faq",
+            "quran_translation"
+          ]
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_name_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s]+$"
+        },
+        "quote_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "translation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/translation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ref": {
+          "$ref": "#/$defs/reference"
+        },
+        "grading": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/grading"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verbatim_verified": {
+          "const": true
+        },
+        "retrieval_score": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "evidence_id",
+        "corpus_id",
+        "domain",
+        "source_id",
+        "source_name_ar",
+        "source_url",
+        "quote_ar",
+        "translation",
+        "ref",
+        "grading",
+        "verbatim_verified",
+        "retrieval_score"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "domain": {
+                "const": "hadith"
+              }
+            },
+            "required": [
+              "domain"
+            ]
+          },
+          "then": {
+            "properties": {
+              "grading": {
+                "$ref": "#/$defs/grading"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "position": {
+      "type": "object",
+      "properties": {
+        "position_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "position_id",
+        "label_ar",
+        "summary_ar",
+        "evidence_ids"
+      ],
+      "additionalProperties": false
+    },
+    "term": {
+      "type": "object",
+      "properties": {
+        "term_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "term_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "glossary_corpus_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "term_ar",
+        "term_en",
+        "glossary_corpus_id"
+      ],
+      "additionalProperties": false
+    },
+    "referral": {
+      "type": "object",
+      "properties": {
+        "body_name_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s]+$"
+        },
+        "fallback_line_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ready_to_ask_question_ar": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "body_name_ar",
+        "body_url",
+        "fallback_line_ar",
+        "ready_to_ask_question_ar"
+      ],
+      "additionalProperties": false
+    },
+    "notice": {
+      "type": "object",
+      "properties": {
+        "corpus_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quote_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note_ar": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "corpus_id",
+        "quote_ar",
+        "note_ar"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "SUPPORTED"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "alignment": {
+            "enum": [
+              "CONFIRMS",
+              "CONTRADICTS"
+            ]
+          },
+          "abstained_reason": {
+            "type": "null"
+          },
+          "positions": {
+            "maxItems": 0
+          },
+          "evidence": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "DISPUTED"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "alignment": {
+            "type": "null"
+          },
+          "abstained_reason": {
+            "type": "null"
+          },
+          "positions": {
+            "minItems": 2
+          },
+          "evidence": {
+            "minItems": 1
+          },
+          "state_label_key": {
+            "const": "disputed"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "CANNOT_CONFIRM"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "alignment": {
+            "type": "null"
+          },
+          "abstained_reason": {
+            "type": "string"
+          },
+          "positions": {
+            "maxItems": 0
+          },
+          "referral": {
+            "$ref": "#/$defs/referral"
+          },
+          "state_label_key": {
+            "const": "cannot_confirm"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "alignment": {
+            "const": "CONFIRMS"
+          }
+        },
+        "required": [
+          "alignment"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state_label_key": {
+            "const": "supported_confirms"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "alignment": {
+            "const": "CONTRADICTS"
+          }
+        },
+        "required": [
+          "alignment"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state_label_key": {
+            "const": "supported_contradicts"
+          },
+          "misquote_notice": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "level": {
+                "const": "D"
+              }
+            },
+            "required": [
+              "level"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "const": "CANNOT_CONFIRM"
+          },
+          "referral": {
+            "$ref": "#/$defs/referral"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "level": {
+                "const": "C"
+              }
+            },
+            "required": [
+              "level"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "enum": [
+              "DISPUTED",
+              "CANNOT_CONFIRM"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "lang": {
+                "const": "en"
+              }
+            },
+            "required": [
+              "lang"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "explanation_en": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "lang": {
+                "const": "ar"
+              }
+            },
+            "required": [
+              "lang"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "explanation_en": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "input_kind": {
+            "const": "term"
+          }
+        },
+        "required": [
+          "input_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "term": {
+            "$ref": "#/$defs/term"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "span_detector_status": {
+                "enum": [
+                  "error",
+                  "timeout",
+                  "index_unavailable",
+                  "corpus_id_unresolved",
+                  "skipped"
+                ]
+              }
+            },
+            "required": [
+              "span_detector_status"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "const": "CANNOT_CONFIRM"
+          },
+          "abstained_reason": {
+            "const": "ALIGNMENT_UNDETERMINED"
+          },
+          "gate_report": {
+            "properties": {
+              "span_detector": {
+                "const": "fail"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "misquote_notice": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "misquote_notice"
+        ]
+      },
+      "then": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "scripture_spans": {
+                "contains": {
+                  "properties": {
+                    "classification": {
+                      "const": "NEAR_MISS"
+                    }
+                  },
+                  "required": [
+                    "classification"
+                  ]
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "scripture_spans"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "claim": {
+            "properties": {
+              "level": {
+                "const": "A"
+              }
+            },
+            "required": [
+              "level"
+            ]
+          }
+        },
+        "required": [
+          "claim"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "enum": [
+              "SUPPORTED",
+              "CANNOT_CONFIRM"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

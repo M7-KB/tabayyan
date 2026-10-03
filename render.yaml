@@ -1,4 +1,4 @@
-# All environment values, including the production key, are entered in Render.
+# All environment values are entered in Render. Health-only mode needs no provider key.
 services:
   - type: web
     name: tabayyan-api-v0
@@ -11,8 +11,6 @@ services:
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log
     healthCheckPath: /health
     envVars:
-      - key: OPENAI_API_KEY
-        sync: false
       - key: HEALTH_ONLY
         sync: false
       - key: CORS_ORIGINS

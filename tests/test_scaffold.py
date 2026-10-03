@@ -59,6 +59,25 @@ def test_missing_key_fails_startup_without_disclosing_config(settings, key):
             pass
 
 
+@pytest.mark.parametrize("key", [None, "", "   "])
+def test_health_only_starts_without_key_or_policy(settings, key, tmp_path):
+    settings.health_only = True
+    settings.openai_api_key = None if key is None else Settings(openai_api_key=key).openai_api_key
+    settings.content_policy_path = tmp_path / "missing-policy.yaml"
+    settings.tuning_path = tmp_path / "missing-tuning.yaml"
+    with TestClient(create_app(settings)) as client:
+        result = client.get("/health")
+        assert result.status_code == 200
+        assert result.json()["status"] == "degraded"
+        assert result.json()["corpus_items"] == 0
+        assert result.json()["policy_approved_by"] == "pending"
+        assert result.json()["policy_version"] is None
+        assert result.json()["tuning_version"] is None
+        for path in ("/docs", "/redoc", "/openapi.json"):
+            assert client.get(path).status_code == 404
+        assert client.post("/verify").status_code == 404
+
+
 @pytest.mark.parametrize("band", ["4", "10", "else"])
 def test_ceiling_violation_is_startup_failure(settings, band):
     data = yaml.safe_load(settings.tuning_path.read_text("utf-8"))

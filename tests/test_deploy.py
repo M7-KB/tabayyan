@@ -46,11 +46,11 @@ def test_health_only_without_artifacts_or_config(tmp_path, monkeypatch):
             assert "private-input" not in response.text
 
 
-def test_health_only_still_requires_dashboard_key(monkeypatch):
+def test_health_only_environment_startup_without_dashboard_key(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    with pytest.raises(RuntimeError, match="OPENAI_API_KEY is required"):
-        with TestClient(create_app(Settings(health_only=True))):
-            pass
+    monkeypatch.setenv("HEALTH_ONLY", "true")
+    with TestClient(create_app(Settings())) as client:
+        assert client.get("/health").status_code == 200
 
 
 def test_health_only_is_explicit_environment_opt_in(monkeypatch):
@@ -72,7 +72,6 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
         "uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log"
     )
     assert {variable["key"] for variable in service["envVars"]} == {
-        "OPENAI_API_KEY",
         "HEALTH_ONLY",
         "CORS_ORIGINS",
         "BUILD_SHA",

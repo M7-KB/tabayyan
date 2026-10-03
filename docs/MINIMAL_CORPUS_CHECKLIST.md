@@ -21,11 +21,11 @@ Only files placed by humans in `data/raw/` may become corpus input. No scraping.
 | `dorar-hadith` | One matching grading record per selected hadith | Verbatim grading, named grader, grading reference, exact grading URL and separate permission. Do not infer grading from a collection title. | Required grading provenance for every displayed hadith. |
 | `jamhara-glossary` | Three terms: Tawhid, Sharia, Worship | Exact Arabic entries and publisher-supplied English equivalents, source/reference and permission for each selected item. Tawhid entry: https://islamic-content.com/dictionary/word/3529 . Other exact entry and English URLs remain pending owner selection. | T07/T08 and the culturally loaded term path in T12. |
 
-Owner-supplied Dorar codes: `JDqeTpYd`, `f5wEbcxS`, `QPGgH3Qa`, `pUrPIlDN`;
-permalinks use `https://dorar.net/h/` plus the exact code. These codes and Bukhari
-numbers have not been verified by us. Their per-item correspondence must be checked
-against the human files before recording grading provenance; list order is not proof.
-Muslim is removed from this selection and the owner download list.
+Owner-confirmed pairs: Bukhari 8 = `JDqeTpYd`, 7556 = `f5wEbcxS`,
+63 = `QPGgH3Qa`, 1399 = `pUrPIlDN`. Authority: build event `d1ca230495eeeb02218c21be73825d975b9a7af7494651623f6cd5fec32bb5ec`.
+Permalinks use `https://dorar.net/h/` plus each code. Text and grading still
+require checks against human files and specialist review. Muslim is not in current
+selection; it remains an approved reference in SOURCES.md and approved_sources.json.
 
 This minimum is not a claim of complete brief coverage. Hadith texts and gradings
 remain pending the human files, permission checks and specialist review. It does not cover all
@@ -48,8 +48,8 @@ remains unsent in OUTBOX while the specialist is unavailable; no work waits on i
    directories. Keep permission evidence with the source metadata. Unclear files remain
    excluded from ingestion and public commits, including derived excerpts and indexes.
 2. Record exact filenames, edition/package, source URLs, references and permitted scope
-   in SOURCES.md. Permission must cover the intended raw/derived publication and public
-   application display; record any restriction explicitly. Confirm the grading source
+   in SOURCES.md. The owner permits challenge-app ingestion for the selected three
+   sources but prohibits redistribution: raw files and built corpus stay private. Confirm the grading source
    separately from the hadith edition.
 3. Robin prepares records with unchanged text, checksums, source IDs, level, licence and
    complete grading metadata. English text stays separate, with its own checksum.

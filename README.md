@@ -289,8 +289,10 @@ Expect health HTTP 200 with `status: degraded`, `corpus_items: 0`,
 ## Source register (P-03)
 
 See [SOURCES.md](SOURCES.md) for one readiness status per candidate source, uses and licence
-evidence. All 13 entries need owner action; licence clearance remains pending and none is
-confirmed. This register grants no ingestion or redistribution permission. P-04 supplies
+evidence. The [dated owner decision](SOURCES.md#owner-licence-decision-2026-10-03-night)
+permits challenge-app ingestion for kfc-mushaf, sahih-bukhari and dorar-hadith,
+with redistribution prohibited. Raw files and built corpus never enter the public repo.
+Machine-readable licence gates await the separate backend change. P-04 supplies
 the separate acquisition manifest and allowlist. SOURCES.md preserves the public raw-package
 history disclosure after the tree cleanup in PR #13.
 
@@ -310,13 +312,15 @@ Run the standalone register contract checks with `node --test tests/*.test.mjs`.
 CI checks headers, unique IDs, required license fields and the closed domain enum.
 
 The [dated organizer reply](SOURCES.md#partner-approval-for-challenge-use-2026-10-03)
-records partner approval for challenge use; redistribution remains **needs owner action**.
+records partner approval for challenge use; the later owner decision prohibits
+redistribution of the three selected sources while allowing challenge-app ingestion.
 Use the [specialist selection/test plan](docs/SPECIALIST_SELECTION_TEST_PLAN.md) and
 [owner download list](docs/OWNER_DOWNLOAD_LIST.md) for five Ramadan claims from Dorar's
 fake-hadith section as test inputs only, expected CANNOT_CONFIRM with referral,
-and the per-item file handoff. The four Dorar codes are owner-supplied and unverified;
-exact files, number-to-code matches, missing item URLs and specialist review remain
-pending. Bukhari 8 is proposed as the altered-hadith base; only the specialist
+and the per-item file handoff. Owner-confirmed pairs: 8=JDqeTpYd,
+7556=f5wEbcxS, 63=QPGgH3Qa, 1399=pUrPIlDN. Exact files, grading content,
+missing item URLs and specialist review remain pending. Muslim remains approved
+but is marked not in current selection in the manifest. Bukhari 8 is proposed as the altered-hadith base; only the specialist
 approves the altered text. The handoff stays unsent in OUTBOX while the specialist
 is unavailable; documentation work proceeds. Only the owner downloads; these documents add no corpus or
 executable test inputs and grant no licence or specialist approval.
@@ -328,8 +332,10 @@ questions; missing cleared evidence always requires abstention and referral.
 ## Manual source collection (P-04)
 
 Follow [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md) for the owner download checklist,
-formats and local paths. [SOURCES.md](SOURCES.md) records licence evidence; all current permissions
-are pending, so ingestion remains blocked until permission is clear.
+formats and local paths. [SOURCES.md](SOURCES.md) records the three-source challenge-app
+ingestion permission and no-redistribution restriction. Other permissions remain pending.
+Current loader gates need the separately assigned backend change; this docs PR does
+not enable ingestion or pending-review runtime use.
 [corpus/approved_sources.json](corpus/approved_sources.json) lists candidate sources by domain;
 it does not grant licensing or Sharia approval. P-03 owns the source register.
 

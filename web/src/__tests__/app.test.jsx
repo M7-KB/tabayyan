@@ -11,6 +11,11 @@ describe('App shell', () => {
     expect(screen.getByRole('note')).toHaveTextContent(strings.aiNotice)
   })
 
+  it('shows the development-preview banner', () => {
+    render(<App />)
+    expect(screen.getByText(strings.previewBanner)).toBeInTheDocument()
+  })
+
   it('shows the privacy notice before the text submit button', () => {
     render(<App />)
     const privacy = screen.getByRole('region', { name: strings.privacyHeading })

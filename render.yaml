@@ -1,0 +1,23 @@
+# All environment values, including the production key, are entered in Render.
+services:
+  - type: web
+    name: tabayyan-api-v0
+    runtime: python
+    plan: free
+    repo: https://github.com/M7-KB/tabayyan
+    branch: ops/deploy-api-v0
+    autoDeployTrigger: "off"
+    buildCommand: python -m pip install .
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: HEALTH_ONLY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: BUILD_SHA
+        sync: false
+      - key: PYTHON_VERSION
+        sync: false

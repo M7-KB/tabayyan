@@ -16,12 +16,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         settings.require_key()
-        policy, tuning = load_config(settings.content_policy_path, settings.tuning_path)
+        policy, tuning = (None, None)
+        if not settings.health_only:
+            policy, tuning = load_config(settings.content_policy_path, settings.tuning_path)
         app.state.policy = policy
         app.state.tuning = tuning
         yield
 
-    app = FastAPI(title="Tabayyan API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="Tabayyan API",
+        version="0.1.0",
+        lifespan=lifespan,
+        docs_url=None if settings.health_only else "/docs",
+        redoc_url=None if settings.health_only else "/redoc",
+        openapi_url=None if settings.health_only else "/openapi.json",
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -37,9 +46,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "status": "degraded",
             "corpus_version": None,
             "corpus_items": 0,
-            "policy_version": app.state.policy.policy_version,
-            "policy_approved_by": app.state.policy.approved_by,
-            "tuning_version": app.state.tuning.tuning_version,
+            "policy_version": app.state.policy.policy_version if app.state.policy else None,
+            "policy_approved_by": app.state.policy.approved_by if app.state.policy else "pending",
+            "tuning_version": app.state.tuning.tuning_version if app.state.tuning else None,
             "card_schema_version": None,
             "build": settings.build_sha,
         }

@@ -210,8 +210,9 @@ composer, detector or gates. Those tasks must consume the policy instead of dupl
 T-410 separately owns independent literal pinning; P-08 tests real-file startup integration.
 
 Policy `p1` remains `approved_by: pending`, so G14 is not met. The owner must record specialist
-approval before changing that field. SPEC §12 still lists four specialist decisions: contradiction
-label wording, the hadith narration-by-meaning boundary, ceiling 4 and Trigger B minimum 3. Tuning
+approval before changing that field. SPEC §12 still lists four specialist decisions: Arabic state
+label wording (including the three provisional labels added Oct 3), the hadith narration-by-meaning
+boundary, ceiling 4 and Trigger B minimum 3. Tuning
 `t1` uses the SPEC defaults (confidence 0.5/0.6, retrieval floor 8.0, word budgets 1/2/3); these are
 initial engineering values, not measured performance. T-508a owns calibration against the real index.
 

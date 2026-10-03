@@ -1422,6 +1422,17 @@ version of this section is resolved and moved to §10.
    `لا يطابق المصدر المعتمد`, followed by `النص كما ورد في المصدر:` introducing the correct verbatim text.
    Shipped as the default `state_label_key: supported_contradicts` string; G26 tests the rendered card, not
    the string, so a specialist wording change is a copy edit, not a retest.
+   The owner requested the remaining state labels for the same specialist review on
+   2026-10-03. Proposed copy only; these additions do not change runtime labels or policy.
+   All exact wording remains pending specialist approval, recorded by the owner.
+
+   | State label key | Provisional Arabic label | Intended meaning |
+   |---|---|---|
+   | `supported_confirms` | `يؤيده المصدر المعتمد` | Retrieved evidence supports the claim; this is not a personal fatwa. |
+   | `supported_contradicts` | `لا يطابق المصدر المعتمد` | Existing owner wording; introduce the retrieved text with `النص كما ورد في المصدر:`. |
+   | `disputed` | `مسألة مختلف فيها` | Present sourced positions without ranking or implying consensus. |
+   | `cannot_confirm` | `لا يمكن التأكد من المصادر المتاحة` | Insufficient available evidence; abstain and provide the required referral. |
+
 2. **The exact boundary of "narration by meaning" for the hadith row of §5.2's Qur'an/hadith split.** The
    owner confirmed the direction (§10 item D3): a Qur'an paraphrase behind an attribution formula is
    flagged; a hadith paraphrase, marked or not, is shown via `misquote_notice` and never told it

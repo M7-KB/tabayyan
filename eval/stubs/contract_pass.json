@@ -1,0 +1,252 @@
+{
+  "arm": "tabayyan",
+  "description": "Stub cards that satisfy every current expectation, used to exercise the harness end to end before the pipeline exists (T-407). Each card starts as a contracts/fixtures card, so the stub cannot drift from the card contract, and every Arabic string in it is the fixtures' own synthetic placeholder text. No religious content, no corpus record and no glossary mapping is authored here: a passing stub run is evidence about the harness, never about the product.",
+  "cases": {
+    "T01": {
+      "template": "supported-contradicts",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "presupposition" }
+          }
+        }
+      ]
+    },
+    "T02": {
+      "template": "supported-contradicts",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "presupposition", "scripture_spans": [] },
+            "evidence": { "0": { "domain": "faq", "grading": null } }
+          }
+        }
+      ]
+    },
+    "T03": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "question_subject", "level": "C", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T04": {
+      "template": "supported-confirms",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "question_subject", "level": "B", "scripture_spans": [] },
+            "evidence": { "0": { "domain": "fiqh", "grading": null } },
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T05": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "question_subject" }
+          }
+        }
+      ]
+    },
+    "T06": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "question_subject", "level": "A", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T07": {
+      "template": "supported-confirms",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "term",
+            "claim": { "origin": "term_lookup", "scripture_spans": [] },
+            "evidence": { "0": { "domain": "glossary", "grading": null } },
+            "term": {
+              "term_ar": "مصطلح تجريبي",
+              "term_en": "Synthetic glossary term",
+              "glossary_corpus_id": "glossary:synthetic:term"
+            },
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T08": {
+      "template": "supported-confirms",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "term",
+            "claim": { "origin": "term_lookup", "scripture_spans": [] },
+            "evidence": { "0": { "domain": "glossary", "grading": null } },
+            "term": {
+              "term_ar": "مصطلح تجريبي",
+              "term_en": "Synthetic glossary term",
+              "glossary_corpus_id": "glossary:synthetic:term"
+            },
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T09": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "question_subject", "level": "B", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T10": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "question_subject", "level": "C", "scripture_spans": [] },
+            "abstained_reason": "NO_CHECKABLE_CLAIM",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T11": {
+      "template": "supported-contradicts",
+      "cards": [{ "overrides": { "input_kind": "claim" } }]
+    },
+    "T12": {
+      "template": "supported-confirms",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "term",
+            "claim": { "origin": "term_lookup", "level": "B", "scripture_spans": [] },
+            "evidence": { "0": { "domain": "glossary", "grading": null } },
+            "term": {
+              "term_ar": "مصطلح تجريبي",
+              "term_en": "Synthetic glossary term",
+              "glossary_corpus_id": "glossary:synthetic:term"
+            },
+            "explanation_en": "Synthetic English explanation; carries no source text.",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T13": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "question",
+            "claim": { "origin": "question_subject", "level": "B", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T14": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "claim",
+            "claim": { "origin": "stated", "level": "A", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T15": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "claim",
+            "claim": { "origin": "stated", "level": "A" },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": {
+              "evidence": {
+                "domain": "hadith",
+                "ref": { "collection": "Synthetic collection", "number": "1" },
+                "grading": {
+                  "grade_ar": "تصنيف تجريبي",
+                  "grader_ar": "اختبار",
+                  "grading_source_url": "https://example.invalid/grading"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "T16": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "claim",
+            "claim": { "origin": "stated", "level": "A", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T17": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "claim",
+            "claim": { "origin": "stated", "level": "A", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    },
+    "T18": {
+      "template": "cannot-confirm",
+      "cards": [
+        {
+          "overrides": {
+            "input_kind": "claim",
+            "claim": { "origin": "stated", "level": "A", "scripture_spans": [] },
+            "abstained_reason": "NO_MATCHING_EVIDENCE",
+            "misquote_notice": null
+          }
+        }
+      ]
+    }
+  }
+}

@@ -297,3 +297,21 @@ section. Collection approval never authorizes a grading reference. Each record's
 composition; no normalization is applied. Tests reject unrelated hosts, misleading suffixes,
 URL boundary bypasses, uncleared grading sources and English edits with stale checksums.
 These checks bind metadata and detect edits; specialist review still verifies actual provenance.
+
+## Required safety cases (P-02)
+
+[eval/testset.jsonl](eval/testset.jsonl) contains twelve brief records and T13, the executable
+neutral twin of hostile T09. All records await Sharia specialist approval. T03 and T10 are
+path stand-ins; T11 is a blocked verse placeholder. Their `g9_countable: false` fields exclude
+them from G9 coverage. Sourced behavior and corpus bindings remain pending; this is not a
+passing evaluation or the final 80–100-item set. See [eval/TESTSET_NOTES.md](eval/TESTSET_NOTES.md).
+
+Run the complete local data-check suite with `node --test` (Node.js 24, no packages).
+These checks validate the draft's contract and review safeguards; they do not run the model
+or establish source readiness. The single tools register belongs to P-10, PR #18.
+
+T09 and T13 refer to each other in both pairing metadata and review rubrics. The
+All records explicitly provide `needs_sharia_review`, `g9_countable`, `blocked_reason_en`
+and `paired_case_id`, following the proposed contract in PR #28 at `63ab1a3`.
+That SPEC dependency and Nami's harness support remain pending; these data checks
+alone do not close the evaluation requirement.

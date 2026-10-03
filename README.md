@@ -249,6 +249,11 @@ confirmed. This register grants no ingestion or redistribution permission. P-04 
 the separate acquisition manifest and allowlist. SOURCES.md preserves the public raw-package
 history disclosure after the tree cleanup in PR #13.
 
+For the owner's Oct 4 noon selection, see the
+[minimal corpus clearance checklist](docs/MINIMAL_CORPUS_CHECKLIST.md): proposed Qur'an,
+Sahihayn with separately cleared gradings, glossary terms and required demo behavior when
+permission is missing. This checklist grants no ingestion or content approval.
+
 Run the standalone register contract checks with `node --test tests/*.test.mjs`.
 CI checks headers, unique IDs, required license fields and the closed domain enum.
 

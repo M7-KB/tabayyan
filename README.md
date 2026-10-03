@@ -199,3 +199,12 @@ ship with this task. P-06 raw ingestion and T-403 filling remain blocked on owne
 and specialist review; format-specific raw importers belong to P-06. Tests use only synthetic prose
 and synthetic metadata and cover the eight rejection rules, original-text preservation and runtime
 rejection of pending approval.
+
+Review fixes follow the SPEC contract in PR #24: hadith grading has its own registered,
+licence-cleared `grading_source_id` and an HTTPS URL on that source's host and approved
+section. Collection approval never authorizes a grading reference. Each record's
+`source_url` must also use its registered source host. Every present `text_en` requires
+`checksum_en_sha256` over its original UTF-8 bytes, including whitespace and Unicode
+composition; no normalization is applied. Tests reject unrelated hosts, misleading suffixes,
+URL boundary bypasses, uncleared grading sources and English edits with stale checksums.
+These checks bind metadata and detect edits; specialist review still verifies actual provenance.

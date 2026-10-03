@@ -60,6 +60,51 @@ def _https(value):
         return False
 
 
+def _source_url(value, source, *, section=False):
+    """Bind URLs to registered metadata; grading also stays in its approved section."""
+    entry = source.get("entry_url")
+    if not _https(entry) or not _https(value):
+        return False
+    approved, actual = urlsplit(entry), urlsplit(value)
+    try:
+        correct_origin = actual.hostname == approved.hostname and actual.port in {None, 443}
+    except ValueError:
+        return False
+    # No encoded or relative path segments can bypass the approved section boundary.
+    path = actual.path
+    safe_path = (
+        "\\" not in path
+        and "%" not in path
+        and all(segment not in {".", ".."} for segment in path.split("/"))
+    )
+    base = approved.path.rstrip("/")
+    return (
+        correct_origin
+        and safe_path
+        and (not section or path == base or path.startswith(base + "/"))
+    )
+
+
+def _grading_provenance(grading, sources, register):
+    # The brief permits Dorar hadith gradings; collection IDs are not grading authority.
+    source_id = grading.get("grading_source_id")
+    if source_id != "dorar-hadith" or source_id not in sources or source_id not in register:
+        return False
+    source = sources[source_id]
+    row = register[source_id]
+    return (
+        _source_url(grading.get("grading_source_url"), source, section=True)
+        and "hadith" in source["domains"]
+        and row["domain"] == "hadith"
+        and source.get("license_status") == "confirmed"
+        and source.get("ingestion_allowed") is True
+        and source.get("redistribution_allowed") is True
+        and _text(row.get("license"))
+        and row["license"].strip().lower() not in {"pending", "unknown"}
+        and _https(row.get("license_url"))
+    )
+
+
 def _unique_object(pairs):
     result = {}
     for key, value in pairs:
@@ -206,6 +251,10 @@ def validate_records(
                 and _https(grading.get("grading_source_url")),
                 f"{prefix}: complete grading required (rule 2)",
             )
+            _require(
+                _grading_provenance(grading, sources, register),
+                f"{prefix}: approved grading provenance required (rule 2)",
+            )
         original = record.get("text_ar")
         _require(_text(original), f"{prefix}: text_ar required (rule 3)")
         _require(
@@ -247,6 +296,10 @@ def validate_records(
         for field in ("source_name_ar", "source_url", "lang", "retrieved_at"):
             _require(_text(record.get(field)), f"{prefix}: {field} required")
         _require(_https(record["source_url"]), f"{prefix}: source_url must be HTTPS")
+        _require(
+            _source_url(record["source_url"], source),
+            f"{prefix}: source_url must match registered source host (rule 1)",
+        )
         _require(record["lang"] in {"ar", "en"}, f"{prefix}: invalid lang")
         _require(
             isinstance(record.get("ref"), dict)
@@ -259,6 +312,17 @@ def validate_records(
         )
         if domain in {"quran_translation", "glossary"}:
             _require(_text(record.get("text_en")), f"{prefix}: text_en required (rule 8)")
+        if "text_en" in record:
+            _require(_text(record["text_en"]), f"{prefix}: invalid text_en (rule 3)")
+            _require(
+                record.get("checksum_en_sha256") == checksum_text(record["text_en"]),
+                f"{prefix}: checksum_en_sha256 mismatch (rule 3)",
+            )
+        else:
+            _require(
+                "checksum_en_sha256" not in record,
+                f"{prefix}: checksum_en_sha256 requires text_en (rule 3)",
+            )
     # Resolve after collecting all IDs, so file ordering cannot affect translations.
     for number, record in enumerate(records, 1):
         if record["domain"] == "quran_translation":

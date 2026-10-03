@@ -43,6 +43,7 @@ def metadata(*domains):
         domain: {
             "source_id": domain,
             "domains": [domain],
+            "entry_url": "https://fixture.invalid/",
             "license_status": "confirmed",
             "ingestion_allowed": True,
             "redistribution_allowed": True,
@@ -108,14 +109,87 @@ def test_hadith_requires_complete_grading(grading):
         validate_records([item], *metadata("hadith"))
 
 
-def test_synthetic_hadith_with_explicit_grading_passes():
+def graded_hadith():
     item = record("hadith")
     item["grading"] = {
         "grade_ar": "Synthetic grade",
         "grader_ar": "Synthetic grader",
-        "grading_source_url": "https://fixture.invalid/grade",
+        "grading_source_id": "dorar-hadith",
+        "grading_source_url": "https://fixture.invalid/hadith/grade",
     }
-    validate_records([item], *metadata("hadith"))
+    sources, register = metadata("hadith")
+    sources["dorar-hadith"] = dict(sources["hadith"], source_id="dorar-hadith")
+    sources["dorar-hadith"]["entry_url"] = "https://fixture.invalid/hadith"
+    register["dorar-hadith"] = dict(register["hadith"], **{"Source id": "dorar-hadith"})
+    return item, sources, register
+
+
+def test_synthetic_hadith_with_explicit_grading_passes():
+    item, sources, register = graded_hadith()
+    validate_records([item], sources, register)
+
+
+@pytest.mark.parametrize("source_id", [None, "unknown", "hadith", [], "dorar-tafsir"])
+def test_grading_requires_separate_approved_source_id(source_id):
+    item, sources, register = graded_hadith()
+    item["grading"]["grading_source_id"] = source_id
+    with pytest.raises(CorpusValidationError, match="rule 2"):
+        validate_records([item], sources, register)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://unapproved.invalid/hadith/grade",
+        "https://fixture.invalid.evil.invalid/hadith/grade",
+        "https://fixture.invalid/tafseer/grade",
+        "https://fixture.invalid/hadith-other/grade",
+        "https://fixture.invalid/hadith/../tafseer",
+        "https://fixture.invalid/hadith/%2e%2e/tafseer",
+        "https://fixture.invalid/hadith\\grade",
+        "https://fixture.invalid:444/hadith/grade",
+        "https://fixture.invalid:bad/hadith/grade",
+        "https://user@fixture.invalid/hadith/grade",
+        "http://fixture.invalid/hadith/grade",
+    ],
+)
+def test_grading_url_must_match_approved_origin_and_section(url):
+    item, sources, register = graded_hadith()
+    item["grading"]["grading_source_url"] = url
+    with pytest.raises(CorpusValidationError, match="rule 2"):
+        validate_records([item], sources, register)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("license_status", "pending"),
+        ("ingestion_allowed", False),
+        ("redistribution_allowed", False),
+        ("domains", ["tafsir"]),
+        ("entry_url", None),
+    ],
+)
+def test_grading_source_requires_independent_permission(field, value):
+    item, sources, register = graded_hadith()
+    sources["dorar-hadith"][field] = value
+    with pytest.raises(CorpusValidationError, match="rule 2"):
+        validate_records([item], sources, register, allow_pending_review=True)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("license", "pending"),
+        ("license_url", "pending"),
+        ("domain", "tafsir"),
+    ],
+)
+def test_grading_register_requires_clearance(field, value):
+    item, sources, register = graded_hadith()
+    register["dorar-hadith"][field] = value
+    with pytest.raises(CorpusValidationError, match="rule 2"):
+        validate_records([item], sources, register)
 
 
 @pytest.mark.parametrize(
@@ -151,6 +225,7 @@ def test_pending_review_only_allowed_offline():
 def test_translation_requires_resolving_quran_target(target):
     item = record("quran_translation", "fixture:translation")
     item["text_en"] = "Synthetic English fixture"
+    item["checksum_en_sha256"] = checksum_text(item["text_en"])
     item["translation_of"] = target
     with pytest.raises(CorpusValidationError, match="rule 8"):
         validate_records([item], *metadata("quran_translation"))
@@ -166,7 +241,68 @@ def test_translation_resolution_independent_of_file_order():
     original = record("quran", "fixture:original")
     translation = record("quran_translation", "fixture:translation")
     translation.update(text_en="Synthetic English fixture", translation_of="fixture:original")
+    translation["checksum_en_sha256"] = checksum_text(translation["text_en"])
     validate_records([translation, original], *metadata("quran", "quran_translation"))
+
+
+@pytest.mark.parametrize("domain", ["glossary", "quran_translation", "faq"])
+@pytest.mark.parametrize("mutation", ["edit", "strip", "normalize", "missing_checksum", "null"])
+def test_english_integrity_covers_every_present_display_text(domain, mutation):
+    item = record(domain)
+    item["text_en"] = "  Synthetic English: caf\u00e9.\n  "
+    item["checksum_en_sha256"] = checksum_text(item["text_en"])
+    original = record("quran", "fixture:original")
+    if domain == "quran_translation":
+        item["translation_of"] = original["corpus_id"]
+    records = [original, item]
+    sources, register = metadata("quran", domain)
+    validate_records(records, sources, register)
+    if mutation == "missing_checksum":
+        del item["checksum_en_sha256"]
+    elif mutation == "null":
+        item["text_en"] = None
+    elif mutation == "normalize":
+        item["text_en"] = item["text_en"].replace("\u00e9", "e\u0301")
+    elif mutation == "strip":
+        item["text_en"] = item["text_en"].strip()
+    else:
+        item["text_en"] += " edited"
+    with pytest.raises(CorpusValidationError, match="rule [38]"):
+        validate_records(records, sources, register)
+
+
+def test_english_checksum_without_text_rejected():
+    item = record()
+    item["checksum_en_sha256"] = checksum_text("Synthetic English")
+    with pytest.raises(CorpusValidationError, match="rule 3"):
+        validate_records([item], *metadata("faq"))
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://unapproved.invalid/item",
+        "https://fixture.invalid.evil.invalid/item",
+        "https://fixture.invalid:444/item",
+        "https://fixture.invalid:bad/item",
+        "https://fixture.invalid/a/../item",
+        "https://fixture.invalid/%2fitem",
+        "https://fixture.invalid/a\\item",
+        "https://user@fixture.invalid/item",
+    ],
+)
+def test_record_source_url_requires_registered_host(url):
+    item = record()
+    item["source_url"] = url
+    with pytest.raises(CorpusValidationError, match="source_url"):
+        validate_records([item], *metadata("faq"))
+
+
+def test_record_source_url_requires_registered_entry():
+    sources, register = metadata("faq")
+    del sources["faq"]["entry_url"]
+    with pytest.raises(CorpusValidationError, match="source_url"):
+        validate_records([record()], sources, register)
 
 
 @pytest.fixture

@@ -294,10 +294,12 @@ confirmed. This register grants no ingestion or redistribution permission. P-04 
 the separate acquisition manifest and allowlist. SOURCES.md preserves the public raw-package
 history disclosure after the tree cleanup in PR #13.
 
-For the owner's Oct 4 noon selection, see the
-[minimal corpus clearance checklist](docs/MINIMAL_CORPUS_CHECKLIST.md): proposed Qur'an,
-Sahihayn with separately cleared gradings, glossary terms and required demo behavior when
-permission is missing. This checklist grants no ingestion or content approval.
+For the owner's late Oct 3 selection, see the
+[minimal corpus clearance checklist](docs/MINIMAL_CORPUS_CHECKLIST.md): KFC-only
+2:255, 51:56-60, 35:28, 112:1-4 (no tafsir), and Bukhari 8, 7556, 63, 1399.
+Canonical hadith references are Bukhari numbers; displayed wording comes from
+the edition file, with separate Dorar grading provenance. Files, permissions
+and specialist review remain pending.
 
 The [Jamhara evidence section](SOURCES.md#jamhara-permission-evidence-2026-10-03)
 consolidates the Oct 3 owner report and policy check. Both Jamhara entries remain
@@ -310,15 +312,15 @@ CI checks headers, unique IDs, required license fields and the closed domain enu
 
 The [dated organizer reply](SOURCES.md#partner-approval-for-challenge-use-2026-10-03)
 records partner approval for challenge use; redistribution remains **needs owner action**.
-Use the [specialist selection/test plan](docs/SPECIALIST_SELECTION_TEST_PLAN.md) and
-[owner download list](docs/OWNER_DOWNLOAD_LIST.md) for the five additional safety inputs
-and per-item file handoff. Exact religious selections and missing item URLs remain
-pending the specialist. Only the owner downloads; these documents add no corpus or
-executable test inputs and grant no licence or specialist approval.
-The plan separates hadith NEAR_MISS notices from semantic contradiction variants
-and explicitly records T11's conditional Quran correction policy under SPEC 5.2–5.4.
-Both altered-word slots leave their final level/state/alignment as open specialist
-questions; missing cleared evidence always requires abstention and referral.
+Use the [specialist selection/test plan](docs/SPECIALIST_SELECTION_TEST_PLAN.md)
+and [owner download list](docs/OWNER_DOWNLOAD_LIST.md) for grading links, five
+Ramadan fake-claim inputs (never corpus; CANNOT_CONFIRM with referral) and
+separate altered-word questions. Bukhari 8 is the proposed altered-hadith base;
+the specialist approves the altered text. Both altered-word verdicts stay open:
+interim abstention with referral and no executable fixtures. Only the owner
+downloads. These documents add no corpus/test-set records or licence approval.
+Owner decision 4 stands: provisional labels suffice for development; final
+specialist wording is a P0 submission gate, not a merge gate.
 
 ## Manual source collection (P-04)
 

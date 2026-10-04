@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     tuning_path: Path = ROOT / "api/tuning.yaml"
     build_sha: str = "unknown"
     health_only: bool = False
+    allow_pending_review: bool = False
+    private_corpus_path: Path | None = None
+    corpus_manifest_path: Path = ROOT / "corpus/manifest.json"
 
     @field_validator("cors_origins")
     @classmethod

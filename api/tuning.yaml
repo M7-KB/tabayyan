@@ -1,6 +1,7 @@
 # Source: SPEC.md section 5.5. Initial values; calibration is T-508a.
 tuning_version: t1
 card_confidence_min: 0.5
+level_confidence_min: 0.5        # Classification only; independent of the card evidence threshold.
 alignment_confidence_min: 0.6
 retrieval_score_floor: 8.0
 word_budget_table:              # §5.2 — no tier may exceed word_budget_ceiling in content_policy.yaml

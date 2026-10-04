@@ -1,6 +1,6 @@
 # Source and licence register
 
-P-03 source register, status checked 2026-10-03 against the evidence recorded below and [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md). Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md). Acquisition steps belong to P-04. This register does not build a corpus. **The dated owner decision below permits challenge-app ingestion for three selected sources, with redistribution prohibited. Raw files and built corpus never enter the public repo. Machine-readable gates await the separate backend change.**
+P-03 source register, status checked 2026-10-03 against the evidence recorded below and [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md). Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md). Acquisition steps belong to P-04. This register does not build a corpus. **The dated owner decision below permits challenge-app ingestion for three selected sources, with redistribution prohibited. Raw files and built corpus never enter the public repo. Machine-readable gates record this scoped permission; public distribution remains disabled.**
 
 ## Current source status
 
@@ -27,8 +27,9 @@ Other permissions and specialist review remain pending.
 - `dawa-other` — **needs owner action**: select exact items and supply their files and item-specific permission; a domain entry is not clearance.
 - `jamhara-dawah` — **needs owner action**: select exact items and supply their files and permission for public application use; the personal-use policy is insufficient.
 
-The machine-readable licence fields below and the candidate allowlist remain `pending` with
-ingestion/redistribution disabled. A readiness status does not change those gates or substitute
+The machine-readable fields confirm challenge-app ingestion for the three sources covered by
+the dated owner decision. Redistribution stays disabled. Other entries remain `pending`.
+A readiness status does not change those gates or substitute
 for Sharia specialist review. Use-only permission, if supplied, must record its exact scope;
 whether public verbatim display is permitted remains an owner/organizer decision.
 
@@ -45,8 +46,10 @@ of the organizers' correspondence or an item-specific licence document.
 action.** Public redistribution in the repository was not addressed. The owner is
 asking a follow-up; until answered, no full third-party text goes into the public
 repository. Raw files, derived excerpts/indexes and public verbatim display still
-require their applicable scope to be recorded per item. The machine-readable
-`license` fields remain `pending`; ingestion/redistribution flags are unchanged.
+require their applicable scope to be recorded per item.
+**Superseded by the dated owner ingestion decision below:** the earlier statement that
+all machine-readable licence fields remained pending and flags were unchanged no longer applies
+to the three selected sources. Public-display permission remains unresolved.
 This approval does not select religious records or supply Sharia specialist approval.
 Only the owner downloads and places selected files in `data/raw/`.
 
@@ -59,11 +62,11 @@ licences. It supersedes the earlier unresolved ingestion/redistribution status f
 these three sources. The private artifact uses committed hashes only, following
 [PR #25](https://github.com/M7-KB/tabayyan/pull/25).
 
-The machine-readable table and approved_sources.json still contain pending licence
-gates. Vegapunk owns their coordinated update with the loader; this docs change
-does not claim runtime ingestion works. Do not set approved_by to sharia-reviewer-1:
+The machine-readable table and approved_sources.json now record confirmed challenge-app
+ingestion for these three sources, with redistribution false. Offline validation checks that
+ingestion scope. Runtime additionally requires recorded public-display permission; all selected sources currently have `public_display_allowed: false`. Do not set approved_by to sharia-reviewer-1:
 owner-selected records stay pending; new test items require needs_sharia_review: true.
-Pending-review runtime use requires the separately implemented explicit config flag,
+Pending-review runtime use requires the explicit default-off ALLOW_PENDING_REVIEW flag,
 reported by /health. Owner selection is not specialist approval.
 
 Sahih Muslim remains an approved reference under the challenge brief, retained in
@@ -126,26 +129,29 @@ No Dorar commentary or grading text is copied, and this citation does not add a 
 to the corpus allowlist or authorize ingestion. See [eval/TESTSET_NOTES.md](eval/TESTSET_NOTES.md).
 
 `domain` uses the nine-value enum in SPEC section 4.1. `use` is descriptive text.
-`license_url` is the policy/licence document to cross-check under SPEC section 4.2
+`license_url` is the publisher policy/licence document to cross-check under SPEC section 4.2
 rule 5, or `pending` when none is established. `Licence evidence URL` may instead
-be a catalogue or landing page; it is not a licence grant. Pending entries cannot
-satisfy ingestion clearance. A policy URL with `license: pending` does not establish permission.
+be a catalogue or landing page; it is not a licence grant. The separate Owner decision evidence URL column corresponds to `license_evidence_url`
+in the allowlist; neither is a publisher policy. Bukhari and Dorar have no established
+publisher policy URL, so their `license_url` is restored to `pending`, rather than inventing
+a grant from a catalogue page. Their records cannot validate until the owner supplies
+the applicable publisher document. Pending entries cannot satisfy ingestion clearance. A policy URL with `license: pending` does not establish permission.
 
-| Source id | domain | use | Source URL | license | license_url | Licence evidence URL | Licence finding | Redistribution / ingestion |
-|---|---|---|---|---|---|---|---|---|
-| kfc-mushaf | quran | unchanged Arabic text | https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/ | pending | https://policy.qurancomplex.gov.sa/?Lan=en | https://policy.qurancomplex.gov.sa/?Lan=en | General policy reserves rights with exceptions for explicitly released resources; exact package terms pending. Portal timeout; formats confirmed only by official indexed developer-page description. | Raw files removed by #13 but remain in public history. No further ingestion or redistribution authorized. |
-| sahih-bukhari | hadith | Sultaniyya / Dar Tawq al-Najah reproduction, Shamela 1681 | https://shamela.ws/book/1681 | pending | pending | https://shamela.ws/book/1681 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
-| sahih-muslim | hadith | Abd al-Baqi, 1955 edition, Shamela 1727 | https://shamela.ws/book/1727 | pending | pending | https://shamela.ws/book/1727 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest |
-| dorar-hadith | hadith | exact grading, grader and reference per item | https://dorar.net/hadith | pending | pending | https://dorar.net/hadith | Rights-reserved footer; no dataset licence established. Edition list: https://dorar.net/hadith/refs . | Pending; local only; do not ingest |
-| jamhara-glossary | glossary | Arabic definition and supplied English equivalent | https://islamic-content.com/dictionary | pending | https://islamic-content.com/page/copyright | https://islamic-content.com/page/copyright | Policy describes personal noncommercial scholarly use; public redistribution/application use not established. | Pending; local only; do not ingest |
-| bayyinat | faq | doubts and dialogue, Usul Center 2024 / 1445 AH | https://dawa.center/file/7937 | pending | pending | https://dawa.center/file/7937 | Catalogue has rights-reserved footer. PDF-specific terms not inspected. | Pending; local only; do not ingest |
-| approved-quran-translation | quran_translation | English, linked to Arabic verse | https://quranpedia.net/translations/languages | pending | pending | https://quranpedia.net/translations/languages | Translator, edition, exact file and its licence all pending selection. KFC-approved translation is also permitted by the brief. | Pending; local only; do not ingest |
-| dorar-tafsir | tafsir | separate commentary from scripture | https://dorar.net/tafseer | pending | pending | https://dorar.net/tafseer | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
-| dorar-aqeeda | aqeeda | approved creed material | https://dorar.net/aqeeda | pending | pending | https://dorar.net/aqeeda | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
-| dorar-fiqh | fiqh | general sourced positions, never personal rulings | https://dorar.net/feqhia | pending | pending | https://dorar.net/feqhia | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
-| dorar-history | seerah | history with qualifications | https://dorar.net/history | pending | pending | https://dorar.net/history | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest |
-| dawa-other | faq | individually selected da'wah resources | https://dawa.center/ | pending | pending | https://dawa.center/ | No particular item selected; item licence must be checked separately. | Pending selection/licence; do not ingest |
-| jamhara-dawah | faq | individually selected da'wah content | https://islamic-content.com/ | pending | https://islamic-content.com/page/copyright | https://islamic-content.com/page/copyright | Same personal-use policy; selected item and public-use permission pending. | Pending; do not ingest |
+| Source id | domain | use | Source URL | license | license_url | Licence evidence URL | Licence finding | Redistribution / ingestion | Owner decision evidence URL |
+|---|---|---|---|---|---|---|---|---|---|
+| kfc-mushaf | quran | unchanged Arabic text | https://qurancomplex.gov.sa/techquran/dev/techquran-dev-mushf/ | Owner-authorized challenge-app use only; no redistribution | https://policy.qurancomplex.gov.sa/?Lan=en | https://policy.qurancomplex.gov.sa/?Lan=en | Owner-reported challenge-app permission, dated 2026-10-03; correspondence retained by owner. Not an independently inspected rights-holder grant. | Challenge-app ingestion allowed; redistribution prohibited; private artifact only; specialist review pending. | https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night |
+| sahih-bukhari | hadith | Sultaniyya / Dar Tawq al-Najah reproduction, Shamela 1681 | https://shamela.ws/book/1681 | Owner-authorized challenge-app use only; no redistribution | pending | https://shamela.ws/book/1681 | Owner-reported challenge-app permission, dated 2026-10-03; correspondence retained by owner. Not an independently inspected rights-holder grant. | Challenge-app ingestion allowed; redistribution prohibited; private artifact only; specialist review pending. | https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night |
+| sahih-muslim | hadith | Abd al-Baqi, 1955 edition, Shamela 1727 | https://shamela.ws/book/1727 | pending | pending | https://shamela.ws/book/1727 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest | pending |
+| dorar-hadith | hadith | exact grading, grader and reference per item | https://dorar.net/hadith | Owner-authorized challenge-app use only; no redistribution | pending | https://dorar.net/hadith | Owner-reported challenge-app permission, dated 2026-10-03; correspondence retained by owner. Not an independently inspected rights-holder grant. | Challenge-app ingestion allowed; redistribution prohibited; private artifact only; specialist review pending. | https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night |
+| jamhara-glossary | glossary | Arabic definition and supplied English equivalent | https://islamic-content.com/dictionary | pending | https://islamic-content.com/page/copyright | https://islamic-content.com/page/copyright | Policy describes personal noncommercial scholarly use; public redistribution/application use not established. | Pending; local only; do not ingest | pending |
+| bayyinat | faq | doubts and dialogue, Usul Center 2024 / 1445 AH | https://dawa.center/file/7937 | pending | pending | https://dawa.center/file/7937 | Catalogue has rights-reserved footer. PDF-specific terms not inspected. | Pending; local only; do not ingest | pending |
+| approved-quran-translation | quran_translation | English, linked to Arabic verse | https://quranpedia.net/translations/languages | pending | pending | https://quranpedia.net/translations/languages | Translator, edition, exact file and its licence all pending selection. KFC-approved translation is also permitted by the brief. | Pending; local only; do not ingest | pending |
+| dorar-tafsir | tafsir | separate commentary from scripture | https://dorar.net/tafseer | pending | pending | https://dorar.net/tafseer | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest | pending |
+| dorar-aqeeda | aqeeda | approved creed material | https://dorar.net/aqeeda | pending | pending | https://dorar.net/aqeeda | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest | pending |
+| dorar-fiqh | fiqh | general sourced positions, never personal rulings | https://dorar.net/feqhia | pending | pending | https://dorar.net/feqhia | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest | pending |
+| dorar-history | seerah | history with qualifications | https://dorar.net/history | pending | pending | https://dorar.net/history | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest | pending |
+| dawa-other | faq | individually selected da'wah resources | https://dawa.center/ | pending | pending | https://dawa.center/ | No particular item selected; item licence must be checked separately. | Pending selection/licence; do not ingest | pending |
+| jamhara-dawah | faq | individually selected da'wah content | https://islamic-content.com/ | pending | https://islamic-content.com/page/copyright | https://islamic-content.com/page/copyright | Same personal-use policy; selected item and public-use permission pending. | Pending; do not ingest | pending |
 
 The brief also permits early tafsir/creed/history sources, approved books of the four schools, and other authenticity-checked hadith editions on Shamela. These are **pending exact title/edition selection**, not permission to ingest arbitrary pages from those domains. Register each selection and licence before adding it to the allowlist.
 

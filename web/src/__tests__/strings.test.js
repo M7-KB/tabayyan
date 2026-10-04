@@ -22,6 +22,13 @@ describe('product strings', () => {
     expect(privacy).not.toContain('صور')
   })
 
+  it('describe text input only in the privacy notice (text first, no audio or video yet)', () => {
+    const privacy = strings.privacyLines.join(' ')
+    expect(privacy).not.toContain('الصوتية')
+    expect(privacy).not.toContain('المرئية')
+    expect(privacy).not.toContain('المقاطع')
+  })
+
   it('use the exact AI disclosure text (SPEC.md §8)', () => {
     expect(strings.aiNotice).toBe('هذه أداة ذكاء اصطناعي، وليست فتوى.')
   })

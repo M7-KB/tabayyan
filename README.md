@@ -283,8 +283,9 @@ npm run build
 
 The page shows a temporary development-preview banner (remove it when T-504 wires the check endpoint),
 the input screen has the AI-not-a-fatwa notice (always visible), the privacy notice before submit, and
-the upload consent checkbox that gates the upload button. The privacy notice covers text and audio/video
-only, because those are the input kinds the UI accepts; image input is P2. No API calls yet: submit
+the upload consent checkbox that gates the upload button. The privacy notice covers text input only
+(text first; audio/video and image input are not live yet, image input is P2). It says the text goes to
+the AI provider and that only the extracted search phrases go to approved sources (SPEC §0.6). No API calls yet: submit
 handlers are empty until T-504, and the UI does not read `VITE_API_URL` yet. Fonts are self-hosted (`@fontsource/ibm-plex-sans-arabic`), so the page does not load
 third-party font CDNs.
 

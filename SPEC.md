@@ -1386,10 +1386,13 @@ Shown on the input screen **before** the user submits, and repeated in the READM
 
 ```
 هذه أداة ذكاء اصطناعي، وليست فتوى.
-تُرسل النصوص والملفات الصوتية والصور التي تُدخلها إلى مزوّد خدمة ذكاء اصطناعي لمعالجتها، ولا نحفظها لدينا.
-تُحذف الملفات الصوتية والصور بعد المعالجة مباشرة.
+تُرسل النص الذي تُدخله إلى مزوّد خدمة ذكاء اصطناعي لمعالجته، ولا نحفظه لدينا.
+تُرسل عبارات البحث المستخرجة من النص فقط إلى المصادر المعتمدة، ولا نحفظها.
 لا تحتاج إلى حساب، ولا نخزّن أسئلتك.
 ```
+
+The text-only copy above is the input-screen notice while text is the only live input (owner, 2026-10-04).
+The audio/video version (upload deleted after processing) returns with the audio input task.
 
 On the upload screen, additionally, the consent checkbox of §6.6:
 

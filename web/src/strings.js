@@ -57,4 +57,19 @@ export const strings = {
   termHeading: 'المصطلح',
   verifyHeading: 'كيف تتحقق بنفسك؟',
   devPreviewBanner: 'بيانات تجريبية للعرض فقط، ولا تمثل مصدراً معتمداً.',
+
+  // Results and check errors (T-504). Each error gives a next step. Provisional copy: owner review.
+  resultsLoading: 'جارٍ التحقق من الادعاءات… قد يستغرق ذلك دقيقة.',
+  resultsEmpty: 'لم تُرجع الخدمة أي بطاقة لهذا النص. عدّل النص وحاول مرة أخرى.',
+  resultsEditText: 'تعديل النص',
+  resultsRetry: 'حاول مرة أخرى',
+  resultsHeading: 'النتائج',
+  checkErrors: {
+    NO_CLAIMS: 'لم نجد في النص ادعاءً يمكن التحقق منه. جرّب صياغة الادعاء كجملة واضحة.',
+    TEXT_NOT_SUPPORTED_LANG: 'اللغة غير مدعومة. أدخل النص بالعربية أو بالإنجليزية.',
+    PIPELINE_DEGRADED: 'تعذّر إكمال التحقق الآن، ولن نعرض نتيجة غير مكتملة. حاول مرة أخرى بعد قليل.',
+    RATE_LIMITED: 'طلبات كثيرة في وقت قصير. انتظر دقيقة ثم حاول مرة أخرى.',
+    NETWORK: 'تعذّر الاتصال بالخدمة. تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى.',
+    UNKNOWN: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+  },
 }

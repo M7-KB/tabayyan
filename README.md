@@ -211,6 +211,19 @@ with a nested misquote notice (temporary fixture, not committed). No element ext
 `web/src/__tests__/layout.test.js` only checks that the breakpoints exist. Label approval for the provisional
 Arabic strings is still open (SPEC.md §12 item 1).
 
+## Check client and results (T-504, part 1)
+
+`web/src/api/check.js` builds and sends `POST /api/v1/check` (SPEC.md §3). It sends only the claim id,
+the confirmed text, and an optional level; the server decides the final level and input kind. A response
+is rendered only if every card has the fields the card UI reads and exactly two verify lines; otherwise it
+is treated as `PIPELINE_DEGRADED`. `web/src/components/Results.jsx` shows loading, error (with retry and
+edit), empty and card states; each error code has an Arabic message with a next step.
+
+Not wired yet: the input screen has no claims to send. `/check` takes claims from `/extract` (T-501), which
+is not on main, and the client does not segment or classify text itself. The submit handlers stay empty and
+the development-preview banner stays on until a live card works end to end. Tests use the P-07 fixtures and
+mocked `fetch`; no live call was made. Arabic error copy is provisional until owner review.
+
 ## API scaffold (T-401)
 
 Python 3.11+. From the repository root:

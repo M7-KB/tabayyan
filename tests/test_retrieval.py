@@ -39,7 +39,7 @@ def record(text, cid="fixture:one", domain="faq"):
 def tuning(floor=None):
     _, result = load_config(ROOT / "api/policy/content_policy.yaml", ROOT / "api/tuning.yaml")
     if floor is not None:
-        result.retrieval_score_floor = floor
+        result.retrieval_overlap_floor = floor
     return result
 
 
@@ -50,8 +50,8 @@ def retriever() -> Retriever:
 
 @pytest.mark.parametrize(
     "query,target",
-    [(text, f"fixture:{i:02}") for i, text in enumerate(TEXTS)]
-    + [("ثلج جليد برد شتاء صقيع", None), ("تفاحة مجهول", None)],
+    [("أين أجد " + " ".join(tokens(text)[:2]), f"fixture:{i:02}") for i, text in enumerate(TEXTS)]
+    + [("ثلج جليد برد شتاء صقيع", None), ("تفاحة مجهول غامض ثلج جليد", None)],
     ids=[f"synthetic-query-{i:02}" for i in range(1, 13)],
 )
 def test_twelve_queries_top_five_or_abstain(retriever, query, target):
@@ -60,7 +60,7 @@ def test_twelve_queries_top_five_or_abstain(retriever, query, target):
         assert results == []
     else:
         assert target in [result.corpus_id for result in results]
-        assert all(result.retrieval_score >= 8 for result in results)
+        assert all(result.overlap_score >= 0.25 for result in results)
 
 
 def test_normalization_and_punctuation(retriever):
@@ -71,48 +71,47 @@ def test_normalization_and_punctuation(retriever):
 
 def test_bm25_formula_length_and_frequency():
     records = [record("alpha alpha beta", "a"), record("beta", "b")]
-    result = BM25Retriever(records, tuning(0)).retrieve("alpha")[0]
+    result = BM25Retriever(records, tuning()).candidates("alpha")[0]
     expected = math.log(2) * 2 * 2.5 / (2 + 1.5 * (0.25 + 0.75 * 3 / 2))
-    assert result.bm25_score == pytest.approx(expected)
-    assert result.retrieval_score == 2
+    assert result.retrieval_score == pytest.approx(expected)
+    assert result.overlap_score == 1
 
 
 def test_floor_boundary():
     records = [record("alpha beta")]
-    score = BM25Retriever(records, tuning(0)).retrieve("alpha beta")[0].retrieval_score
-    assert BM25Retriever(records, tuning(score)).retrieve("alpha beta")
-    assert (
-        BM25Retriever(records, tuning(math.nextafter(score, math.inf))).retrieve("alpha beta") == []
-    )
+    query = "alpha beta gamma delta"
+    score = BM25Retriever(records, tuning()).candidates(query)[0].overlap_score
+    assert BM25Retriever(records, tuning(score)).retrieve(query)
+    assert BM25Retriever(records, tuning(math.nextafter(score, math.inf))).retrieve(query) == []
 
 
 def test_repeated_query_cannot_raise_score(retriever):
-    assert retriever.retrieve("تفاحة " * 100) == []
+    assert retriever.retrieve("تفاحة " * 100) == retriever.retrieve("تفاحة")
     assert retriever.retrieve(TEXTS[0] * 1) == retriever.retrieve((TEXTS[0] + " ") * 100)
 
 
 def test_domain_filter_and_top_k_keep_global_scores():
     records = [record("alpha beta", "z", "faq"), record("alpha beta", "a", "glossary")]
-    search = BM25Retriever(records, tuning(0))
+    search = BM25Retriever(records, tuning())
     assert [r.corpus_id for r in search.retrieve("alpha", top_k=1)] == ["a"]
     filtered = search.retrieve("alpha", domain="faq")
     assert [r.corpus_id for r in filtered] == ["z"]
     assert filtered[0].retrieval_score == search.retrieve("alpha")[1].retrieval_score
     assert search.retrieve("alpha", domain="missing") == []
-    reversed_search = BM25Retriever(list(reversed(records)), tuning(0))
+    reversed_search = BM25Retriever(list(reversed(records)), tuning())
     assert search.retrieve("alpha") == reversed_search.retrieve("alpha")
 
 
 @pytest.mark.parametrize("query", ["", "   ", "?!", "absent"])
 def test_no_tokens_or_overlap_returns_empty(query):
-    assert BM25Retriever([record("alpha")], tuning(0)).retrieve(query) == []
-    assert BM25Retriever([], tuning(0)).retrieve(query) == []
-    assert BM25Retriever([record("!!!")], tuning(0)).retrieve(query) == []
+    assert BM25Retriever([record("alpha")], tuning()).retrieve(query) == []
+    assert BM25Retriever([], tuning()).retrieve(query) == []
+    assert BM25Retriever([record("!!!")], tuning()).retrieve(query) == []
 
 
 def test_original_text_and_nested_provenance_are_isolated():
     original = record("إِبْرَة إبــرة")
-    search = BM25Retriever([original], tuning(0))
+    search = BM25Retriever([original], tuning())
     original["text_ar"] = "changed"
     original["ref"]["number"] = "changed"
     result = search.retrieve("ابره")[0]
@@ -149,9 +148,7 @@ def test_artifact_factory_propagates_loader_validation(tmp_path):
             BM25Retriever.from_artifact(tuning(), tmp_path / "corpus.jsonl")
         loader.assert_called_once()
     with patch("api.retrieval.load_corpus", return_value=[record("alpha")]) as loader:
-        assert (
-            BM25Retriever.from_artifact(tuning(0)).retrieve("alpha")[0].corpus_id == "fixture:one"
-        )
+        assert BM25Retriever.from_artifact(tuning()).retrieve("alpha")[0].corpus_id == "fixture:one"
 
 
 @pytest.mark.parametrize("count", [1, 10, 4471, 10000])
@@ -161,21 +158,22 @@ def test_gate_is_independent_of_corpus_size_and_unrelated_lengths(count):
         record("unrelated " * (1 + i % 30), f"filler:{i}") for i in range(count - 1)
     ]
     search = BM25Retriever(records, tuning())
-    assert search.retrieve("alpha unknown") == []
-    assert search.candidates("alpha unknown")[0].retrieval_score == 2
-    assert search.retrieve("alpha beta gamma delta epsilon")[0].retrieval_score == 10
+    assert search.retrieve("alpha unknown unseen absent missing") == []
+    assert search.candidates("alpha unknown unseen absent missing")[0].overlap_score == 0.2
+    assert search.retrieve("alpha beta gamma delta epsilon")[0].overlap_score == 1
 
 
 def test_candidates_preserve_below_floor_twins_and_all_records_by_default():
     records = [record("alpha beta", f"twin:{i:02}") for i in range(8)]
     records.append(record("alpha changed", "near-miss"))
     search = BM25Retriever(records, tuning())
-    assert search.retrieve("alpha beta") == []
-    candidates = search.candidates("alpha beta")
+    query = "alpha beta unknown unseen absent missing extra additional further"
+    assert search.retrieve(query) == []
+    candidates = search.candidates(query)
     assert {r.corpus_id for r in candidates} == {r["corpus_id"] for r in records}
-    assert search.candidates("alpha beta", top_k=2) == candidates[:2]
+    assert search.candidates(query, top_k=2) == candidates[:2]
     candidates[0].record["ref"]["number"] = "changed"
-    assert search.candidates("alpha beta")[0].record["ref"]["number"] == "synthetic"
+    assert search.candidates(query)[0].record["ref"]["number"] == "synthetic"
 
 
 @pytest.mark.parametrize("limit", [0, -1, 1.5, True, "5"])
@@ -189,3 +187,49 @@ def test_candidate_domain_and_empty_query(retriever):
     assert retriever.candidates("") == []
     with pytest.raises(ValueError, match="domain"):
         retriever.candidates(TEXTS[0], domain="")
+
+
+@pytest.mark.parametrize("length", [1, 2, 3, 4, 5, 12, 30])
+def test_full_overlap_can_clear_gate_at_every_query_length(length):
+    query = " ".join(f"term{i}" for i in range(length))
+    result = BM25Retriever([record(query + " unrelated extra")], tuning()).retrieve(query)[0]
+    assert result.overlap_score == 1
+
+
+@pytest.mark.parametrize(
+    "query,text",
+    [
+        ("apple", "apple orange banana"),
+        ("blue pencil", "blue pencil notebook paper"),
+        ("where can I find the blue pencil", "blue pencil notebook paper"),
+        ("please describe a notebook and paper for writing", "paper notebook writing supplies"),
+        ("quote beta gamma", "alpha beta gamma delta epsilon"),
+        (
+            "explain alpha beta gamma delta with some other extra absent terms please",
+            "alpha beta gamma delta epsilon",
+        ),
+    ],
+)
+def test_non_verbatim_questions_and_partial_quotes(query, text):
+    assert query != text
+    result = BM25Retriever([record(text)], tuning()).retrieve(query)[0]
+    assert result.corpus_id == "fixture:one"
+
+
+def test_denominator_is_tunable_and_independent_of_bm25_floor():
+    config = tuning()
+    config.retrieval_overlap_min_terms = 5
+    search = BM25Retriever([record("alpha beta")], config)
+    assert search.candidates("alpha")[0].overlap_score == 0.2
+    assert search.retrieve("alpha") == []
+    config.retrieval_overlap_min_terms = 1
+    config.retrieval_score_floor = 100000
+    assert BM25Retriever([record("alpha beta")], config).retrieve("alpha")
+
+
+@pytest.mark.parametrize("value", [0, -1, 1.5, True])
+def test_invalid_minimum_denominator(value):
+    config = tuning()
+    config.retrieval_overlap_min_terms = value
+    with pytest.raises(ValueError):
+        BM25Retriever([], config)

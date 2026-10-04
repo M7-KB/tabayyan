@@ -24,7 +24,7 @@ def tokens(text: str) -> tuple[str, ...]:
 class RetrievalResult:
     record: dict
     retrieval_score: float
-    bm25_score: float
+    overlap_score: float
 
     @property
     def corpus_id(self) -> str:
@@ -50,7 +50,9 @@ class BM25Retriever:
     """
 
     def __init__(self, records: Sequence[Mapping], tuning: TuningMetadata):
-        self._floor = TuningMetadata.model_validate(tuning.model_dump()).retrieval_score_floor
+        validated = TuningMetadata.model_validate(tuning.model_dump())
+        self._overlap_floor = validated.retrieval_overlap_floor
+        self._min_terms = validated.retrieval_overlap_min_terms
         self._records = copy.deepcopy([dict(record) for record in records])
         ids = [record["corpus_id"] for record in self._records]
         if any(not isinstance(cid, str) or not cid for cid in ids) or len(set(ids)) != len(ids):
@@ -92,7 +94,7 @@ class BM25Retriever:
         return [
             result
             for result in self.candidates(query, domain=domain)
-            if result.retrieval_score >= self._floor
+            if result.overlap_score >= self._overlap_floor
         ][:top_k]
 
     def candidates(
@@ -127,8 +129,8 @@ class BM25Retriever:
         return [
             RetrievalResult(
                 copy.deepcopy(self._records[index]),
-                10.0 * overlap[index] / max(5, len(query_terms)),
                 scores[index],
+                overlap[index] / max(self._min_terms, len(query_terms)),
             )
             for index in ranked[:top_k]
         ]

@@ -28,6 +28,8 @@ class TuningMetadata(BaseModel):
     card_confidence_min: Confidence
     alignment_confidence_min: Confidence
     retrieval_score_floor: float = Field(ge=0, allow_inf_nan=False)
+    retrieval_overlap_floor: Confidence
+    retrieval_overlap_min_terms: PositiveBudget
     word_budget_table: dict[str, PositiveBudget]
     trigger_b_min_window_tokens: PositiveBudget
 

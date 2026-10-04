@@ -41,18 +41,23 @@ T-503a quote-safety follow-up: equal normalized keys must never authorize a quot
 
 ## Lexical retrieval (T-404)
 
-`api.retrieval.Retriever` defines `retrieve(query, top_k=5, domain=None)`. Its
-`BM25Retriever` implementation indexes ar-v1 normalized keys with Unicode word
-boundaries and case folding. It uses Okapi BM25 (`k1=1.5`, `b=0.75`, positive
-Robertson IDF), counts each query term once, and returns only positive scores at
-or above `retrieval_score_floor` from validated `TuningMetadata`. BM25 ranks
-candidates; `bm25_score` retains that raw rank score. `retrieval_score` is a
-corpus-independent gate: `10 * distinct matched query terms / max(5, distinct query terms)`.
-It is bounded from 0 to 10 and is not a probability. The default floor 8 requires
-at least four distinct matches and 80% query coverage. Repetition, corpus size,
-document frequency and unrelated document lengths cannot raise the gate score.
-Ranking ties sort by `corpus_id`; a domain filter keeps
-global index statistics unchanged, including for the glossary path.
+`api.retrieval.Retriever` defines `retrieve(query, top_k=5, domain=None)` and
+`candidates(query, top_k=None, domain=None)`. `BM25Retriever` indexes ar-v1 keys
+with Unicode word boundaries and case folding. Okapi BM25 (`k1=1.5`, `b=0.75`,
+positive Robertson IDF) determines ranking and the raw `retrieval_score` field.
+Scores are not probabilities. Ties sort by `corpus_id`; domain filtering keeps
+global index statistics unchanged.
+
+A separate `overlap_score` gates `retrieve()`: distinct matched query terms
+`/ max(retrieval_overlap_min_terms, distinct query terms)`. The denominator
+minimum defaults to 1, so a full one-word or two-word lookup reaches 1.0.
+`retrieval_overlap_floor` defaults to 0.25; this is an initial engineering
+threshold, not real-corpus calibration or evidence confidence. Corpus size,
+document frequency, repetition and unrelated lengths cannot increase it.
+Raw `retrieval_score_floor: 8.0` is retained as legacy metadata but is not enforced
+by this retriever. The lead's Oct 4 decision keeps it out of card gating until
+calibration and the corresponding SPEC/composer change. Downstream consumers
+must distinguish rank scores from overlap gating.
 
 ```python
 from pathlib import Path
@@ -62,7 +67,7 @@ from api.retrieval import BM25Retriever
 _, tuning = load_config(Path("api/policy/content_policy.yaml"), Path("api/tuning.yaml"))
 retriever = BM25Retriever.from_artifact(tuning)  # requires an approved local artifact
 matches = retriever.retrieve("user claim", top_k=5)
-# Each match has corpus_id, retrieval_score, bm25_score, and a detached original record.
+# Each match has corpus_id, retrieval_score, overlap_score, and a detached original record.
 ```
 
 `from_artifact` calls the public corpus validator/loader and propagates rejection.
@@ -78,8 +83,9 @@ Run `python -m pytest` for the full Python suite. The retrieval tests use twelve
 synthetic, non-religious query cases with expected top-five targets or abstention,
 plus formula, floor-boundary, normalization, provenance and failure tests. These
 are engineering fixtures, not the twelve brief safety cases or a real-corpus
-evaluation. The overlap floor of 8.0 still needs real-corpus calibration; short
-queries can abstain. No raw source text, index artifact, query logging, model
+evaluation. The overlap settings still need real-corpus calibration. Tests include
+non-verbatim questions, partial quotations and short lookup reachability. No raw
+source text, index artifact, query logging, model
 call, endpoint or input persistence is added by this module.
 
 `candidates(query, top_k=None, domain=None)` exposes all positive-overlap records

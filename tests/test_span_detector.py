@@ -51,6 +51,8 @@ TUNING = {
     "card_confidence_min": 0.5,
     "alignment_confidence_min": 0.6,
     "retrieval_score_floor": 8.0,
+    "retrieval_overlap_floor": 0.25,
+    "retrieval_overlap_min_terms": 1,
     "word_budget_table": {"4": 1, "10": 2, "else": 3},
     "trigger_b_min_window_tokens": 3,
 }

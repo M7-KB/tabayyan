@@ -2,7 +2,9 @@
 tuning_version: t1
 card_confidence_min: 0.5
 alignment_confidence_min: 0.6
-retrieval_score_floor: 8.0       # T-404 overlap score (0..10), not raw BM25; calibration pending.
+retrieval_score_floor: 8.0       # Legacy raw BM25 value; not enforced until calibration/SPEC update.
+retrieval_overlap_floor: 0.25    # Candidate overlap fraction; initial engineering value, uncalibrated.
+retrieval_overlap_min_terms: 1  # Denominator lower bound; permits one-word and two-word lookups.
 word_budget_table:              # §5.2 — no tier may exceed word_budget_ceiling in content_policy.yaml
   "4": 1                        # n <= 4 tokens
   "10": 2                       # n <= 10 tokens

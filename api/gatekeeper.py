@@ -103,6 +103,7 @@ class QuoteGatekeeper:
         self._source_names = {}
         self._titles = {}
         self._local_available = False
+        embedded_comparison = []
         for record in local_records:
             r = copy.deepcopy(record)
             # Local records must already have passed the private artifact loader.
@@ -114,6 +115,7 @@ class QuoteGatekeeper:
             if r.get("domain") == "quran":
                 self._local_available = True
             self._records[r["corpus_id"]] = r
+            embedded_comparison.append(Record(r["corpus_id"], r["domain"], r["text_ar"]))
         blocked = set()
         for item in request._received if received is None else received:
             if item.request_token is not request._token:
@@ -131,6 +133,12 @@ class QuoteGatekeeper:
             if len(r["text_ar"]) > 12000 or not normalize_arabic(r["text_ar"]):
                 continue
             key = "live:" + r["source_id"] + ":" + r["record_ref"]
+            if r["domain"] == "hadith":
+                # Distinct safety handles retain every conflicting version;
+                # only the original handle can authorize display below.
+                embedded_comparison.append(
+                    Record(f"unsafe:{len(embedded_comparison)}:{key}", r["domain"], r["text_ar"])
+                )
             if key in blocked:
                 continue
             if key in self._records:
@@ -163,6 +171,11 @@ class QuoteGatekeeper:
             r.domain == "quran" and r.corpus_id not in self._live for r in comparison
         )
         self.detector = SpanDetector(comparison if self._local_available else None, detector_config)
+        # Rejected scripture still supplies unsafe-span knowledge. This index
+        # never decides claim alignment or authorizes an exact-match veto.
+        self._embedded_detector = SpanDetector(
+            embedded_comparison if self._local_available else None, detector_config
+        )
 
     @property
     def records(self) -> list[dict]:
@@ -226,7 +239,7 @@ class QuoteGatekeeper:
 
     def _embedded(self, text: str) -> list[dict] | None:
         """Require each detected scripture span to have its own authorized record."""
-        detection = self.detector.detect(text)
+        detection = self._embedded_detector.detect(text)
         if detection.span_detector_status != "ran":
             return None
         dependencies = {}
@@ -234,6 +247,8 @@ class QuoteGatekeeper:
             if finding.match.classification != "VERBATIM":
                 return None
             key = finding.match.record.corpus_id
+            if key.startswith("unsafe:"):
+                key = key.split(":", 2)[2]
             r = self._base_quote(key, text[finding.start : finding.end])
             if r is None:
                 return None

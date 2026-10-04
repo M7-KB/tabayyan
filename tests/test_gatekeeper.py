@@ -222,6 +222,54 @@ def test_excerpt_with_ungraded_hadith_is_dropped():
     assert g.published_answer("live:islamqa:one", a["text_ar"]) is None
 
 
+@pytest.mark.parametrize("marked", [False, True])
+@pytest.mark.parametrize("field", ["title", "excerpt", "glossary"])
+@pytest.mark.parametrize("invalid", ["grading", "reference", "grading_url", None])
+def test_embedded_scripture_keeps_rejected_records_visible_to_safety_scan(marked, field, invalid):
+    text = "قلم دفتر ورقة مسطرة حقيبة"
+    h = raw("dorar-hadith", text, domain="hadith")
+    if invalid == "grading":
+        del h["grading"]
+    elif invalid == "reference":
+        h["ref"] = {"number": 1}
+    elif invalid == "grading_url":
+        h["grading"]["grading_source_url"] = "https://evil.invalid/grade"
+    embedded = '"' + text + '"' if marked else text
+    a = raw()
+    if field == "title":
+        a["title_ar"] = embedded
+    else:
+        a["text_ar"] = embedded
+    if field == "glossary":
+        a.update(source_id="terminologyenc", domain="glossary")
+        a["source_url"] = "https://mcp.islamiccontent.org/test/one"
+    key = "live:" + a["source_id"] + ":one"
+    g = gate(h, a)
+    if field == "title":
+        published, dependencies = g.published_answer(key, a["text_ar"])
+        assert published["title_ar"] == (embedded if invalid is None else "الإسلام سؤال وجواب")
+        assert bool(dependencies) == (invalid is None)
+    elif invalid is not None:
+        assert g.verify(key, embedded) is None
+        card = compose(g, proposal(corpus_ids=[key]), embedded)
+        assert card["state"] == "CANNOT_CONFIRM"
+        assert card["evidence"] == [] and card["published_answer"] is None
+    else:
+        assert g.verify(key, embedded) is not None
+        dependencies = g.dependencies(key, embedded)
+        assert len(dependencies) == 1
+        assert dependencies[0]["grading"] == h["grading"]
+
+
+def test_conflicting_scripture_duplicates_remain_unsafe_embedded_text():
+    h = raw("dorar-hadith", "قلم دفتر ورقة مسطرة حقيبة", domain="hadith")
+    conflict = copy.deepcopy(h)
+    conflict["text_ar"] = "نافذة باب جدار سقف أرضية"
+    for text in (h["text_ar"], conflict["text_ar"]):
+        a = raw(text=text)
+        assert gate(h, conflict, a).verify("live:islamqa:one", text) is None
+
+
 def test_duplicate_record_refs_fail_closed_even_when_seen_three_times():
     r = raw()
     assert len(gate(r, r, r).records) == 1
@@ -390,9 +438,9 @@ def test_title_detector_failure_uses_neutral_source_name(monkeypatch):
 
     r = raw()
     g = gate(r)
-    detect = g.detector.detect
+    detect = g._embedded_detector.detect
     monkeypatch.setattr(
-        g.detector,
+        g._embedded_detector,
         "detect",
         lambda text: Detection("timeout") if text == r["title_ar"] else detect(text),
     )

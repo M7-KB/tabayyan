@@ -134,6 +134,10 @@ the full authorized set veto near-miss classification before either detector tri
 Scripture records must pass the display reference/provenance checks and their own
 hadith grading checks before entering that set. Rejected rows cannot suppress a
 local Quran correction, even when independent FAQ evidence remains valid.
+A separate embedded-text scan retains known rejected scripture. It cannot change
+claim alignment or veto a local correction; instead it rejects affected excerpts
+and glossary evidence, and replaces affected titles with the fixed source name.
+Embedded scripture still requires an authorized own-record reference and grading.
 Hadith beyond the local records have comparison coverage only when returned by a
 connector in the current request; this is partial coverage, not a full hadith index.
 

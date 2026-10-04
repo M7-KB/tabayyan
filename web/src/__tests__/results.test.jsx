@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Results } from '../components/Results.jsx'
 import { strings } from '../strings.js'
 import supportedConfirms from '../../../contracts/fixtures/supported-confirms.json'
 import cannotConfirm from '../../../contracts/fixtures/cannot-confirm.json'
+import disputed from '../../../contracts/fixtures/disputed.json'
 
 describe('Results', () => {
   it('shows a status message while loading', () => {
@@ -41,5 +42,20 @@ describe('Results', () => {
     expect(screen.getAllByRole('article')).toHaveLength(2)
     expect(screen.getByRole('article', { name: strings.stateLabels.supported_confirms })).toBeInTheDocument()
     expect(screen.getByRole('article', { name: strings.stateLabels.cannot_confirm })).toBeInTheDocument()
+  })
+
+  it('renders a nested correction notice with its evidence in the scripture block', () => {
+    render(<Results status="done" cards={[cannotConfirm]} />)
+    const article = screen.getByRole('article')
+    expect(within(article).getByRole('heading', { name: strings.misquoteHeading })).toBeInTheDocument()
+    const scripture = within(article).getAllByText(cannotConfirm.misquote_notice.evidence.quote_ar)
+    expect(scripture.length).toBeGreaterThan(0)
+    expect(within(article).getByText(cannotConfirm.misquote_notice.note_ar)).toBeInTheDocument()
+  })
+
+  it('renders a disputed card with its positions heading and state label', () => {
+    render(<Results status="done" cards={[disputed]} />)
+    expect(screen.getByRole('heading', { name: strings.positionsHeading })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: strings.stateLabels.disputed })).toBeInTheDocument()
   })
 })

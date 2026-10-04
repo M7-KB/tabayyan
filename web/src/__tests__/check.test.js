@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { CHECK_PATH, CheckError, buildCheckRequest, parseCheckResponse, postCheck } from '../api/check.js'
 import supportedConfirms from '../../../contracts/fixtures/supported-confirms.json'
 import disputed from '../../../contracts/fixtures/disputed.json'
+import cannotConfirm from '../../../contracts/fixtures/cannot-confirm.json'
 
 function jsonResponse(status, body) {
   return {
@@ -62,6 +63,46 @@ describe('parseCheckResponse', () => {
       expect(error).toBeInstanceOf(CheckError)
       expect(error.code).toBe('PIPELINE_DEGRADED')
     }
+  })
+})
+
+function cloneCard(card) {
+  return structuredClone(card)
+}
+
+async function checkWithCard(card) {
+  const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { cards: [card] }))
+  return postCheck({ claims: [], locale: 'ar' }, { fetchImpl })
+}
+
+describe('card contract validation (SPEC.md §3, A12)', () => {
+  it('accepts a nested correction notice whose evidence is verbatim-verified', async () => {
+    const result = await checkWithCard(cannotConfirm)
+    expect(result.cards[0].misquote_notice.evidence.verbatim_verified).toBe(true)
+  })
+
+  it('rejects a nested correction notice whose evidence is not verbatim-verified', async () => {
+    const card = cloneCard(cannotConfirm)
+    card.misquote_notice.evidence.verbatim_verified = false
+    await expect(checkWithCard(card)).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
+  })
+
+  it('rejects null evidence on a card', async () => {
+    const card = cloneCard(supportedConfirms)
+    card.evidence = [null]
+    await expect(checkWithCard(card)).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
+  })
+
+  it('rejects an object where a verify line string belongs', async () => {
+    const card = cloneCard(supportedConfirms)
+    card.how_to_verify_ar = [{ text: 'سطر' }, 'سطر ثانٍ']
+    await expect(checkWithCard(card)).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
+  })
+
+  it('rejects evidence whose verbatim_verified is false, even on a top-level card', async () => {
+    const card = cloneCard(supportedConfirms)
+    card.evidence[0].verbatim_verified = false
+    await expect(checkWithCard(card)).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
   })
 })
 

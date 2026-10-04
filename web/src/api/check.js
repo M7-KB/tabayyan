@@ -1,6 +1,10 @@
 // Client for POST /api/v1/check (SPEC.md §3). The server is the authority: it reclassifies level and
-// input kind and validates every card. This module only sends what the user confirmed and refuses to
-// render a response that does not have the minimum card shape.
+// input kind and validates every card. This module sends only what the user confirmed and refuses to
+// render any card that does not validate against the card contract.
+
+import Ajv2020 from 'ajv/dist/2020.js'
+import addFormats from 'ajv-formats'
+import cardSchema from '../../../contracts/card.schema.json'
 
 export const CHECK_PATH = '/api/v1/check'
 
@@ -26,28 +30,22 @@ export function buildCheckRequest({ claims, inputKind, segments, locale = 'ar' }
   return request
 }
 
-// A card must carry the fields the UI reads. Anything less is treated as a degraded pipeline (SPEC.md
-// §3: never a best-effort card).
-export function isRenderableCard(card) {
-  return (
-    card !== null &&
-    typeof card === 'object' &&
-    typeof card.state === 'string' &&
-    typeof card.state_label_key === 'string' &&
-    card.claim !== null &&
-    typeof card.claim === 'object' &&
-    typeof card.claim.text_original === 'string' &&
-    Array.isArray(card.evidence) &&
-    Array.isArray(card.how_to_verify_ar) &&
-    card.how_to_verify_ar.length === 2
-  )
+// Every card is checked against contracts/card.schema.json (SPEC.md §3, A12) before it can reach the UI.
+// The schema is the contract, so the client uses the same file as the server test suite. Anything that
+// does not validate, including nested evidence and misquote notices, is treated as PIPELINE_DEGRADED.
+const cardValidator = new Ajv2020({ allErrors: false, strict: false })
+addFormats(cardValidator)
+const validateCardSchema = cardValidator.compile(cardSchema)
+
+export function isValidCard(card) {
+  return validateCardSchema(card) === true
 }
 
 export function parseCheckResponse(body) {
   if (!body || typeof body !== 'object' || !Array.isArray(body.cards)) {
     throw new CheckError('PIPELINE_DEGRADED')
   }
-  if (!body.cards.every(isRenderableCard)) {
+  if (!body.cards.every(isValidCard)) {
     throw new CheckError('PIPELINE_DEGRADED')
   }
   return body

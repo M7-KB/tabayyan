@@ -96,7 +96,9 @@ by a checked model proposal (or the extracted term itself). Definitions remain i
 evidence. Both ordinary term fields require completed separation scans; known
 scripture/quotes or scan failures abstain. English equivalents use checksummed
 `text_en`; unverified extra `term_ar`/`term_en` record fields are ignored.
-Known hadith in a glossary definition abstains because glossary records lack a
+Every selected glossary evidence item requires a completed definition scan,
+regardless of input kind or position in the selected records. Known hadith in
+any selected glossary definition abstains because glossary records lack a
 loader-verified hadith grading; comparison-record grades cannot authorize that quote.
 
 `/health` reports card schema version 1 in verification mode. Logs contain card

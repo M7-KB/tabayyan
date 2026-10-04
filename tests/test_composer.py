@@ -458,7 +458,7 @@ def test_quoted_glossary_definition_stays_in_evidence(domain, safe_label):
     else:
         assert card["state"] == "CANNOT_CONFIRM"
         assert card["term"] is None
-        assert card["gate_report"]["grading" if safe_label else "separation"] == "fail"
+        assert card["gate_report"]["grading" if domain == "hadith" else "separation"] == "fail"
         assert card["evidence"] == []
 
 
@@ -489,6 +489,70 @@ def test_unattested_term_label_cannot_be_generated():
     e = engine(proposal(term_label_ar="invented label"), [record("fixture:scripture"), r])
     card = compose(e, claim(r["text_ar"], origin="term_lookup"), kind="term", no_claim=True)
     assert card["state"] == "CANNOT_CONFIRM"
+    assert card["term"] is None
+
+
+@pytest.mark.parametrize("count,unsafe_index", [(n, i) for n in range(1, 6) for i in range(n)])
+@pytest.mark.parametrize("kind", ["term", "claim"])
+def test_every_selected_glossary_item_requires_safe_graded_evidence(count, unsafe_index, kind):
+    from test_corpus_loader import metadata
+    from test_corpus_loader import record as corpus_record
+
+    from corpus.validate import checksum_text, validate_records
+
+    label = "اسم تجريبي"
+    records = []
+    for i in range(count):
+        text = label + (": " + TEXT if i == unsafe_index else f" وصف {i}")
+        r = corpus_record(domain="glossary", corpus_id=f"fixture:g{i}")
+        r.update(
+            text_ar=text,
+            text_normalized=normalize_arabic(text),
+            checksum_sha256=checksum_text(text),
+            text_en="Synthetic name",
+            checksum_en_sha256=checksum_text("Synthetic name"),
+        )
+        records.append(r)
+    validate_records(records, *metadata("glossary"))
+    e = engine(
+        proposal(corpus_ids=[r["corpus_id"] for r in records], term_label_ar=label),
+        [record("fixture:scripture", domain="hadith"), *records],
+    )
+    card = compose(
+        e,
+        claim(label, origin="term_lookup" if kind == "term" else "stated"),
+        kind=kind,
+        no_claim=kind == "term",
+    )
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["gate_report"]["grading"] == "fail"
+    assert card["evidence"] == []
+    assert card["term"] is None
+
+
+@pytest.mark.parametrize("status", ["error", "timeout", "index_unavailable"])
+def test_later_glossary_evidence_requires_completed_scan(monkeypatch, status):
+    label = "اسم تجريبي"
+    records = [
+        record("fixture:one", domain="glossary", text=label),
+        record("fixture:two", domain="glossary", text=label + " وصف آخر"),
+    ]
+    for r in records:
+        r["text_en"] = "Synthetic name"
+    e = engine(
+        proposal(corpus_ids=[r["corpus_id"] for r in records], term_label_ar=label),
+        [record("fixture:scripture"), *records],
+    )
+    detect = e.detector.detect
+
+    def failing_scan(text):
+        return Detection(status) if text == records[1]["text_ar"] else detect(text)
+
+    monkeypatch.setattr(e.detector, "detect", failing_scan)
+    card = compose(e, claim(label, origin="term_lookup"), kind="term", no_claim=True)
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["gate_report"]["separation"] == "fail"
+    assert card["evidence"] == []
     assert card["term"] is None
 
 

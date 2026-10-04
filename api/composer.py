@@ -280,6 +280,26 @@ class Composer:
             return finish("VERBATIM_GATE_FAILED")
         if not card["evidence"]:
             return finish("NO_MATCHING_EVIDENCE")
+        # Apply this guard to every displayed glossary item, in every input path,
+        # before any later finish can return selected evidence.
+        for cid in proposal.corpus_ids:
+            selected = by_id[cid].record
+            if selected["domain"] != "glossary":
+                continue
+            definition_scan = self.detector.detect(selected["text_ar"])
+            if (
+                definition_scan.span_detector_status
+                != self.policy["span_detector"]["required_status"]
+            ):
+                gate["separation"] = "fail"
+                card["evidence"] = []
+                return finish("VERBATIM_GATE_FAILED")
+            if any(f.match.record.domain == "hadith" for f in definition_scan.findings):
+                # Glossary evidence has no loader-verified hadith grading. A grade
+                # on the comparison record cannot authorize this embedded quote.
+                gate["grading"] = "fail"
+                card["evidence"] = []
+                return finish("VERBATIM_GATE_FAILED")
         if proposal.confidence < self.tuning.card_confidence_min:
             card["evidence"] = []
             return finish("LOW_CONFIDENCE")
@@ -316,20 +336,6 @@ class Composer:
                 label, glossary_label_id=glossary["corpus_id"]
             ) or not self._isolated(glossary["text_en"], glossary_label_id=glossary["corpus_id"]):
                 gate["separation"] = "fail"
-                card["evidence"] = []
-                return finish("VERBATIM_GATE_FAILED")
-            definition_scan = self.detector.detect(glossary["text_ar"])
-            if (
-                definition_scan.span_detector_status
-                != self.policy["span_detector"]["required_status"]
-            ):
-                gate["separation"] = "fail"
-                card["evidence"] = []
-                return finish("VERBATIM_GATE_FAILED")
-            if any(f.match.record.domain == "hadith" for f in definition_scan.findings):
-                # Glossary evidence has no loader-verified hadith grading. A grade
-                # on the comparison record cannot authorize this embedded quote.
-                gate["grading"] = "fail"
                 card["evidence"] = []
                 return finish("VERBATIM_GATE_FAILED")
             card["term"] = {

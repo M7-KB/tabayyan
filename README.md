@@ -107,7 +107,7 @@ failure cases; those probe strings are test inputs and grant no corpus approval.
 | Document | Contents |
 |---|---|
 | [SPEC.md](SPEC.md) | Scope, architecture, API contracts, data schemas, input kinds and the question → claim design for all 12 required brief cases, the A–D → card-state mapping with the `alignment` ratchet, the scripture-span detector, the policy/tuning split, untrusted-input rules, providers, referral target, clip privacy, acceptance criteria |
-| [TOOLS.md](TOOLS.md) | P-10 AI-tool inventory under merged PR #14; independently verified model IDs only, contributor claims kept in evidence; Robin reconciles by Oct 5 20:00 Riyadh |
+| [TOOLS.md](TOOLS.md) | P-10 AI-tool inventory under merged PR #14; T-501 configured models and runtime dependency ranges recorded separately from live use and deployed versions; Robin reconciles by Oct 5 20:00 Riyadh |
 | [TASKS.md](TASKS.md) | Day-by-day task plan for Oct 2–6 |
 | [AGENTS.md](AGENTS.md) | Team, non-negotiable rules, workflow, file-access boundary |
 | [CODEOWNERS](CODEOWNERS) | `api/policy/` is owned by the project owner (gate G24) |

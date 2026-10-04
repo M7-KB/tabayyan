@@ -47,5 +47,44 @@ status is recorded. Recheck updates before the Oct 6 21:00 final submission.
 
 Luffy confirmed actual Claude Code use and reported the model identifier in the cited planning message. This resolves the earlier configuration-only indication from CLAUDE.md and PR #14's attribution. The row preserves contributor-reported evidence; service terms and independent runtime/provider confirmation are not established by that message. Luffy will report changes before Oct 5 18:00 Riyadh.
 
-Product model identifiers in [SPEC.md section 8](SPEC.md) remain planned and pending
-verification. Record actual use and evidence before claiming them in the submission.
+Product model identifiers in [SPEC.md section 8](SPEC.md) are configuration choices.
+The T-501 entry below verifies their official documentation and proposed adapter
+configuration, but does not establish account access or actual product inference.
+Record actual use and evidence before claiming them in the submission.
+
+## T-501 product adapter contribution (2026-10-04)
+
+Vegapunk reported this contribution in build message
+`849b87b83312f68c8e8fc10c3f3b0bc92ae49ab41f30287e63231f64e03f1915`.
+Evidence is scoped to open [PR #49](https://github.com/M7-KB/tabayyan/pull/49)
+at `d832ef65a452f1dea51fb8b1117ef91b439a02a6`; it is not a merged or deployed inventory.
+All earlier contributor rows remain above.
+
+| Date | Task | AI tool / provider | Documented and configured model identifier | Use status | Evidence | Licence / terms status |
+|---|---|---|---|---|---|---|
+| 2026-10-04 | T-501, PR #49 | Responses API / OpenAI | `gpt-6-luna` for extraction; `gpt-6.1-sol` for level classification | Adapter implementation and mocked HTTP validation only; contributor reports no live inference | [Official Luna page](https://developers.openai.com/api/docs/models/gpt-6-luna), [official Sol page](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [adapter](https://github.com/M7-KB/tabayyan/blob/d832ef65a452f1dea51fb8b1117ef91b439a02a6/api/provider.py), [documented environment configuration](https://github.com/M7-KB/tabayyan/blob/d832ef65a452f1dea51fb8b1117ef91b439a02a6/README.md), cited contributor message | Hosted API service; applicable account/service terms pending verification. Model documentation does not establish account entitlement or religious accuracy |
+
+The adapter posts directly through HTTPX; this contribution does not declare an
+OpenAI Python SDK dependency. Provider behavior/privacy references are in
+[PR #49's README](https://github.com/M7-KB/tabayyan/blob/d832ef65a452f1dea51fb8b1117ef91b439a02a6/README.md).
+The contributor's local research record is
+`RESEARCH/TABAYYAN_T501_PROVIDER_DOCS_20261004.md` (workspace path, not a shipped repo file).
+Mock transport validation is not live model testing. No zero-retention claim is made.
+
+### Runtime dependency contribution
+
+These ranges are declared in
+[PR #49's pyproject.toml](https://github.com/M7-KB/tabayyan/blob/d832ef65a452f1dea51fb8b1117ef91b439a02a6/pyproject.toml).
+Both also remain listed in the development extras. They are dependency constraints,
+not pinned installed or deployed versions. Upstream licence files were checked on
+2026-10-04; confirm licences and notices for the resolved release at submission.
+
+| Package | Declared runtime range | Role | Upstream licence evidence | Installed/deployed version |
+|---|---|---|---|---|
+| `httpx` | `>=0.27,<1` | HTTP transport to Responses API | BSD-3-Clause; [upstream LICENSE.md](https://github.com/encode/httpx/blob/master/LICENSE.md) | Pending verification |
+| `jsonschema` | `>=4.23,<5` | Local structured-output schema validation | MIT; [upstream COPYING](https://github.com/python-jsonschema/jsonschema/blob/main/COPYING) | Pending verification |
+
+Robin collects account/service terms and resolved runtime versions/licence notices
+by **2026-10-05 18:00 Riyadh**, with evidence from Vegapunk or the deployment owner.
+Live access, actual model use and accuracy remain pending until separately reported;
+the existing 20:00 reconciliation/escalation deadline applies.

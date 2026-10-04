@@ -155,6 +155,7 @@ class HttpApiClient:
 
         payload = {
             "claims": claims,
+            "original_text": text,
             "input_kind": extracted.get("input_kind"),
             "locale": record["input"]["lang"],
         }

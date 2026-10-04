@@ -52,7 +52,7 @@ def test_health_reports_config_and_unavailable_artifacts(settings):
         "policy_version": "test-p",
         "policy_approved_by": "pending",
         "tuning_version": "test-t",
-        "card_schema_version": None,
+        "card_schema_version": "1",
         "build": "test-build",
     }
 

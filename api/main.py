@@ -6,11 +6,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.check import CheckRequest, CheckService
 from api.classifier import LevelClassifier
+from api.composer import Composer
 from api.config import load_config
 from api.errors import install_handlers, response
 from api.extract import ExtractionError, Extractor, ExtractRequest, ExtractResponse
 from api.provider import OpenAIStructuredModel
+from api.retrieval import BM25Retriever
 from api.settings import Settings
 from api.span_detector import DetectorConfig, Record, SpanDetector
 from corpus.private_artifact import load_private_corpus
@@ -71,6 +74,63 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     if not settings.health_only:
 
+        @app.post("/api/v1/check")
+        def check(request: CheckRequest):
+            try:
+                if not request.claims:
+                    raise ExtractionError(400, "NO_CLAIMS")
+                service = getattr(app.state, "checker", None)
+                if service is None:
+                    key = settings.openai_api_key.get_secret_value()
+                    reason = OpenAIStructuredModel(api_key=key, model=settings.openai_model_reason)
+                    detector = SpanDetector(
+                        [
+                            Record(r["corpus_id"], r["domain"], r["text_ar"])
+                            for r in app.state.corpus
+                        ],
+                        DetectorConfig.from_files(
+                            settings.content_policy_path, settings.tuning_path
+                        ),
+                    )
+                    extractor = Extractor(
+                        model=OpenAIStructuredModel(
+                            api_key=key, model=settings.openai_model_extract
+                        ),
+                        classifier=LevelClassifier(
+                            model=reason,
+                            policy_path=settings.content_policy_path,
+                            tuning_path=settings.tuning_path,
+                        ),
+                        detector=detector,
+                    )
+                    service = CheckService(
+                        extractor=extractor,
+                        composer=Composer(
+                            model=reason,
+                            retriever=BM25Retriever(app.state.corpus, app.state.tuning),
+                            detector=detector,
+                            records=app.state.corpus,
+                            policy_path=settings.content_policy_path,
+                            tuning_path=settings.tuning_path,
+                        ),
+                        corpus_version=app.state.corpus_version,
+                    )
+                    # Store only services/indexes, never request data or result cards.
+                    app.state.checker = service
+                result = service.check(request)
+                logger.info(
+                    "Check complete: cards=%d states=%s",
+                    len(result["cards"]),
+                    [card["state"] for card in result["cards"]],
+                )
+                return result
+            except ExtractionError as exc:
+                return response(
+                    exc.status, exc.code, "Check could not be completed", "تعذر إتمام التحقق"
+                )
+            except Exception:
+                return response(503, "PIPELINE_DEGRADED", "Check unavailable", "التحقق غير متاح")
+
         @app.post("/api/v1/extract", response_model=ExtractResponse)
         def extract(request: ExtractRequest):
             try:
@@ -128,7 +188,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "policy_version": app.state.policy.policy_version if app.state.policy else None,
             "policy_approved_by": app.state.policy.approved_by if app.state.policy else "pending",
             "tuning_version": app.state.tuning.tuning_version if app.state.tuning else None,
-            "card_schema_version": None,
+            "card_schema_version": "1" if not settings.health_only else None,
             "build": settings.build_sha,
         }
 

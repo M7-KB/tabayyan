@@ -60,7 +60,39 @@ actual adapter and endpoint without billing, including model separation,
 refusals, invalid spans, input injection boundaries, no-checkable claims,
 segmentation limits, original-context routing and classifier failure statuses.
 These tests verify boundary behavior, not live model accuracy. The extraction
-adapter does not implement alignment, explanations, transcription or `/check`.
+adapter does not implement alignment, explanations or transcription.
+
+## Text verification (T-502)
+
+`POST /api/v1/check` accepts `{"claims":[{"id":"c1","text_ar":"...","level":"A"}],
+"input_kind":"claim","locale":"ar"}`. Pass the original question/statement as
+`text_ar` so the server can recompute its origin and detect altered scripture.
+When submitting `/extract` results, also pass `original_text` with the full input:
+the server re-extracts it to preserve question origins, personal-case context and
+original scripture spans. The eval HTTP client supplies this field automatically.
+Client levels and kinds are advisory: the server re-extracts, reclassifies and
+re-detects, retaining the more restrictive route. Claims have unique IDs, at most
+50 claims and a combined limit of 12,000 code points. Empty claims return 400;
+invalid shapes return 422; infrastructure or card-schema failures return 503.
+This endpoint currently supports text only; upload segments/timestamps are deferred.
+
+The composer reads state and alignment rules from policy. Models propose only
+retrieved IDs, confidence and separate bridging prose. Evidence is copied from
+loader-validated original records, with source reference and source grading.
+Generated quotations or matching source excerpts are rejected. Quran near-misses
+against the whole index force CONTRADICTS; hadith near-misses instead show a sourced
+wording notice. Unresolved detector/classifier/alignment, missing evidence, low
+confidence and personal cases abstain with a referral and ready-to-ask question.
+Unsupported glossary lookups carry `term: null`; the contract permits that only on
+abstaining term cards. Approved translations are not attached in this first composer.
+
+`/health` reports card schema version 1 in verification mode. Logs contain card
+counts/states only; no input, claims, source text or provider diagnostics. Services
+and the local index are reused, while requests/results are not cached or stored.
+Run the full Python suite and Node data-contract checks. Synthetic composer tests
+exercise state rows, thresholds, whole-index twins, grading, isolation, errors and
+the HTTP workflow; they do not establish religious accuracy or deployed readiness.
+The live-source contract and request-scoped gatekeeper ship separately after this PR.
 
 ## Arabic normalizer (normalizer portion of T-402)
 

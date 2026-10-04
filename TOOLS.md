@@ -90,3 +90,22 @@ Robin collects account/service terms and resolved runtime versions/licence notic
 by **2026-10-05 18:00 Riyadh**, with evidence from Vegapunk or the deployment owner.
 Live access, actual model use and accuracy remain pending until separately reported;
 the existing 20:00 reconciliation/escalation deadline applies.
+
+## Bounded connector spike and Quran handoff (2026-10-05)
+
+Authority: owner event 62e18dbe42e11a40f175e75c987826e5b4b202b3b65e2ec679ccdb3756742209,
+Luffy routing e660ae834c34b4c7632f3e857e5aafb932e03922d007b3f5319985dc3934bbb2.
+See [the measured spike](docs/CONNECTOR_SPIKE_20261005.md), display [PR #61](https://github.com/M7-KB/tabayyan/pull/61)
+and artifact metadata [PR #62](https://github.com/M7-KB/tabayyan/pull/62).
+
+| Date | Task | AI tool / provider | Verified model identifier | Use | Evidence | Licence / terms status |
+|---|---|---|---|---|---|---|
+| 2026-10-05 | Bounded source spike | OpenAI Responses API | gpt-6.1-sol (both response model fields) | Two requests: remote MCP language metadata and domain-filtered web search for API docs; store:false; no real user input | [Measured table](docs/CONNECTOR_SPIKE_20261005.md); 9,933 total provider tokens, dollar cost not measured | Official [remote MCP](https://developers.openai.com/api/docs/guides/tools-connectors-mcp) and [web-search](https://developers.openai.com/api/docs/guides/tools-web-search) documentation; service-contract applicability not independently verified |
+| 2026-10-05 | Display scope, Quran handoff and spike log | Codex / OpenAI | Session identifies GPT-6; exact coding-session provider API identifier not exposed | Documentation, source metadata, local build script and existing test update; no generated religious source content | PR #61 and #62; docs/spike-log-20261005 | Service terms pending verification |
+
+Supporting tools in this session: Buzz CLI (authorized channel messages and reads),
+Git/GitHub CLI (branches and PRs), PowerShell, Python 3.11/httpx (bounded API probes
+and local artifact build), pytest, Node.js test runner and web search/page retrieval
+(primary API documentation only). Skills used: Buzz CLI and OpenAI Docs. No relay-backed
+skills loaded. Tool outputs contain metadata; keys are read only from the authorized
+dev environment and never recorded. Source permissions stay in SOURCES.md.

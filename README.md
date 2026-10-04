@@ -904,3 +904,12 @@ HTTP status and whether an object-shaped JSON response was returned. It stores
 no response text. A successful JSON probe does not establish usable hadith or
 grade parsing, retrieval quality, or end-to-end card correctness. This command
 has not yet run from Render; the earlier workstation 403 is not Render evidence.
+
+## Bounded connector spike (2026-10-05)
+
+The [measured source/API spike](docs/CONNECTOR_SPIKE_20261005.md) records two OpenAI
+calls and bounded direct probes, endpoint shapes, one-sample local latency and terms
+links. [TOOLS.md](TOOLS.md#bounded-connector-spike-and-quran-handoff-2026-10-05)
+records verified provider model use. Dorar returned 403 from the local machine;
+Render reachability remains untested. MCP language access worked, terminology coverage
+is unverified, and web-search citations alone do not provide raw verbatim evidence.

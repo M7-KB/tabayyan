@@ -157,3 +157,44 @@
     font-size: 1.3rem;
   }
 }
+
+.published-answer {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #3d5a80;
+  border-radius: 0.5rem;
+  background: #f5f8fc;
+}
+
+.published-answer h3 {
+  margin-top: 0;
+}
+
+.source-chip {
+  display: inline-block;
+  margin: 0.25rem 0;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #e6ebf1;
+  font-size: 0.85rem;
+}
+
+.published-title {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+}
+
+.published-excerpt {
+  margin: 0.25rem 0;
+  padding: 0.5rem 0.75rem;
+  border-inline-start: 3px solid #3d5a80;
+  font-family: "Amiri Quran", serif;
+  font-size: 1.15rem;
+  line-height: 1.9;
+}
+
+.published-note {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #4a4a4a;
+}

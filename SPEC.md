@@ -32,20 +32,21 @@ Most of the 12 required cases are questions (the Kaaba, the authorship of the Qu
 2. **The model's tools reach only the allowlist in §0.3.** The model cannot choose a host or fetch an arbitrary URL. Our code runs each connector call, and the connector HTTP client refuses any host outside the list, including after redirects (G29).
 3. **The gatekeeper is code, not the model.** It alone decides what is shown. The model never writes scripture, hadith gradings, published answers, or rulings.
 4. **Stage 5 (retrieve)** is now: local lookup in the Quran-only v30 artifact, plus connector calls to allowlisted sources, using the extracted search phrases only. Stage 7 (gates) applies §0.4 to every quote.
-5. **Detector comparison set (scripture span detector, §5.2).** The detector compares a user span against the local index only: the Quran-only v30 artifact. Same-request connector hits are added to the set for that request; they never remove a local record from it. The local verbatim veto runs first and does not depend on any search hit. If the local index is unavailable, `span_detector_status` is `index_unavailable` and the card fails closed to CANNOT_CONFIRM (§5.2). There is no local hadith index. Hadith are covered only by same-request connector results; until the live Dorar connector lands, hadith claims abstain with referral, and that partial coverage is disclosed in the README (§12 item 6).
+5. **Detector comparison set (scripture span detector, §5.2).** The detector compares a user span against the local index only: the Quran-only v30 artifact. Same-request connector hits are added to the set for that request; they never remove a local record from it. The local verbatim veto runs first and does not depend on any search hit. If the local index is unavailable, `span_detector_status` is `index_unavailable` and the card fails closed to CANNOT_CONFIRM (§5.2). There is no local hadith index. Hadith are covered only by same-request connector results from the §0.3 allowlist (HadeethEnc first; Dorar only after its Render smoke call reaches it). Until a hadith connector returns a result, hadith claims abstain with referral, and that partial coverage is disclosed in the README (§12 item 6).
 
 ### 0.3 Allowlist (owner list, 2026-10-04)
 
 Nothing outside this list is used. Each entry is in the challenge data package. Endpoint shapes, latency and terms per source are recorded in Robin's spike table (2026-10-04) and in SOURCES.md, not here.
 
-Owner decision of 2026-10-05: the local artifact is KFC standard-Unicode Hafs version 30 only (6,236 records). Match on `aya_text_emlaey`, display `aya_text_unicode` from the same `(sura_no, aya_no)` record, copied exactly including the end-of-ayah mark. Hafs Smart and its font are dropped. Hadith comes from the live Dorar connector; until it lands, hadith claims abstain with referral.
+Owner decision of 2026-10-05: the local artifact is KFC standard-Unicode Hafs version 30 only (6,236 records). Match on `aya_text_emlaey`, display `aya_text_unicode` from the same `(sura_no, aya_no)` record, copied exactly including the end-of-ayah mark. Hafs Smart and its font are dropped. Hadith comes from the approved runtime connectors in the table below (HadeethEnc direct API first; Dorar only after its Render smoke call reaches it). Until a hadith connector returns a result, hadith claims abstain with referral. Whether HadeethEnc's returned grading may serve as grading provenance is open (§0.4 rule 3, §12 item 7).
 
 **Hosts not yet recorded are disabled.** A connector whose host is not yet recorded in the spike table (for example icadb, and any Bayyinat endpoint) is disabled in the connector client until Robin records its host. Disabled means refused, under G29, and the card does not depend on it.
 
 | Source | Use in Tabayyan |
 |---|---|
 | KFC Quran full text (local private artifact, 6,236 verses) | Qur'an verses. Read locally; never in the repo |
-| Dorar hadith API (`dorar.net`, article/389) | Hadith text and grading |
+| HadeethEnc API (direct; exact host to be recorded in Robin's spike table, disabled until recorded) | Hadith text, first runtime hadith connector (decision 29) |
+| Dorar hadith API (`dorar.net`, article/389) | Hadith text and grading, only after the Render smoke call reaches it (decision 29) |
 | Islamic Content Service MCP server (`mcp.islamiccontent.org`): `quranenc`, `hadeethenc`, `byenah`, `islamhouse`, `islamenc`, `terminologyenc` | Translations, hadith, term definitions (`terminologyenc` for the §4.4 term cases) |
 | icadb API | Per the spike table |
 | Bayyinat (`dawa.center`, file/7937) | Per the spike table |
@@ -62,7 +63,7 @@ Every quoted religious text on screen (verse, hadith, published-answer excerpt, 
 
 1. It matches verbatim, after the normalization of §4.2, a text in the local artifact (the Quran-only v30 records, §0.3) **or** in a result returned by an allowlisted source during this request. The check runs against the raw result text we received, never against a model summary of it.
 2. It shows its source name and URL.
-3. A hadith shows the grading from the source's own record, including Dorar's section on circulating hadith that are not authentic. A hadith without grading is dropped.
+3. A hadith shows the grading from the source's own record, including Dorar's section on circulating hadith that are not authentic. A hadith without grading is dropped. **Open (owner content decision, §12 item 7):** whether HadeethEnc's returned grading or provenance is approved as grading authority. Until the owner decides, HadeethEnc results are not used as grading provenance, so a hadith from HadeethEnc alone is dropped under this rule, consistent with §4.2 rule 2. No grade is inferred from connector success.
 
 **Copy rule.** Normalization only locates a span in the cited result. The shown text is the original span, copied unchanged from that result, and the shown `source_ref` (`source_id`, `record_ref`, `url`) and grading come from that same result. Any matching result plus model-written metadata is not enough. A normalization-equivalent altered candidate never leaves the API; the original source text and its provenance do.
 
@@ -124,7 +125,7 @@ Where an older section says "Sharia specialist" or "specialist" as the approver,
 
 ### 0.10 Not decided here
 
-Transport details (endpoints, response shapes, latency, terms pages) come from Robin's spike table. This section sets the rules, not the transport. OpenAI's remote MCP and its web search are spike tests only. A model-side search counts as an allowlisted source only if its raw output, containing the verbatim text, passes §0.4. Until the spike confirms that, the product path uses our own connectors.
+Transport details (endpoints, response shapes, latency, terms pages) come from Robin's spike table. This section sets the rules, not the transport. OpenAI's remote MCP and its web search are spike tests only and are not runtime sources (decision 29a). The runtime tools reach only the §0.3 connectors, called by our code. Model-side search is not an allowlisted source at runtime.
 
 ---
 
@@ -758,7 +759,7 @@ Validator rules (`corpus/validate.py`, runs in CI):
    (`docs/challenge-brief.md`, approved references by domain), so it has to be registered and cleared
    like any other source, not hard-coded as a string. The hadith *collection* `source_id` being approved
    never by itself establishes grading provenance — grading is attested by a separate, separately
-   registered source. (Non-negotiable 1; @Nami, PR #22 blocker 1.)
+   registered source. (Non-negotiable 1; @Nami, PR #22 blocker 1.) Whether HadeethEnc results can satisfy this rule is open (§0.4 rule 3, §12 item 7); until decided, they do not.
 3. `text_ar` non-empty, and `checksum_sha256` matches `text_ar`. Guards silent edits.
 4. `text_normalized` must be reproducible from `text_ar` by the shared normalizer. Guards hand-edited index drift.
 5. `license` and `license_url` required, and must appear in `SOURCES.md`. (Non-negotiable 5.)
@@ -1659,4 +1660,5 @@ version of this section is resolved and moved to §10.
    Recalibrated once P-03's corpus slice exists (T-508a, @Nami) against a measured run, not guessed.
 
 5. **Public verbatim display (resolved by owner, 2026-10-05; no specialist).** Public display is allowed in the deployed challenge app for kfc-mushaf, dorar-hadith and live results from allowlisted sources. Scope: only the matched verse, hadith, grading or short excerpt, with visible source and link. No bulk display, no download, no redistribution of files. Basis: the organizers' written reply of 2026-10-03 and the challenge data package, as reported by the owner. Evidence and flags are recorded in [SOURCES.md](SOURCES.md#owner-public-display-decision-2026-10-05). This does not waive source binding, grading, exact-host checks or quote gates.
-6. **Hadith coverage of the span detector (owner, disclosure).** There is no local hadith index. Hadith coverage is limited to same-request live Dorar results; unmarked paraphrases outside that set may go undetected. Until the connector lands, hadith claims abstain with referral. The README discloses this limit (§0.2 item 5).
+6. **Hadith coverage of the span detector (owner, disclosure).** There is no local hadith index. Hadith coverage is limited to same-request results from the §0.3 runtime connectors (HadeethEnc, and Dorar if it is reachable); unmarked paraphrases outside that set may go undetected. Until a hadith connector returns a result, hadith claims abstain with referral. The README discloses this limit (§0.2 item 5).
+7. **Grading provenance for connector hadith (owner content decision, open).** §0.4 rule 3 accepts grading from the source's own record. §4.2 validator rule 2 names Dorar as the sole approved grading authority, with separately registered grading provenance. It is not decided whether HadeethEnc's returned grading or provenance is approved. Until the owner decides, those results are not used as grading provenance and abstain or drop. Content questions go to the owner; the project has no Sharia specialist (decision 29).

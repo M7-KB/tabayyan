@@ -436,6 +436,20 @@ with a nested misquote notice (temporary fixture, not committed). No element ext
 `web/src/__tests__/layout.test.js` only checks that the breakpoints exist. Label approval for the provisional
 Arabic strings is still open (SPEC.md §12 item 1).
 
+## Light and dark theme
+
+The header toggle (`web/src/components/ThemeToggle.jsx`) switches between light and dark. With no saved choice the
+page follows the system setting (`prefers-color-scheme`). A choice is saved only in `localStorage` under
+`tabayyan-theme`; nothing is sent to a server. `web/index.html` sets `data-theme` before first paint, and
+`web/src/theme.js` holds the same rule for the toggle.
+
+Colours are tokens (`--c-*`) in `web/src/styles.css`. `:root` holds the light values, which are unchanged from the
+previous palette. `:root[data-theme='dark']` holds the dark values from the owner brief (background `#0D1033`, surface
+`#161B4A`, primary `#6A5AE0` with white text, accent `#38C8E8` for focus and rules, text `#FFFFFF`, muted `#B7BCE3`).
+The four state badges have their own dark pairs. `web/src/__tests__/palette.test.js` reads the tokens from the CSS
+and checks each text pair at 4.5:1 and each control or focus pair at 3:1 in both themes. Dark-theme borders
+(`--c-border`, `#2A3170`) are decorative only: inputs and buttons use `--c-border-strong` for their edge.
+
 ## Check client and results (T-504, part 1)
 
 `web/src/api/check.js` builds and sends `POST /api/v1/check` (SPEC.md §3). It sends only the claim id,

@@ -3,6 +3,7 @@ import './card.css'
 import { ExplanationBlock } from './ExplanationBlock.jsx'
 import { MisquoteNotice } from './MisquoteNotice.jsx'
 import { PositionsList } from './PositionsList.jsx'
+import { PublishedAnswer } from './PublishedAnswer.jsx'
 import { ReferralBlock } from './ReferralBlock.jsx'
 import { ScriptureBlock } from './ScriptureBlock.jsx'
 import { StateBadge } from './StateBadge.jsx'
@@ -42,6 +43,8 @@ export function ClaimCard({ card }) {
       )}
       {!isDisputed &&
         card.evidence.map((item) => <ScriptureBlock key={item.evidence_id} item={item} />)}
+
+      {card.published_answer && <PublishedAnswer answer={card.published_answer} />}
 
       {card.explanation_ar && (
         <ExplanationBlock textAr={card.explanation_ar} textEn={card.explanation_en} />

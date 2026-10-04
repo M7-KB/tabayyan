@@ -1,5 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import Ajv2020 from 'ajv/dist/2020.js'
+import addFormats from 'ajv-formats'
+import cardSchema from '../../../contracts/card.schema.json'
 import { ClaimCard } from '../components/card/ClaimCard.jsx'
 import { strings } from '../strings.js'
 import supportedConfirms from '../../../contracts/fixtures/supported-confirms.json'
@@ -287,5 +290,71 @@ describe('claim timestamp and term', () => {
     render(<ClaimCard card={termCard} />)
     expect(screen.getByText('مصطلح تجريبي')).toBeInTheDocument()
     expect(screen.getByText('Synthetic term')).toBeInTheDocument()
+  })
+})
+
+// Published answers and live source references (SPEC.md §0.8, contracts/card.schema.json). Synthetic text only.
+const ajv = addFormats(new Ajv2020({ allErrors: true, strict: false }))
+const validateCard = ajv.compile(cardSchema)
+
+const syntheticAnswer = {
+  source_id: 'synthetic-answers',
+  title_ar: 'عنوان تجريبي للجواب',
+  excerpt_ar: 'نص تجريبي للجواب من المصدر',
+  url: 'https://example.invalid/answer',
+}
+
+const withAnswer = { ...supportedConfirms, published_answer: syntheticAnswer }
+
+const liveEvidence = {
+  ...supportedConfirms.evidence[0],
+  source_ref: { source_id: 'synthetic-source', record_ref: 'synthetic:1', url: 'https://example.invalid/record' },
+}
+delete liveEvidence.corpus_id
+const liveCard = { ...supportedConfirms, evidence: [liveEvidence] }
+
+describe('published answer block (SPEC.md §0.5, §0.8)', () => {
+  it('uses fixtures that validate against the card contract', () => {
+    expect(validateCard(withAnswer)).toBe(true)
+    expect(validateCard(liveCard)).toBe(true)
+  })
+
+  it('renders the title, the verbatim excerpt and the link in their own block', () => {
+    const { container } = render(<ClaimCard card={withAnswer} />)
+    const block = container.querySelector('[data-role="published-answer"]')
+    expect(block).not.toBeNull()
+    expect(within(block).getByText(syntheticAnswer.title_ar)).toBeInTheDocument()
+    expect(within(block).getByText(syntheticAnswer.excerpt_ar)).toBeInTheDocument()
+    expect(within(block).getByRole('link', { name: strings.publishedAnswerLink })).toHaveAttribute(
+      'href',
+      syntheticAnswer.url,
+    )
+    expect(within(block).getByText(strings.quoteSourceNote)).toBeInTheDocument()
+  })
+
+  it('keeps the published answer out of the scripture and explanation blocks', () => {
+    const { container } = render(<ClaimCard card={withAnswer} />)
+    const block = container.querySelector('[data-role="published-answer"]')
+    expect(block.closest('[data-role="explanation"]')).toBeNull()
+    expect(block.closest('[data-role="scripture"]')).toBeNull()
+  })
+
+  it('shows the link host as the source chip, not a source name we do not have', () => {
+    const { container } = render(<ClaimCard card={withAnswer} />)
+    expect(container.querySelector('.source-chip')).toHaveTextContent('example.invalid')
+  })
+
+  it('renders no published-answer block when there is none', () => {
+    const { container } = render(<ClaimCard card={{ ...supportedConfirms, published_answer: null }} />)
+    expect(container.querySelector('[data-role="published-answer"]')).toBeNull()
+  })
+})
+
+describe('live source references (SPEC.md §0.8)', () => {
+  it('renders a scripture block for evidence that carries source_ref instead of corpus_id', () => {
+    const { container } = render(<ClaimCard card={liveCard} />)
+    const block = container.querySelector('[data-role="scripture"]')
+    expect(block).not.toBeNull()
+    expect(within(block).getByText(liveEvidence.quote_ar)).toBeInTheDocument()
   })
 })

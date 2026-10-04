@@ -45,6 +45,11 @@ export const strings = {
   explanationHeading: 'شرح مُولَّد بالذكاء الاصطناعي',
   scriptureLabel: 'نص من المصدر',
   sourceLink: 'المصدر',
+  quoteSourceNote: 'النصوص منقولة من مصادرها المعتمدة كما هي، مع الرابط للتحقق.',
+  // Published answer (SPEC.md §0.5, §0.8). The excerpt is the source's own text, shown apart from our explanation.
+  publishedAnswerHeading: 'جواب منشور من مصدر معتمد',
+  publishedAnswerNote: 'هذا نص الجواب كما نشره المصدر، وليس شرحاً من تبيّن.',
+  publishedAnswerLink: 'عرض الجواب في المصدر',
   translationLabel: 'ترجمة من المصدر',
   translationSourceLink: 'مصدر الترجمة',
   gradingLabel: 'الحكم',

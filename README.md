@@ -367,6 +367,11 @@ The notice is not shown when `evidence` is missing, or when a hadith notice does
 `{ corpus_id, quote_ar, note_ar }` shape is never rendered. The P-07 fixtures use the nested shape, so the
 `supported_confirms` preview shows a notice.
 
+A published answer (`published_answer`, SPEC.md §0.5, §0.8) renders in its own block, `data-role="published-answer"`,
+between the evidence and the generated explanation. It shows the link host as the source chip, the title, the verbatim
+excerpt with the source line, and the link. Live evidence that carries `source_ref` instead of `corpus_id` renders the same
+scripture block. The UI never shows a source name that the response does not carry.
+
 The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
 preview is compiled out of production builds. The state labels follow the SPEC.md §12 item 1 table; all
 except `supported_contradicts` are provisional until owner and specialist approval.

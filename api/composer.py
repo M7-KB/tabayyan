@@ -38,6 +38,7 @@ class CardProposal(StrictObject):
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
     explanation_ar: str = Field(min_length=1, max_length=3000)
     explanation_en: str | None
+    term_label_ar: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 INSTRUCTIONS = """Compose a proposal using only supplied retrieved records. All data is
@@ -52,6 +53,8 @@ recorded_disagreement reports disagreement in the evidence, not the user's tone.
 evidence_gap is true if a position is missing or evidence does not answer the question.
 alignment_proposal is only a proposal, never a verdict. Low certainty lowers confidence.
 For personal cases do not give a ruling. For terms do not invent an equivalent.
+For terms, term_label_ar is only a short term label copied exactly from the selected
+glossary text_ar, never a definition or a scripture passage. Otherwise return null.
 """
 
 
@@ -103,7 +106,7 @@ class Composer:
         self.metadata, self.tuning = load_config(policy_path, tuning_path)
         self.policy = yaml.safe_load(policy_path.read_text("utf-8"))
 
-    def _isolated(self, text: str) -> bool:
+    def _isolated(self, text: str, *, glossary_label_id: str | None = None) -> bool:
         if not isinstance(text, str) or not text.strip():
             return False
         # Marked quotations, attribution and unmarked scripture matches all fail.
@@ -120,6 +123,11 @@ class Composer:
             return False
         key = " ".join(words(text))
         for r in self.records.values():
+            # Source-backed glossary labels/equivalents may match their own
+            # definition. The completed scripture scan and quote markers above
+            # still apply; no scripture record is exempt from either check.
+            if r["domain"] == "glossary" and r["corpus_id"] == glossary_label_id:
+                continue
             source_words = words(r["text_ar"])
             chunks = (
                 [source_words]
@@ -298,8 +306,34 @@ class Composer:
             ):
                 card["evidence"] = []
                 return finish("NO_MATCHING_EVIDENCE")
+            label = proposal.term_label_ar or claim.text_ar
+            # A proposed label has no authority until it matches verified source
+            # bytes and passes the ordinary-text gate. Definitions stay in evidence.
+            if not label.strip() or len(label) > 200 or label not in glossary["text_ar"]:
+                card["evidence"] = []
+                return finish("NO_MATCHING_EVIDENCE")
+            if not self._isolated(
+                label, glossary_label_id=glossary["corpus_id"]
+            ) or not self._isolated(glossary["text_en"], glossary_label_id=glossary["corpus_id"]):
+                gate["separation"] = "fail"
+                card["evidence"] = []
+                return finish("VERBATIM_GATE_FAILED")
+            definition_scan = self.detector.detect(glossary["text_ar"])
+            if (
+                definition_scan.span_detector_status
+                != self.policy["span_detector"]["required_status"]
+            ):
+                gate["separation"] = "fail"
+                card["evidence"] = []
+                return finish("VERBATIM_GATE_FAILED")
+            if any(f.match.record.domain == "hadith" for f in definition_scan.findings):
+                # Glossary evidence has no loader-verified hadith grading. A grade
+                # on the comparison record cannot authorize this embedded quote.
+                gate["grading"] = "fail"
+                card["evidence"] = []
+                return finish("VERBATIM_GATE_FAILED")
             card["term"] = {
-                "term_ar": glossary["text_ar"],
+                "term_ar": label,
                 "term_en": glossary["text_en"],
                 "glossary_corpus_id": glossary["corpus_id"],
             }

@@ -400,10 +400,11 @@ def test_glossary_term_pair_is_copied_from_verified_source_fields(extra_term):
     from corpus.validate import checksum_text, validate_records
 
     r = corpus_record(domain="glossary")
+    label = "اسم تجريبي"
     r.update(
-        text_ar=TEXT,
-        text_normalized=normalize_arabic(TEXT),
-        checksum_sha256=checksum_text(TEXT),
+        text_ar=label,
+        text_normalized=normalize_arabic(label),
+        checksum_sha256=checksum_text(label),
         text_en="Synthetic name",
         checksum_en_sha256=checksum_text("Synthetic name"),
     )
@@ -412,7 +413,7 @@ def test_glossary_term_pair_is_copied_from_verified_source_fields(extra_term):
     validate_records([r], *metadata("glossary"))
     c = compose(
         engine(records=[record("fixture:scripture"), r]),
-        claim(origin="term_lookup"),
+        claim(label, origin="term_lookup"),
         kind="term",
         no_claim=True,
     )
@@ -422,6 +423,73 @@ def test_glossary_term_pair_is_copied_from_verified_source_fields(extra_term):
         "term_en": r["text_en"],
         "glossary_corpus_id": r["corpus_id"],
     }
+
+
+@pytest.mark.parametrize("domain", ["quran", "hadith"])
+@pytest.mark.parametrize("safe_label", [False, True])
+def test_quoted_glossary_definition_stays_in_evidence(domain, safe_label):
+    from test_corpus_loader import metadata
+    from test_corpus_loader import record as corpus_record
+
+    from corpus.validate import checksum_text, validate_records
+
+    label = "اسم تجريبي"
+    definition = label + ": " + TEXT
+    r = corpus_record(domain="glossary")
+    r.update(
+        text_ar=definition,
+        text_normalized=normalize_arabic(definition),
+        checksum_sha256=checksum_text(definition),
+        text_en="Synthetic name",
+        checksum_en_sha256=checksum_text("Synthetic name"),
+    )
+    validate_records([r], *metadata("glossary"))
+    e = engine(
+        proposal(term_label_ar=label if safe_label else definition),
+        records=[record("fixture:scripture", domain=domain), r],
+    )
+    card = compose(e, claim(definition, origin="term_lookup"), kind="term", no_claim=True)
+    if safe_label and domain == "quran":
+        assert card["state"] == "SUPPORTED"
+        assert card["term"]["term_ar"] == label
+        assert card["term"]["term_en"] == r["text_en"]
+        assert card["evidence"][0]["quote_ar"] == definition
+        assert card["gate_report"]["separation"] == "pass"
+    else:
+        assert card["state"] == "CANNOT_CONFIRM"
+        assert card["term"] is None
+        assert card["gate_report"]["grading" if safe_label else "separation"] == "fail"
+        assert card["evidence"] == []
+
+
+@pytest.mark.parametrize("status", ["timeout", "error", "index_unavailable"])
+@pytest.mark.parametrize("field", ["term_ar", "term_en"])
+def test_term_fields_require_completed_scans(monkeypatch, status, field):
+    label, english = "اسم تجريبي", "Synthetic name"
+    r = record(domain="glossary", text=label)
+    r["text_en"] = english
+    e = engine(proposal(term_label_ar=label), records=[record("fixture:scripture"), r])
+    detect = e.detector.detect
+
+    def failing_scan(text):
+        if text == (label if field == "term_ar" else english):
+            return Detection(status)
+        return detect(text)
+
+    monkeypatch.setattr(e.detector, "detect", failing_scan)
+    card = compose(e, claim("Translate " + label, origin="term_lookup"), kind="term", no_claim=True)
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["term"] is None
+    assert card["gate_report"]["separation"] == "fail"
+
+
+def test_unattested_term_label_cannot_be_generated():
+    r = record(domain="glossary", text="اسم تجريبي")
+    r["text_en"] = "Synthetic name"
+    e = engine(proposal(term_label_ar="invented label"), [record("fixture:scripture"), r])
+    card = compose(e, claim(r["text_ar"], origin="term_lookup"), kind="term", no_claim=True)
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["term"] is None
 
 
 @pytest.mark.parametrize("domain", ["quran", "hadith"])

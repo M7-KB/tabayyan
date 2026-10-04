@@ -91,8 +91,13 @@ wording notice. Unresolved detector/classifier/alignment, missing evidence, low
 confidence and personal cases abstain with a referral and ready-to-ask question.
 Unsupported glossary lookups carry `term: null`; the contract permits that only on
 abstaining term cards. Approved translations are not attached in this first composer.
-Term pairs use the loader-verified `text_ar` and checksummed `text_en` fields;
-unverified extra `term_ar`/`term_en` record fields are ignored.
+Arabic term labels must be exact substrings of loader-verified `text_ar`, selected
+by a checked model proposal (or the extracted term itself). Definitions remain in
+evidence. Both ordinary term fields require completed separation scans; known
+scripture/quotes or scan failures abstain. English equivalents use checksummed
+`text_en`; unverified extra `term_ar`/`term_en` record fields are ignored.
+Known hadith in a glossary definition abstains because glossary records lack a
+loader-verified hadith grading; comparison-record grades cannot authorize that quote.
 
 `/health` reports card schema version 1 in verification mode. Logs contain card
 counts/states only; no input, claims, source text or provider diagnostics. Services

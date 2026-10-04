@@ -566,6 +566,62 @@ and `paired_case_id`, following the proposed contract in PR #28 at `63ab1a3`.
 That SPEC dependency and Nami's harness support remain pending; these data checks
 alone do not close the evaluation requirement.
 
+## Eval harness (T-407)
+
+[eval/run.py](eval/run.py) reads [eval/testset.jsonl](eval/testset.jsonl), gets cards for every
+case from one card source, validates each card against
+[contracts/card.schema.json](contracts/card.schema.json), runs the hard assertions of SPEC.md
+§4.3 per case, and then evaluates the §6.1 release gates as properties over every card in the run.
+Soft assertions (`rubric_en`, `forbidden_behaviors`) are carried into the report for review and
+are never counted as passes.
+
+Use `--corpus PATH --sources PATH --register PATH` to supply the exact corpus loaded by the
+service and its approval metadata. The existing corpus loader validates it; invalid artifacts are
+setup errors. The report pins artifact, source metadata and register hashes. Required corpus IDs
+present in that artifact must appear in card evidence. Absent IDs or unavailable corpus make the
+case `not_evaluated` and not countable, with a reason; G9 fails for such a brief case and metrics
+exclude it. Evidence IDs returned by a card never establish corpus availability. This input does
+not implement the deferred full-corpus quote gates (G1/G2/G6/G16).
+
+Schema-invalid cards fail G23 and their case, stop deeper traversal, and leave later cases reported.
+Dependent gates report a schema prerequisite failure; contract properties and pair comparisons
+are not evaluated on invalid shapes. Non-object extract/check responses are client errors.
+A `NO_MATCHING_EVIDENCE` card carrying evidence fails `must_not_fabricate` (owner, 2026-10-04).
+
+```bash
+pip install -e '.[dev]'
+python -m eval.run --stub eval/stubs/contract_pass.json          # stub card source
+python -m eval.run --api-base https://your-api --arm tabayyan    # live API
+python -m eval.run --stub eval/stubs/contract_pass.json \
+  --json eval/reports/run.json --markdown eval/reports/run.md
+```
+
+Exit codes: `0` everything checked passed, `1` a case, gate or contract property failed, `2` the
+run could not be set up. `--only T09` adds the pair partner automatically, because a pair
+comparison is itself a hard assertion. `--arm` is `tabayyan` or `control`; the corpus-free arm is
+always `control` (§6.5), and the control run itself is T-611.
+
+Two reporting rules make the output usable as gate evidence:
+
+- A gate whose evidence needs the approved corpus is reported `not evaluated` with the reason,
+  never `pass`. At this head that is G1, G2, G6 and G16; G21 is `not evaluated` until the P-09
+  red-team cases land, and G25 until the control arm runs. Where part of such a gate is decidable
+  from the card alone — a quote field repeated in a generated field, the user's input inside a
+  quote field — that part can still fail.
+- `unmatched_quotes` is reported as `null` with a reason, not as `0`, while there is no corpus to
+  match against.
+
+G9 fails today, by design: T03, T10 and T11 carry `g9_countable: false`, so three of the twelve
+brief cases are not covered. The run also fails if a brief case id is removed from the file. A
+filtered `--only` run reports G9 as `not evaluated` rather than claiming coverage it does not have.
+
+`eval/stubs/contract_pass.json` is a stub card source, not product behaviour: every card starts as
+a `contracts/fixtures` card and the bundle only patches structural fields, so each Arabic string in
+it is the fixtures' own synthetic placeholder text. No scripture, corpus record or glossary mapping
+is authored there, and a passing stub run is evidence about the harness only. The harness runs
+against the real API through `--api-base`; T-508 is the first full run and T-611 adds the control
+arm.
+
 ## Private corpus file and pending review
 
 The owner uploads Robin's built JSONL artifact as a Render Secret File and sets

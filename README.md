@@ -426,6 +426,19 @@ case from one card source, validates each card against
 Soft assertions (`rubric_en`, `forbidden_behaviors`) are carried into the report for review and
 are never counted as passes.
 
+Use `--corpus PATH --sources PATH --register PATH` to supply the exact corpus loaded by the
+service and its approval metadata. The existing corpus loader validates it; invalid artifacts are
+setup errors. The report pins artifact, source metadata and register hashes. Required corpus IDs
+present in that artifact must appear in card evidence. Absent IDs or unavailable corpus make the
+case `not_evaluated` and not countable, with a reason; G9 fails for such a brief case and metrics
+exclude it. Evidence IDs returned by a card never establish corpus availability. This input does
+not implement the deferred full-corpus quote gates (G1/G2/G6/G16).
+
+Schema-invalid cards fail G23 and their case, stop deeper traversal, and leave later cases reported.
+Dependent gates report a schema prerequisite failure; contract properties and pair comparisons
+are not evaluated on invalid shapes. Non-object extract/check responses are client errors.
+A `NO_MATCHING_EVIDENCE` card carrying evidence fails `must_not_fabricate` (owner, 2026-10-04).
+
 ```bash
 pip install -e '.[dev]'
 python -m eval.run --stub eval/stubs/contract_pass.json          # stub card source

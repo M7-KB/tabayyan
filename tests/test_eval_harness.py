@@ -131,7 +131,8 @@ def test_supported_card_without_alignment_fails(tmp_path):
     bundle = write_bundle(tmp_path / "bundle.json", patch)
     code, report = run(tmp_path, testset=countable_testset(tmp_path), bundle=bundle)
     assert code == 1
-    assert assertion(report, "T01", "alignment")["status"] == "fail"
+    assert assertion(report, "T01", "schema_valid")["status"] == "fail"
+    assert assertion(report, "T01", "alignment")["status"] == "not_evaluated"
     assert gate(report, "G17")["status"] == "fail"
     assert "T01" in gate(report, "G17")["detail"]
 
@@ -223,7 +224,8 @@ def test_level_d_supported_fails_g4(tmp_path):
     code, report = run(tmp_path, testset=countable_testset(tmp_path), bundle=bundle)
     assert code == 1
     assert gate(report, "G4")["status"] == "fail"
-    assert assertion(report, "T05", "state")["status"] == "fail"
+    assert assertion(report, "T05", "schema_valid")["status"] == "fail"
+    assert assertion(report, "T05", "state")["status"] == "not_evaluated"
 
 
 def test_pair_divergence_is_reported_with_both_case_ids(tmp_path):
@@ -482,3 +484,178 @@ def test_requires_exactly_one_card_source(capsys):
 
 def test_unreadable_testset_is_a_setup_error(tmp_path):
     assert harness.main(["--testset", str(tmp_path / "nope.jsonl"), "--stub", str(BUNDLE)]) == 2
+
+
+def corpus_args(tmp_path, corpus_id):
+    """Write validated synthetic records, never religious content."""
+    from test_corpus_loader import metadata, record
+
+    source, register = metadata("faq")
+    corpus_path = tmp_path / "corpus.jsonl"
+    corpus_path.write_text(json.dumps(record(corpus_id=corpus_id)) + "\n", encoding="utf-8")
+    sources_path = tmp_path / "sources.json"
+    sources_path.write_text(json.dumps({"sources": list(source.values())}), encoding="utf-8")
+    register_path = tmp_path / "SOURCES.md"
+    columns = ["Source id", "domain", "license", "license_url"]
+    register_path.write_text(
+        "| "
+        + " | ".join(columns)
+        + " |\n|---|---|---|---|\n"
+        + "| "
+        + " | ".join(register["faq"][column] for column in columns)
+        + " |\n",
+        encoding="utf-8",
+    )
+    return (
+        "--corpus",
+        str(corpus_path),
+        "--sources",
+        str(sources_path),
+        "--register",
+        str(register_path),
+    )
+
+
+@pytest.mark.parametrize(
+    "availability,returned,status",
+    [
+        ("present", True, "pass"),
+        ("present", False, "fail"),
+        ("absent", True, "not_evaluated"),
+        ("unavailable", True, "not_evaluated"),
+    ],
+)
+def test_required_ids_use_validated_loaded_corpus(tmp_path, availability, returned, status):
+    items = load_testset(countable_testset(tmp_path))
+    items[0]["expect"]["required_corpus_ids"] = ["synthetic:e1"]
+    path = write_testset(tmp_path / "required.jsonl", items)
+
+    def patch(bundle):
+        if not returned:
+            overrides(bundle, "T01")["evidence"] = {"0": {"corpus_id": "synthetic:other"}}
+
+    bundle = write_bundle(tmp_path / "required-bundle.json", patch)
+    extra = (
+        ()
+        if availability == "unavailable"
+        else corpus_args(
+            tmp_path, "synthetic:e1" if availability == "present" else "synthetic:other"
+        )
+    )
+    code, report = run(tmp_path, testset=path, bundle=bundle, extra=extra)
+    assert assertion(report, "T01", "required_corpus_ids")["status"] == status
+    assert case(report, "T01")["status"] == status
+    assert gate(report, "G9")["status"] == ("pass" if status == "pass" else "fail")
+    assert code == (0 if status == "pass" else 1)
+    if status == "not_evaluated":
+        assert case(report, "T01")["g9_countable"] is False
+        assert case(report, "T01")["blocked_reason_en"]
+        assert report["metrics"]["cases_executed"] == len(items) - 1
+        assert report["metrics"]["cases_passing"] == len(items) - 1
+        assert report["metrics"]["cases_not_evaluated"] == 1
+    if availability != "unavailable":
+        assert report["loaded_corpus"]["status"] == "validated"
+        assert len(report["loaded_corpus"]["sha256"]) == 64
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        None,
+        {"claim": None},
+        {"evidence": [None]},
+        {"positions": [None]},
+        {"claim": {"scripture_spans": [None]}},
+    ],
+)
+def test_malformed_cards_report_g23_and_continue(tmp_path, malformed):
+    def patch(bundle):
+        bundle["cases"]["T01"]["cards"][0]["overrides"] = malformed
+
+    bundle = write_bundle(tmp_path / "malformed.json", patch)
+    code, report = run(tmp_path, testset=countable_testset(tmp_path), bundle=bundle)
+    assert code == 1
+    assert case(report, "T01")["status"] == "fail"
+    assert assertion(report, "T01", "schema_valid")["status"] == "fail"
+    assert gate(report, "G23")["status"] == "fail"
+    assert "T01" in gate(report, "G23")["detail"]
+    assert case(report, "T02")["status"] == "pass"
+    assert len(report["cases"]) == len(records())
+    assert report["metrics"]["cases_executed"] == len(records()) - 1
+    assert harness.render_markdown(report)
+
+
+@pytest.mark.parametrize("endpoint", ["extract", "check"])
+@pytest.mark.parametrize("body", [None, [], "text", 42])
+def test_http_non_object_bodies_report_client_error(tmp_path, monkeypatch, endpoint, body):
+    from io import BytesIO
+
+    def urlopen(request, **kwargs):
+        payload = (
+            body
+            if request.full_url.endswith(endpoint)
+            else {
+                "claims": [{"id": "c1", "text_ar": "synthetic", "level": "A"}],
+                "input_kind": "question",
+            }
+        )
+        return BytesIO(json.dumps(payload).encode("utf-8"))
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    output = tmp_path / "http-error.json"
+    code = harness.main(
+        [
+            "--api-base",
+            "http://fixture.invalid",
+            "--only",
+            "T01,T02",
+            "--json",
+            str(output),
+            "--quiet",
+        ]
+    )
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert code == 1
+    for case_id in ("T01", "T02"):
+        assert case(report, case_id)["status"] == "fail"
+        assert "non-object JSON body" in case(report, case_id)["error"]
+
+
+def test_invalid_corpus_is_a_setup_error(tmp_path):
+    args = corpus_args(tmp_path, "synthetic:e1")
+    Path(args[1]).write_text('{"corpus_id":"synthetic:e1"}\n', encoding="utf-8")
+    assert harness.main(["--stub", str(BUNDLE), *args, "--quiet"]) == 2
+
+
+def test_malformed_pair_does_not_compare_null_observations_as_a_pass(tmp_path):
+    def patch(bundle):
+        for case_id in ("T09", "T13"):
+            bundle["cases"][case_id]["cards"][0]["overrides"] = None
+
+    bundle = write_bundle(tmp_path / "pair-malformed.json", patch)
+    code, report = run(tmp_path, testset=countable_testset(tmp_path), bundle=bundle)
+    assert code == 1
+    for case_id in ("T09", "T13"):
+        assert assertion(report, case_id, "pair_consistency")["status"] == "not_evaluated"
+    assert case(report, "T18")["status"] == "pass"
+
+
+def test_no_matching_evidence_consistency_reads_actual_card(tmp_path):
+    items = load_testset(countable_testset(tmp_path))
+    next(item for item in items if item["case_id"] == "T15")["expect"]["abstained_reason"] = (
+        "NO_CHECKABLE_CLAIM"
+    )
+    path = write_testset(tmp_path / "actual-reason.jsonl", items)
+
+    def patch(bundle):
+        overrides(bundle, "T15")["evidence"] = [
+            json.loads(
+                (ROOT / "contracts/fixtures/supported-confirms.json").read_text(encoding="utf-8")
+            )["evidence"][0]
+        ]
+
+    bundle = write_bundle(tmp_path / "actual-reason-bundle.json", patch)
+    code, report = run(tmp_path, testset=path, bundle=bundle)
+    assert code == 1
+    assert assertion(report, "T15", "schema_valid")["status"] == "pass"
+    assert assertion(report, "T15", "must_not_fabricate")["status"] == "fail"

@@ -4,8 +4,8 @@ Hard assertions are the machine-checked list of SPEC.md section 4.3. Soft
 assertions (`rubric_en`, `forbidden_behaviors`) are carried into the report for
 review and are never turned into a pass here.
 
-Everything in this module is structural: it reads the card, not the corpus. A
-claim that needs a corpus record to settle, such as verbatim equality (G2) or
+Required IDs are resolved against validated loaded-corpus IDs. Other checks
+are structural. A claim needing source text, such as verbatim equality (G2) or
 user-span isolation (G16), is reported as not evaluated rather than as a pass.
 """
 
@@ -85,7 +85,7 @@ class CaseResult:
     """One executed case: the record, what came back, and every check."""
 
     record: dict[str, Any]
-    cards: list[dict[str, Any]]
+    cards: list[Any]
     error: str | None = None
     checks: list[Check] = field(default_factory=list)
     meta: dict[str, Any] = field(default_factory=dict)
@@ -102,7 +102,24 @@ class CaseResult:
     def status(self) -> str:
         if self.error is not None or self.failures:
             return FAIL
+        if self.corpus_blocked_reason:
+            return NOT_EVALUATED
         return PASS
+
+    @property
+    def corpus_blocked_reason(self) -> str | None:
+        return next(
+            (
+                check.detail
+                for check in self.checks
+                if check.name == "required_corpus_ids" and check.status == NOT_EVALUATED
+            ),
+            None,
+        )
+
+    @property
+    def countable(self) -> bool:
+        return self.record["g9_countable"] and not self.corpus_blocked_reason
 
 
 @lru_cache(maxsize=1)
@@ -118,7 +135,7 @@ def schema_errors(card: Any) -> list[str]:
     validator = card_validator()
     return [
         f"{'/'.join(str(part) for part in error.path) or '<root>'}: {error.message}"
-        for error in sorted(validator.iter_errors(card), key=lambda error: list(error.path))
+        for error in sorted(validator.iter_errors(card), key=lambda error: str(list(error.path)))
     ]
 
 
@@ -199,7 +216,7 @@ def near_miss_spans(card: dict[str, Any]) -> list[dict[str, Any]]:
 
 def observed(card: dict[str, Any] | None) -> dict[str, Any]:
     """The five fields a pair comparison and the report both read."""
-    if card is None:
+    if card is None or schema_errors(card):
         return dict.fromkeys(PAIR_COMPARED_FIELDS)
     return {
         "input_kind": card.get("input_kind"),
@@ -254,7 +271,7 @@ def _check_must_not_fabricate(expect: dict[str, Any], card: dict[str, Any]) -> C
                         problems.append(f"{path}.grading.{name} is empty")
 
     # A card that reports no matching evidence cannot also display evidence.
-    if expect["abstained_reason"] == "NO_MATCHING_EVIDENCE" and (card.get("evidence") or []):
+    if card.get("abstained_reason") == "NO_MATCHING_EVIDENCE" and card.get("evidence"):
         problems.append("NO_MATCHING_EVIDENCE card returned evidence items")
 
     if problems:
@@ -279,8 +296,29 @@ def _check_required_domains(expect: dict[str, Any], card: dict[str, Any]) -> Che
     return Check("required_evidence_domains", PASS, f"required {required}, observed {present}")
 
 
-def _check_required_corpus_ids(expect: dict[str, Any], card: dict[str, Any]) -> Check:
+def _check_required_corpus_ids(
+    expect: dict[str, Any],
+    card: dict[str, Any] | None,
+    loaded_corpus_ids: frozenset[str] | None = None,
+) -> Check:
     required = expect["required_corpus_ids"]
+    if not required:
+        return Check("required_corpus_ids", PASS, "no required IDs for this case")
+    if required and loaded_corpus_ids is None:
+        return Check(
+            "required_corpus_ids",
+            NOT_EVALUATED,
+            "required IDs cannot be resolved: validated loaded corpus unavailable",
+        )
+    absent = [value for value in required if value not in (loaded_corpus_ids or ())]
+    if absent:
+        return Check(
+            "required_corpus_ids",
+            NOT_EVALUATED,
+            f"required IDs absent from validated loaded corpus: {absent}",
+        )
+    if card is None:
+        return Check("required_corpus_ids", NOT_EVALUATED, "no valid card to assert against")
     present = [item.get("corpus_id") for _, item in evidence_items(card)]
     missing = [corpus_id for corpus_id in required if corpus_id not in present]
     if missing:
@@ -311,7 +349,11 @@ def _check_forbidden_substrings(expect: dict[str, Any], card: dict[str, Any]) ->
     )
 
 
-def assert_case(record: dict[str, Any], cards: list[dict[str, Any]]) -> list[Check]:
+def assert_case(
+    record: dict[str, Any],
+    cards: list[Any],
+    loaded_corpus_ids: frozenset[str] | None = None,
+) -> list[Check]:
     """Run the hard assertions of section 4.3 for one case."""
     expect = record["expect"]
     if len(cards) != 1:
@@ -328,6 +370,13 @@ def assert_case(record: dict[str, Any], cards: list[dict[str, Any]]) -> list[Che
     errors = schema_errors(card)
     if errors:
         checks.append(Check("schema_valid", FAIL, "; ".join(errors[:5])))
+        return checks + [
+            _check_required_corpus_ids(expect, None, loaded_corpus_ids)
+            if name == "required_corpus_ids"
+            else Check(name, NOT_EVALUATED, "card failed schema validation")
+            for name in HARD_ASSERTIONS
+            if name not in ("card_count", "schema_valid")
+        ]
     else:
         checks.append(Check("schema_valid", PASS, "validates against contracts/card.schema.json"))
 
@@ -345,7 +394,7 @@ def assert_case(record: dict[str, Any], cards: list[dict[str, Any]]) -> list[Che
     checks.append(_check_must_refer(expect, card))
     checks.append(_check_must_not_fabricate(expect, card))
     checks.append(_check_required_domains(expect, card))
-    checks.append(_check_required_corpus_ids(expect, card))
+    checks.append(_check_required_corpus_ids(expect, card, loaded_corpus_ids))
     checks.append(_check_forbidden_substrings(expect, card))
     return checks
 
@@ -372,6 +421,8 @@ def assert_pair(
             FAIL,
             f"{record['case_id']} and {paired} must each return exactly 1 card",
         )
+    if schema_errors(cards[0]) or schema_errors(partner_cards[0]):
+        return Check("pair_consistency", NOT_EVALUATED, "pair contains a schema-invalid card")
     mine = observed(cards[0])
     theirs = observed(partner_cards[0])
     differences = [

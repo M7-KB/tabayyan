@@ -198,6 +198,8 @@ def gate_g9(
         elif result.status == FAIL:
             detail = result.error or "; ".join(check.name for check in result.failures)
             problems.append(f"{case_id} failed: {detail}")
+        elif result.corpus_blocked_reason:
+            problems.append(f"{case_id} is not countable: {result.corpus_blocked_reason}")
     if not_executed and not filtered:
         problems += [f"{case_id} was not executed in this run" for case_id in not_executed]
     if problems:
@@ -375,6 +377,18 @@ def gate_g26(results: list[CaseResult]) -> Check:
 
 def contract_properties(results: list[CaseResult]) -> list[Check]:
     """Section 4.1 field rules that are not themselves numbered gates."""
+    if any(schema_errors(card) for result in results for card in result.cards):
+        return [
+            Check(name, NOT_EVALUATED, "schema-invalid cards; see G23")
+            for name in (
+                "notice_eligibility",
+                "referral_required",
+                "alignment_confidence_present",
+                "internal_gate_report",
+                "explanation_en_presence",
+                "input_preserved",
+            )
+        ]
     notice_problems = []
     referral_problems = []
     confidence_problems = []
@@ -488,6 +502,39 @@ def evaluate_gates(
     filtered: bool = False,
 ) -> list[Check]:
     """Every gate this harness can speak to, in gate-id order."""
+    invalid = [
+        result.case_id for result in results if any(schema_errors(card) for card in result.cards)
+    ]
+    if invalid:
+        # Deeper gates require the schema's traversal guarantees. Retain G23's
+        # raw failures and fail the prerequisite rather than traversing bad shapes.
+        return [
+            gate_g9(records, results, filtered)
+            if name == "G9"
+            else gate_g23(results)
+            if name == "G23"
+            else gate_g25(arm, arms_present)
+            if name == "G25"
+            else Check(name, FAIL, f"schema prerequisite failed for {invalid}; see G23")
+            for name in (
+                "G1",
+                "G2",
+                "G3",
+                "G4",
+                "G5",
+                "G6",
+                "G7",
+                "G8",
+                "G9",
+                "G16",
+                "G17",
+                "G19",
+                "G21",
+                "G23",
+                "G25",
+                "G26",
+            )
+        ]
     return [
         gate_g1(results),
         gate_g2(results),
@@ -515,7 +562,14 @@ def evaluate_gates(
 
 def metrics(results: list[CaseResult]) -> dict[str, Any]:
     """Report numbers. A metric with no evidence is null, never zero."""
-    executed = [result for result in results if result.error is None and len(result.cards) == 1]
+    executed = [
+        result
+        for result in results
+        if result.error is None
+        and result.countable
+        and len(result.cards) == 1
+        and not schema_errors(result.cards[0])
+    ]
     total = len(results)
 
     def share(matches: int) -> float | None:
@@ -568,12 +622,17 @@ def metrics(results: list[CaseResult]) -> dict[str, Any]:
 
     return {
         "cases_total": total,
+        "cases_returned_single_card": sum(
+            1 for result in results if result.error is None and len(result.cards) == 1
+        ),
         "cases_executed": len(executed),
         "cases_passing": sum(1 for result in results if result.status == PASS),
         "cases_failing": sum(1 for result in results if result.status == FAIL),
+        "cases_not_evaluated": sum(1 for result in results if result.status == NOT_EVALUATED),
+        "cases_not_countable": sum(1 for result in results if not result.countable),
         "classification_accuracy": share(classification),
-        "classification_accuracy_definition": "share of executed cases whose level and state "
-        "both match the expectation",
+        "classification_accuracy_definition": "share of countable, schema-valid single-card "
+        "responses whose level and state both match the expectation",
         **accuracy,
         "abstention_precision": precision,
         "abstention_recall": recall,

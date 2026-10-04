@@ -22,7 +22,7 @@ FIXTURES_DIR = ROOT / "contracts" / "fixtures"
 class ClientResponse:
     """Cards for one case, or an error explaining why there are none."""
 
-    cards: list[dict[str, Any]] = field(default_factory=list)
+    cards: list[Any] = field(default_factory=list)
     error: str | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
@@ -128,7 +128,10 @@ class HttpApiClient:
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             return None, f"POST {path} failed: {exc}"
         try:
-            return json.loads(body), None
+            decoded = json.loads(body)
+            if not isinstance(decoded, dict):
+                return None, f"POST {path} returned a non-object JSON body"
+            return decoded, None
         except json.JSONDecodeError as exc:
             return None, f"POST {path} returned invalid JSON: {exc}"
 
@@ -138,9 +141,14 @@ class HttpApiClient:
         if error is not None or extracted is None:
             return ClientResponse(error=error or "extract returned no body")
 
+        raw_claims = extracted.get("claims")
+        if not isinstance(raw_claims, list) or any(
+            not isinstance(claim, dict) for claim in raw_claims
+        ):
+            return ClientResponse(error="extract response has no valid claims array")
         claims = [
             {"id": claim.get("id"), "text_ar": claim.get("text_ar"), "level": claim.get("level")}
-            for claim in extracted.get("claims", [])
+            for claim in raw_claims
         ]
         if not claims:
             return ClientResponse(error="extract returned no claims")

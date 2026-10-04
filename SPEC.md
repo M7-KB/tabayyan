@@ -666,7 +666,15 @@ Review and coverage fields (owner-facing contract, decided by Luffy 2026-10-03; 
 - `paired_case_id` (string or null) is `null` for unpaired records. A pair must name a different `case_id` (no self-reference) that exists in the same file, and the target must name the original back. Both cases execute, and the harness compares `input_kind`, `level`, `state`, `alignment`, and `abstained_reason`. Any difference in the actual outputs fails the pair explicitly, and the failure is reported with both case ids. A one-sided, self, or unresolved reference fails.
 
 Assertions split into two kinds, and the split matters:
-- **Hard** (`input_kind`, `level`, `state`, `alignment`, `abstained_reason`, `state_label_key`, `must_refer`, `must_not_fabricate`, `required_evidence_domains`, `forbidden_substrings_ar`) — machine-checked, pass/fail, and these gate the release.
+- **Hard** (`input_kind`, `level`, `state`, `alignment`, `abstained_reason`, `state_label_key`, `must_refer`, `must_not_fabricate`, `required_evidence_domains`, `required_corpus_ids`, `forbidden_substrings_ar`) — machine-checked, pass/fail, and these gate the release.
+
+Owner decisions (2026-10-04, build thread `7ceaac9b3f00d684f58a169ac0b9dba6b88827ed4cf6751cf65b2d7f2ecafdd9`):
+`required_corpus_ids` is hard when the record exists in the exact validated loaded corpus.
+A present record omitted from card evidence fails. An absent record, or unavailable loaded corpus,
+makes the case not countable with a reason, never a pass; G9 cannot pass and accuracy/abstention
+metrics exclude that case. Card evidence cannot prove corpus availability.
+A card whose actual `abstained_reason` is `NO_MATCHING_EVIDENCE` and which carries non-empty
+`evidence[]` fails `must_not_fabricate`.
 - **Soft** (`rubric_en`, `forbidden_behaviors`) — reviewed by @Nami and recorded in the eval report. Never auto-converted into a pass.
 
 All 12 required cases from `docs/challenge-brief.md` ship with `origin: "brief"` and must be present; the

@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from corpus.loader import load_corpus
+from corpus.validate import CorpusValidationError
 from eval.assertions import (
     CARD_SCHEMA_PATH,
     FAIL,
@@ -68,7 +70,11 @@ def select_records(records: list[dict[str, Any]], only: list[str] | None) -> lis
     return [record for record in records if record["case_id"] in wanted]
 
 
-def run_cases(records: list[dict[str, Any]], client: Any) -> list[CaseResult]:
+def run_cases(
+    records: list[dict[str, Any]],
+    client: Any,
+    loaded_corpus_ids: frozenset[str] | None = None,
+) -> list[CaseResult]:
     results: list[CaseResult] = []
     for record in records:
         response = client.cards_for(record)
@@ -81,7 +87,7 @@ def run_cases(records: list[dict[str, Any]], client: Any) -> list[CaseResult]:
             results.append(CaseResult(record=record, cards=[], error=response.error, checks=checks))
             continue
         checks = [Check("response", PASS, f"{len(response.cards)} card(s) returned")]
-        checks += assert_case(record, response.cards)
+        checks += assert_case(record, response.cards, loaded_corpus_ids)
         results.append(
             CaseResult(
                 record=record, cards=list(response.cards), checks=checks, meta=dict(response.meta)
@@ -110,6 +116,7 @@ def build_report(
     client_name: str,
     testset_path: Path,
     selected: list[dict[str, Any]] | None = None,
+    corpus_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """`records` is the whole test set; `selected` is what this run executed."""
     executed = selected if selected is not None else records
@@ -121,8 +128,8 @@ def build_report(
             "case_id": result.case_id,
             "origin": result.record["origin"],
             "category": result.record["category"],
-            "g9_countable": result.record["g9_countable"],
-            "blocked_reason_en": result.record["blocked_reason_en"],
+            "g9_countable": result.countable,
+            "blocked_reason_en": result.corpus_blocked_reason or result.record["blocked_reason_en"],
             "paired_case_id": result.record["paired_case_id"],
             "reviewed_by": result.record["reviewed_by"],
             "status": result.status,
@@ -152,6 +159,7 @@ def build_report(
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "arm": arm,
         "card_source": client_name,
+        "loaded_corpus": corpus_meta or {"status": "unavailable"},
         "testset": {
             "path": str(testset_path.relative_to(ROOT))
             if testset_path.is_relative_to(ROOT)
@@ -173,7 +181,9 @@ def build_report(
             {"name": check.name, "status": check.status, "detail": check.detail}
             for check in properties
         ],
-        "outcome": FAIL if failing_checks else PASS,
+        "outcome": FAIL
+        if failing_checks or any(result.status == NOT_EVALUATED for result in results)
+        else PASS,
     }
 
 
@@ -192,6 +202,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Card schema: `{report['card_schema']['path']}` "
         f"(sha256 `{report['card_schema']['sha256'][:12]}`)",
         f"- Harness version: {report['harness_version']}",
+        f"- Loaded corpus: {report['loaded_corpus']}",
         "",
         "## Metrics",
         "",
@@ -217,6 +228,8 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.append(f"### {case['case_id']} — {_status_mark(case['status'])}")
         if case["error"]:
             lines.append(f"- response error: {case['error']}")
+        if not case["g9_countable"]:
+            lines.append(f"- not countable: {case['blocked_reason_en']}")
         for assertion in case["assertions"]:
             lines.append(
                 f"- {assertion['name']}: {_status_mark(assertion['status'])}"
@@ -270,6 +283,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--markdown", dest="markdown_out", type=Path, help="write the Markdown report here"
     )
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument("--corpus", type=Path, help="exact validated corpus loaded by the API")
+    parser.add_argument("--sources", type=Path, default=ROOT / "corpus/approved_sources.json")
+    parser.add_argument("--register", type=Path, default=ROOT / "SOURCES.md")
     parser.add_argument("--quiet", action="store_true", help="print only the outcome line")
     return parser.parse_args(argv)
 
@@ -296,8 +312,28 @@ def main(argv: list[str] | None = None) -> int:
     else:
         client = HttpApiClient(args.api_base, timeout=args.timeout)
 
-    results = run_cases(selected, client)
-    report = build_report(records, results, args.arm, client.name, args.testset, selected)
+    loaded_ids = None
+    corpus_meta = {"status": "unavailable"}
+    if args.corpus:
+        try:
+            corpus_records = load_corpus(
+                args.corpus, sources_path=args.sources, register_path=args.register
+            )
+            loaded_ids = frozenset(record["corpus_id"] for record in corpus_records)
+            corpus_meta = {
+                "status": "validated",
+                "records": len(corpus_records),
+                "sha256": _sha256(args.corpus),
+                "sources_sha256": _sha256(args.sources),
+                "register_sha256": _sha256(args.register),
+            }
+        except (CorpusValidationError, OSError) as exc:
+            print(f"error: cannot load validated corpus: {exc}", file=sys.stderr)
+            return 2
+    results = run_cases(selected, client, loaded_ids)
+    report = build_report(
+        records, results, args.arm, client.name, args.testset, selected, corpus_meta
+    )
 
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)

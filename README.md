@@ -107,7 +107,22 @@ and the local index are reused, while requests/results are not cached or stored.
 Run the full Python suite and Node data-contract checks. Synthetic composer tests
 exercise state rows, thresholds, whole-index twins, grading, isolation, errors and
 the HTTP workflow; they do not establish religious accuracy or deployed readiness.
-The live-source contract and request-scoped gatekeeper ship separately after this PR.
+The request-scoped gatekeeper ships separately from the card contract below.
+
+### Live-source card contract (SPEC §0.8)
+
+Version 1 now accepts either the legacy local `corpus_id` or a live `source_ref`
+`{source_id, record_ref, url}` on evidence and approved translations, never both.
+Terms similarly use either `glossary_corpus_id` or `source_ref`. Local artifact
+cards remain valid. An optional nullable `published_answer` contains exactly
+`{source_id, title_ar, excerpt_ar, url}`; its excerpt is source text and must render
+in the source block, separately from generated explanations. A published answer
+also requires evidence carrying its provenance. Hadith grading stays mandatory.
+
+This schema validates structure only. The gatekeeper must enforce same-request
+origin, allowlisted source/URL, source_ref consistency and exact excerpt matching
+against raw connector results. Synthetic contract tests do not establish those
+properties. Consumers must support `source_ref` before live-source cards are enabled.
 
 ## Arabic normalizer (normalizer portion of T-402)
 

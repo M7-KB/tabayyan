@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tabayyan.example/contracts/card.schema.json",
   "title": "Claim card version 1",
-  "$comment": "Structural contract only. Corpus provenance, original-text equality, generated-text isolation, span bounds, evidence-id resolution, and corpus-dependent notice eligibility require runtime gates. Fixtures contain synthetic text and do not establish corpus or Sharia approval.",
+  "$comment": "Structural contract only. Corpus provenance, original-text equality, generated-text isolation, span bounds, evidence-id resolution, and corpus-dependent notice eligibility require runtime gates. Fixtures contain synthetic text and do not establish corpus or Sharia approval. source_ref replaces corpus_id (or glossary_corpus_id) for live results; exactly one reference form is required. Runtime gates must verify current-request origin, source/source_ref equality, and published_answer excerpt linkage. Optional published_answer is a source quote field, not generated prose.",
   "type": "object",
   "properties": {
     "card_id": {
@@ -286,6 +286,16 @@
         "span_detector"
       ],
       "additionalProperties": false
+    },
+    "published_answer": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/publishedAnswer"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
@@ -445,15 +455,33 @@
           "type": "string",
           "format": "uri",
           "pattern": "^https://[^\\s]+$"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/sourceRef"
         }
       },
       "required": [
-        "corpus_id",
         "text_en",
         "source_id",
         "source_url"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "required": [
+                "corpus_id"
+              ]
+            },
+            {
+              "required": [
+                "source_ref"
+              ]
+            }
+          ]
+        }
+      ]
     },
     "reference": {
       "type": "object",
@@ -541,11 +569,13 @@
         "retrieval_score": {
           "type": "number",
           "minimum": 0
+        },
+        "source_ref": {
+          "$ref": "#/$defs/sourceRef"
         }
       },
       "required": [
         "evidence_id",
-        "corpus_id",
         "domain",
         "source_id",
         "source_name_ar",
@@ -652,6 +682,20 @@
               }
             }
           }
+        },
+        {
+          "oneOf": [
+            {
+              "required": [
+                "corpus_id"
+              ]
+            },
+            {
+              "required": [
+                "source_ref"
+              ]
+            }
+          ]
         }
       ]
     },
@@ -702,14 +746,32 @@
         "glossary_corpus_id": {
           "type": "string",
           "minLength": 1
+        },
+        "source_ref": {
+          "$ref": "#/$defs/sourceRef"
         }
       },
       "required": [
         "term_ar",
-        "term_en",
-        "glossary_corpus_id"
+        "term_en"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "required": [
+                "glossary_corpus_id"
+              ]
+            },
+            {
+              "required": [
+                "source_ref"
+              ]
+            }
+          ]
+        }
+      ]
     },
     "referral": {
       "type": "object",
@@ -754,6 +816,59 @@
       "required": [
         "evidence",
         "note_ar"
+      ],
+      "additionalProperties": false
+    },
+    "sourceRef": {
+      "type": "object",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "record_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s]+$"
+        }
+      },
+      "required": [
+        "source_id",
+        "record_ref",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "publishedAnswer": {
+      "type": "object",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excerpt_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://[^\\s]+$"
+        }
+      },
+      "required": [
+        "source_id",
+        "title_ar",
+        "excerpt_ar",
+        "url"
       ],
       "additionalProperties": false
     }
@@ -1136,6 +1251,25 @@
               "SUPPORTED",
               "CANNOT_CONFIRM"
             ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "published_answer": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "published_answer"
+        ]
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minItems": 1
           }
         }
       }

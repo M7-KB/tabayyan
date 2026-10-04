@@ -39,6 +39,44 @@ The normalizer and its tests were developed on October 2, 2026, with organizer p
 development that day (see Disclosure below). TASKS.md records the implementation and the pending
 T-503a quote-safety follow-up: equal normalized keys must never authorize a quotation.
 
+## Lexical retrieval (T-404)
+
+`api.retrieval.Retriever` defines `retrieve(query, top_k=5, domain=None)`. Its
+`BM25Retriever` implementation indexes ar-v1 normalized keys with Unicode word
+boundaries and case folding. It uses Okapi BM25 (`k1=1.5`, `b=0.75`, positive
+Robertson IDF), counts each query term once, and returns only positive scores at
+or above `retrieval_score_floor` from validated `TuningMetadata`. Scores are raw
+BM25 values, not probabilities. Ties sort by `corpus_id`; a domain filter keeps
+global index statistics unchanged, including for the glossary path.
+
+```python
+from pathlib import Path
+from api.config import load_config
+from api.retrieval import BM25Retriever
+
+_, tuning = load_config(Path("api/policy/content_policy.yaml"), Path("api/tuning.yaml"))
+retriever = BM25Retriever.from_artifact(tuning)  # requires an approved local artifact
+matches = retriever.retrieve("user claim", top_k=5)
+# Each match has corpus_id, retrieval_score, and a detached original record.
+```
+
+`from_artifact` calls the public corpus validator/loader and propagates rejection.
+Direct `BM25Retriever(records, tuning)` construction is an adapter for records
+already validated by a loader, including a future private-artifact loader; it
+does not grant licence or specialist approval. Original `text_ar` and provenance
+are copied unchanged, isolated from caller mutations. Lexical matching never
+authorizes a quotation, evidence state, or alignment; downstream gates still
+check the original retrieved record. Empty queries, no overlap and below-floor
+matches return an empty list, including when the floor is zero.
+
+Run `python -m pytest` for the full Python suite. The retrieval tests use twelve
+synthetic, non-religious query cases with expected top-five targets or abstention,
+plus formula, floor-boundary, normalization, provenance and failure tests. These
+are engineering fixtures, not the twelve brief safety cases or a real-corpus
+evaluation. The initial floor of 8.0 still needs real-corpus calibration; short
+queries can abstain. No raw source text, index artifact, query logging, model
+call, endpoint or input persistence is added by this module.
+
 ## Claim card contract (P-07)
 
 [contracts/card.schema.json](contracts/card.schema.json) is the Draft 2020-12 version-1

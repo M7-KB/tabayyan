@@ -300,9 +300,50 @@ claim/card fields per SPEC.md, not tuning keys; they arrive with the detector/ca
 The policy file transcribes SPEC §§5.1–5.5 and §9: level/state rows, state guards, the ordered
 alignment ratchet, detector prerequisites, markers, user-text isolation and referral copy. State
 guards run before alignment; level D stays CANNOT_CONFIRM even with a detected near-miss. The
-scaffold currently loads metadata and budget limits only; these files do not implement the classifier,
-composer, detector or gates. Those tasks must consume the policy instead of duplicating its rules.
+scaffold currently loads metadata and budget limits only. Pipeline utilities consume these files
+separately; the HTTP routes do not yet run the classifier, composer, detector or gates.
 T-410 separately owns independent literal pinning; P-08 tests real-file startup integration.
+
+### Content level classifier (T-405)
+
+`api/classifier.py` provides `LevelClassifier(model=adapter, policy_path=..., tuning_path=...)`.
+Call `classify(claim_text, context=original_input)`; keyword-only `context` is required.
+Omitting it raises `TypeError`, so extraction cannot silently discard personal-case cues.
+Arabic normalization is applied only to deterministic routing keys, never to displayed text.
+Routing keys remove Unicode format characters (including U+200D, U+200C and U+061C).
+Every Arabic cue word accepts conjunction, preposition and article clitics, including
+stacked forms and lam/article contraction. This conservative cue matcher is not a
+full morphological analyzer; ambiguous matches may refer. Original text and model data
+remain unchanged. Personal-case and judgment cues force D without a provider call.
+Other rules establish a minimum
+level; a model can raise it but cannot lower it. Hostility is not a routing cue.
+
+The classifier reads P-08's restrictive level order and `level_confidence_min`.
+The new classification threshold is independent of `card_confidence_min` (card evidence only).
+Missing, malformed,
+failed or below-floor model classifications resolve to D. `level_confidence` retains the model's
+confidence (zero on missing/invalid output), rather than claiming certainty about that fallback.
+The result contains `level`, `level_confidence`, a fixed English `level_rationale_en`,
+and `classifier_status`: `rule_forced`, `model_validated`, `low_confidence` or `unavailable`.
+The composer must check status before level-D personal-case policy: low confidence or
+unavailable classification keeps the restrictive state but must not tell a user that their
+question was a personal fatwa. T-502 owns that integration; this utility does not make cards.
+First-person family/possessive cues and Arabic ability/possession framings force D,
+including English relative possessives.
+It does not establish authenticity, retrieve sources or choose a card state.
+
+Provider adapters implement the shared `api/model.py` `StructuredModel.complete_json` interface:
+fixed instructions, separately serialized untrusted data, and `LevelProposal.model_json_schema()`.
+The provider must enforce that JSON schema, and the classifier validates it again locally.
+Adapters must not merge data into instructions or log payloads/provider errors. Keys and model
+IDs come from environment configuration. This utility ships without a live provider adapter or
+HTTP integration; no inference calls are made in its tests.
+
+The offline regression suite exercises the brief inputs and T14–T18 with a stub that always
+proposes A, testing deterministic floors independently of model agreement. T11 remains skipped
+because its owner-provided misquote input is missing. Separate tests cover model escalation,
+low confidence, invalid JSON, failure handling, original-context retention, and tone invariance.
+These checks are routing tests, not model accuracy measurements or religious approval.
 
 Policy `p1` remains `approved_by: pending`, so G14 is not met. The owner must record specialist
 approval before changing that field. SPEC §12 still lists four specialist decisions: Arabic state
@@ -311,9 +352,11 @@ boundary, ceiling 4 and Trigger B minimum 3. Tuning
 `t1` uses the SPEC defaults (confidence 0.5/0.6, retrieval floor 8.0, word budgets 1/2/3); these are
 initial engineering values, not measured performance. T-508a owns calibration against the real index.
 
-`GET /health` exposes the policy approval and tuning versions read from those files. Until the corpus
-loader and card schema are integrated, it reports `status: degraded`, `corpus_items: 0` and null
-artifact versions. It is a scaffold liveness response, not a release-readiness claim. Verification,
+`GET /health` exposes the policy approval and tuning versions read from those files. The private file
+loader reports the loaded count and corpus version after full validation.
+It still reports `status: degraded` while verification endpoints and the card schema are not integrated;
+loading data is not evidence that the pipeline is ready. It is a scaffold liveness response, not a
+release-readiness claim. Verification,
 transcription and ingestion routes are not implemented by this PR. Errors use the SPEC envelope
 `error: {code, message_ar, message_en}` with fixed text that does not echo input.
 
@@ -421,15 +464,16 @@ python -m pytest
 ```
 
 The validator cross-checks `corpus/approved_sources.json` and the explicit machine-readable table in
-`SOURCES.md`. For a cleared source, its allowlist row must have `license_status: confirmed`,
+`SOURCES.md`. For public-distribution validation, its allowlist row must have `license_status: confirmed`,
 `ingestion_allowed: true` and `redistribution_allowed: true`; its exact licence and licence URL must
-match the register. Existing candidate rows remain pending and cannot pass. Only an owner-cleared
+match the register. The private-use mode described below does not require redistribution; it still
+requires confirmed ingestion. Unrelated candidate rows remain pending. Only an owner-cleared
 source PR changes these flags and records permission for derived corpus/application display. This
 validator trusts that reviewed metadata; it cannot prove the permission document or textual provenance.
 
 Offline review of a licence-cleared artifact may use `python -m corpus.validate --allow-pending-review`
-to admit `approved_by: pending`. This option never waives licence checks and is unavailable on
-`load_corpus`: runtime records always require `sharia-reviewer-1`. The owner records actual specialist
+to admit `approved_by: pending`. This option never waives licence checks. `load_corpus` has the
+analogous explicit `allow_pending_review` keyword, default false. The owner records actual specialist
 approval in the content PR; a string in a fixture is not sign-off. Use `--corpus`, `--sources` and
 `--register` for explicit offline paths. The loader's analogous keyword paths support tests/integration.
 
@@ -471,3 +515,46 @@ All records explicitly provide `needs_sharia_review`, `g9_countable`, `blocked_r
 and `paired_case_id`, following the proposed contract in PR #28 at `63ab1a3`.
 That SPEC dependency and Nami's harness support remain pending; these data checks
 alone do not close the evaluation requirement.
+
+## Private corpus file and pending review
+
+The owner uploads Robin's built JSONL artifact as a Render Secret File and sets
+`PRIVATE_CORPUS_PATH` to its mounted path in the service environment. Commit only
+`corpus/manifest.json` with exactly `{"sha256": "<64 lowercase hex digits>", "corpus_version": "v1"}`;
+the SHA-256 is over the complete file bytes, including line endings. `CORPUS_MANIFEST_PATH`
+can override that public manifest path. No URL/read token is needed. No actual manifest is supplied
+until the private artifact exists. Keep real artifacts under `corpus/private/` locally; built JSONL,
+raw files and indexes are ignored and checked for accidental tracked files in CI.
+The guard covers alternate JSONL names and backups, corpus build directories, data JSONL,
+and index/embedding/database extensions even when force-added. Public corpus code/docs,
+`approved_sources.json` and the checksum-only `manifest.json` are allowed.
+
+Startup reads at most 64 MiB and validates the same bytes it hashed. All rows must pass before any
+records reach app state. Missing files, hash mismatch or an invalid row leave `corpus_items: 0` and
+`corpus_version: null`. `/health` distinguishes `corpus_status: not_configured`, `loaded`,
+`unavailable` and `disabled` (health-only); `corpus_error` is a safe row/field reason on failure,
+null otherwise. That reason is logged once at startup. `HEALTH_ONLY=true` skips all artifact/config
+reads. The application logs no private path, parser exception or source text. `/health` stays degraded until the pipeline is integrated.
+
+`ALLOW_PENDING_REVIEW=false` is the default. Only the owner-managed judging service may set it true.
+`/health` always reports `allow_pending_review` and `pending_review_items` (the loaded count).
+Future cards using pending evidence must visibly disclose the lack of specialist review in Arabic
+with specialist-reviewed copy; see SPEC section 4.2. Enabling it permits only literal `pending` in addition
+to `sharia-reviewer-1`; no `approved_by` value is changed. **G14 remains NOT MET** while review is pending.
+Licensing, grading, integrity and downstream verbatim checks still apply. This flag implements no
+quote or card generation and cannot authorize display of generated religious content.
+
+The source register records scoped owner-reported challenge-app ingestion for `kfc-mushaf`,
+`sahih-bukhari` and `dorar-hadith`; redistribution remains prohibited. All other permissions remain
+unchanged. `python -m corpus.validate --private-use --allow-pending-review --corpus <private-path>`
+checks such artifacts offline. Without `--private-use`, public-distribution validation still requires
+redistribution permission. Runtime uses the explicit file loader and additionally checks
+public-display permission for collection and grading sources. All current sources have `public_display_allowed: false`,
+so use-only sources must stay out of the deployed artifact until the owner and specialist
+resolve SPEC section 12 item 5. `ALLOW_PENDING_REVIEW` cannot bypass this permission.
+Bukhari and Dorar publisher policy URLs remain pending; owner-decision self-links are separate
+evidence and cannot replace `license_url`.
+
+Run `python -m pytest`, `ruff check .`, `ruff format --check .`,
+`node --test tests/*.test.mjs` and `python -m corpus.check_public_tree` from the repo root.
+Tests use synthetic non-scriptural fixtures; no private artifacts or credentials are used by public CI.

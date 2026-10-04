@@ -26,6 +26,7 @@ class TuningMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
     tuning_version: str = Field(min_length=1)
     card_confidence_min: Confidence
+    level_confidence_min: Confidence
     alignment_confidence_min: Confidence
     retrieval_score_floor: float = Field(ge=0, allow_inf_nan=False)
     retrieval_overlap_floor: Confidence

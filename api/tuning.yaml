@@ -1,6 +1,7 @@
 # Source: SPEC.md section 5.5. Initial values; calibration is T-508a.
 tuning_version: t1
 card_confidence_min: 0.5
+level_confidence_min: 0.5        # Classification only; independent of the card evidence threshold.
 alignment_confidence_min: 0.6
 retrieval_score_floor: 8.0       # Legacy raw BM25 value; not enforced until calibration/SPEC update.
 retrieval_overlap_floor: 0.25    # Candidate overlap fraction; initial engineering value, uncalibrated.

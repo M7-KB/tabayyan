@@ -49,6 +49,7 @@ POLICY = {
 TUNING = {
     "tuning_version": "t1",
     "card_confidence_min": 0.5,
+    "level_confidence_min": 0.5,
     "alignment_confidence_min": 0.6,
     "retrieval_score_floor": 8.0,
     "retrieval_overlap_floor": 0.25,

@@ -71,7 +71,7 @@ alignment_rules:
     when:
       proposal: CONFIRMS
       quran_near_miss: false
-      retrieval_score_at_least: retrieval_score_floor
+      overlap_score_at_least: retrieval_overlap_floor
       confidence_at_least: alignment_confidence_min
     result: CONFIRMS
   - id: unresolved

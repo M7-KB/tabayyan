@@ -368,6 +368,14 @@ scaffold currently loads metadata and budget limits only. Pipeline utilities con
 separately; the HTTP routes do not yet run the classifier, composer, detector or gates.
 T-410 separately owns independent literal pinning; P-08 tests real-file startup integration.
 
+T-502's preparatory retrieval regressions in `tests/test_composer_retrieval_contract.py`
+reject high raw BM25 scores below the overlap floor, accept low raw scores above
+that floor, and include the exact-floor boundary. These test retrieval prerequisites;
+card alignment still requires the composer and its other safety gates. The policy
+YAML now pins `overlap_score_at_least: retrieval_overlap_floor`, as approved by the
+owner on Oct 4. A literal regression rejects replacement with the raw-score gate;
+the legacy raw-score tuning field remains ranking metadata.
+
 ### Content level classifier (T-405)
 
 `api/classifier.py` provides `LevelClassifier(model=adapter, policy_path=..., tuning_path=...)`.

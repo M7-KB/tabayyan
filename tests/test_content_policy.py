@@ -61,3 +61,11 @@ def test_policy_rule_references_resolve():
         for key, value in rule.get("when", {}).items():
             if key.endswith("_at_least"):
                 assert value in tuning
+
+
+def test_model_confirms_requires_overlap_gate_literal():
+    """Pin the approved gate independently of runtime threshold configuration."""
+    policy = yaml.safe_load(POLICY.read_text("utf-8"))
+    rule = next(rule for rule in policy["alignment_rules"] if rule["id"] == "model_confirms")
+    assert rule["when"]["overlap_score_at_least"] == "retrieval_overlap_floor"
+    assert "retrieval_score_at_least" not in rule["when"]

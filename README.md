@@ -245,9 +245,50 @@ claim/card fields per SPEC.md, not tuning keys; they arrive with the detector/ca
 The policy file transcribes SPEC §§5.1–5.5 and §9: level/state rows, state guards, the ordered
 alignment ratchet, detector prerequisites, markers, user-text isolation and referral copy. State
 guards run before alignment; level D stays CANNOT_CONFIRM even with a detected near-miss. The
-scaffold currently loads metadata and budget limits only; these files do not implement the classifier,
-composer, detector or gates. Those tasks must consume the policy instead of duplicating its rules.
+scaffold currently loads metadata and budget limits only. Pipeline utilities consume these files
+separately; the HTTP routes do not yet run the classifier, composer, detector or gates.
 T-410 separately owns independent literal pinning; P-08 tests real-file startup integration.
+
+### Content level classifier (T-405)
+
+`api/classifier.py` provides `LevelClassifier(model=adapter, policy_path=..., tuning_path=...)`.
+Call `classify(claim_text, context=original_input)`; keyword-only `context` is required.
+Omitting it raises `TypeError`, so extraction cannot silently discard personal-case cues.
+Arabic normalization is applied only to deterministic routing keys, never to displayed text.
+Routing keys remove Unicode format characters (including U+200D, U+200C and U+061C).
+Every Arabic cue word accepts conjunction, preposition and article clitics, including
+stacked forms and lam/article contraction. This conservative cue matcher is not a
+full morphological analyzer; ambiguous matches may refer. Original text and model data
+remain unchanged. Personal-case and judgment cues force D without a provider call.
+Other rules establish a minimum
+level; a model can raise it but cannot lower it. Hostility is not a routing cue.
+
+The classifier reads P-08's restrictive level order and `level_confidence_min`.
+The new classification threshold is independent of `card_confidence_min` (card evidence only).
+Missing, malformed,
+failed or below-floor model classifications resolve to D. `level_confidence` retains the model's
+confidence (zero on missing/invalid output), rather than claiming certainty about that fallback.
+The result contains `level`, `level_confidence`, a fixed English `level_rationale_en`,
+and `classifier_status`: `rule_forced`, `model_validated`, `low_confidence` or `unavailable`.
+The composer must check status before level-D personal-case policy: low confidence or
+unavailable classification keeps the restrictive state but must not tell a user that their
+question was a personal fatwa. T-502 owns that integration; this utility does not make cards.
+First-person family/possessive cues and Arabic ability/possession framings force D,
+including English relative possessives.
+It does not establish authenticity, retrieve sources or choose a card state.
+
+Provider adapters implement the shared `api/model.py` `StructuredModel.complete_json` interface:
+fixed instructions, separately serialized untrusted data, and `LevelProposal.model_json_schema()`.
+The provider must enforce that JSON schema, and the classifier validates it again locally.
+Adapters must not merge data into instructions or log payloads/provider errors. Keys and model
+IDs come from environment configuration. This utility ships without a live provider adapter or
+HTTP integration; no inference calls are made in its tests.
+
+The offline regression suite exercises the brief inputs and T14–T18 with a stub that always
+proposes A, testing deterministic floors independently of model agreement. T11 remains skipped
+because its owner-provided misquote input is missing. Separate tests cover model escalation,
+low confidence, invalid JSON, failure handling, original-context retention, and tone invariance.
+These checks are routing tests, not model accuracy measurements or religious approval.
 
 Policy `p1` remains `approved_by: pending`, so G14 is not met. The owner must record specialist
 approval before changing that field. SPEC §12 still lists four specialist decisions: Arabic state

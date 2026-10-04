@@ -21,7 +21,8 @@ def settings(tmp_path):
         encoding="utf-8",
     )
     tuning.write_text(
-        "tuning_version: test-t\ncard_confidence_min: 0.5\nalignment_confidence_min: 0.6\n"
+        "tuning_version: test-t\ncard_confidence_min: 0.5\n"
+        "level_confidence_min: 0.5\nalignment_confidence_min: 0.6\n"
         'retrieval_score_floor: 8.0\nword_budget_table: {"4": 1, "10": 2, else: 3}\n'
         "trigger_b_min_window_tokens: 3\n",
         encoding="utf-8",

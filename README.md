@@ -252,8 +252,9 @@ T-410 separately owns independent literal pinning; P-08 tests real-file startup 
 ### Content level classifier (T-405)
 
 `api/classifier.py` provides `LevelClassifier(model=adapter, policy_path=..., tuning_path=...)`.
-Call `classify(claim_text, context=original_input)` so extraction cannot remove a personal-case
-cue. Arabic normalization is applied only to deterministic routing keys, never to displayed text.
+Call `classify(claim_text, context=original_input)`; keyword-only `context` is required.
+Omitting it raises `TypeError`, so extraction cannot silently discard personal-case cues.
+Arabic normalization is applied only to deterministic routing keys, never to displayed text.
 Routing keys remove Unicode format characters (including U+200D, U+200C and U+061C).
 Every Arabic cue word accepts conjunction, preposition and article clitics, including
 stacked forms and lam/article contraction. This conservative cue matcher is not a
@@ -262,10 +263,18 @@ remain unchanged. Personal-case and judgment cues force D without a provider cal
 Other rules establish a minimum
 level; a model can raise it but cannot lower it. Hostility is not a routing cue.
 
-The classifier reads P-08's restrictive level order and `card_confidence_min`. Missing, malformed,
+The classifier reads P-08's restrictive level order and `level_confidence_min`.
+The new classification threshold is independent of `card_confidence_min` (card evidence only).
+Missing, malformed,
 failed or below-floor model classifications resolve to D. `level_confidence` retains the model's
 confidence (zero on missing/invalid output), rather than claiming certainty about that fallback.
-The result contains only `level`, `level_confidence` and a fixed English `level_rationale_en`.
+The result contains `level`, `level_confidence`, a fixed English `level_rationale_en`,
+and `classifier_status`: `rule_forced`, `model_validated`, `low_confidence` or `unavailable`.
+The composer must check status before level-D personal-case policy: low confidence or
+unavailable classification keeps the restrictive state but must not tell a user that their
+question was a personal fatwa. T-502 owns that integration; this utility does not make cards.
+First-person family/possessive cues and Arabic ability/possession framings force D,
+including English relative possessives.
 It does not establish authenticity, retrieve sources or choose a card state.
 
 Provider adapters implement the shared `api/model.py` `StructuredModel.complete_json` interface:

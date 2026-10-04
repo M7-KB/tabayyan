@@ -26,6 +26,7 @@ class Classification(BaseModel):
     level: Level
     level_confidence: float
     level_rationale_en: str
+    classifier_status: Literal["rule_forced", "model_validated", "low_confidence", "unavailable"]
 
 
 class ClassifierPolicy(BaseModel):
@@ -64,8 +65,11 @@ def _patterns(*patterns: str) -> tuple[re.Pattern, ...]:
 # These are conservative routing cues, not a complete linguistic classifier.
 _PERSONAL = _patterns(
     r"\b(?:زواجي|زوجي|زوجتي|عقدي|صلاتي|صيامي|طلاقي|ميراثي|معاملتي|بلدي)\b",
+    r"\b(?:أخي|أختي|ابني|ابنتي|أمي|أبي|والدي|والدتي|وصيتي|عندي|أقدر)\b",
     r"\b(?:يجوز لي|يحق لي|هل علي|هل انا|في دوله)\b",
     r"\b(?:my|our)\s+(?:marriage|wife|husband|contract|prayer|fast|divorce|inheritance)\b",
+    r"\b(?:my|our)\s+(?:brother|sister|son|daughter|mother|father|parent|child)"
+    r"(?:['’]s)?\b",
     r"\b(?:may i|can i|must i|am i|in my country)\b",
 )
 _INDIVIDUAL_CASE = _patterns(
@@ -130,11 +134,18 @@ class LevelClassifier:
         except (OSError, UnicodeError, yaml.YAMLError, ValidationError) as exc:
             raise RuntimeError("Classifier policy missing or invalid") from exc
         self.order = policy.state_guards.level_order
-        self.confidence_min = tuning.card_confidence_min
+        self.confidence_min = tuning.level_confidence_min
         self.model = model
 
     def resolve(self, floor: Level, proposal: object) -> Classification:
         """Validate a proposal locally and apply the policy's restrictive ratchet."""
+        if floor == "D":
+            return Classification(
+                level="D",
+                level_confidence=1,
+                level_rationale_en="Deterministic personal-case or judgment cue; referral required",
+                classifier_status="rule_forced",
+            )
         try:
             proposed = LevelProposal.model_validate(proposal)
         except ValidationError:
@@ -142,31 +153,30 @@ class LevelClassifier:
                 level=self.order[-1],
                 level_confidence=0,
                 level_rationale_en="Missing or invalid classification; referral required",
+                classifier_status="unavailable",
             )
         if proposed.confidence < self.confidence_min:
             return Classification(
                 level=self.order[-1],
                 level_confidence=proposed.confidence,
                 level_rationale_en="Low classification confidence; referral required",
+                classifier_status="low_confidence",
             )
         level = max((floor, proposed.level), key=self.order.index)
         return Classification(
             level=level,
             level_confidence=proposed.confidence,
             level_rationale_en="More restrictive of rules and validated model classification",
+            classifier_status="model_validated",
         )
 
-    def classify(self, text: str, *, context: str = "") -> Classification:
+    def classify(self, text: str, *, context: str) -> Classification:
         """Classify in memory; context preserves personal-case cues lost in extraction."""
         if not isinstance(text, str) or not isinstance(context, str):
             raise TypeError("Classification requires text strings")
         floor = max((rule_level(text), rule_level(context)), key=self.order.index)
         if floor == "D":
-            return Classification(
-                level="D",
-                level_confidence=1,
-                level_rationale_en="Deterministic personal-case or judgment cue; referral required",
-            )
+            return self.resolve(floor, None)
         if not text.strip() or self.model is None:
             return self.resolve(floor, None)
         try:

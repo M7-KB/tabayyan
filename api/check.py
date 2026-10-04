@@ -42,7 +42,11 @@ class CheckService:
         if request.original_text is not None:
             # Re-extract the original input rather than an earlier model paraphrase.
             # This preserves personal-case context, question origin and quote spans.
-            extracted = self.extractor.extract(ExtractRequest(text=request.original_text))
+            extracted = self.extractor.extract(
+                ExtractRequest(text=request.original_text, max_claims=50)
+            )
+            if extracted.dropped_count:
+                raise ExtractionError(503, "PIPELINE_DEGRADED")
             client_floor = max((c.level for c in request.claims), key="ABCD".index)
             kind = max(
                 (request.input_kind, extracted.input_kind),
@@ -68,6 +72,8 @@ class CheckService:
             extracted = self.extractor.extract(
                 ExtractRequest(text=submitted.text_ar, max_claims=50)
             )
+            if extracted.dropped_count:
+                raise ExtractionError(503, "PIPELINE_DEGRADED")
             kind = max(
                 (request.input_kind, extracted.input_kind),
                 key={"claim": 0, "question": 1, "term": 2}.__getitem__,

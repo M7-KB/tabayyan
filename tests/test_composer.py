@@ -1,6 +1,7 @@
 """Offline nonreligious card fixtures; no claims about production accuracy."""
 
 import copy
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -10,11 +11,11 @@ from jsonschema import ValidationError
 from api.check import CheckRequest, CheckService
 from api.classifier import LevelClassifier
 from api.composer import VALIDATOR, Composer, evidence_from
-from api.extract import ExtractedClaim, Extractor
+from api.extract import ExtractedClaim, ExtractionError, Extractor, Span
 from api.main import create_app
 from api.retrieval import BM25Retriever, RetrievalResult
 from api.settings import Settings
-from api.span_detector import DetectorConfig, Record, SpanDetector
+from api.span_detector import Detection, DetectorConfig, Record, SpanDetector
 from corpus.normalize import normalize_arabic
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -391,9 +392,24 @@ def test_injection_is_data_and_model_cannot_supply_quotes():
     assert "ignore previous" in e.model.calls[0]["data"]["claim"]
 
 
-def test_glossary_term_pair_is_copied_from_source():
-    r = record(domain="glossary")
-    r.update(term_ar="اسم تجريبي", term_en="Synthetic name")
+@pytest.mark.parametrize("extra_term", [None, "Unattested equivalent"])
+def test_glossary_term_pair_is_copied_from_verified_source_fields(extra_term):
+    from test_corpus_loader import metadata
+    from test_corpus_loader import record as corpus_record
+
+    from corpus.validate import checksum_text, validate_records
+
+    r = corpus_record(domain="glossary")
+    r.update(
+        text_ar=TEXT,
+        text_normalized=normalize_arabic(TEXT),
+        checksum_sha256=checksum_text(TEXT),
+        text_en="Synthetic name",
+        checksum_en_sha256=checksum_text("Synthetic name"),
+    )
+    if extra_term is not None:
+        r.update(term_ar="Unattested name", term_en=extra_term)
+    validate_records([r], *metadata("glossary"))
     c = compose(
         engine(records=[record("fixture:scripture"), r]),
         claim(origin="term_lookup"),
@@ -402,7 +418,124 @@ def test_glossary_term_pair_is_copied_from_source():
     )
     assert c["state"] == "SUPPORTED"
     assert c["term"] == {
-        "term_ar": r["term_ar"],
-        "term_en": r["term_en"],
+        "term_ar": r["text_ar"],
+        "term_en": r["text_en"],
         "glossary_corpus_id": r["corpus_id"],
     }
+
+
+@pytest.mark.parametrize("domain", ["quran", "hadith"])
+def test_unrelated_misquote_does_not_change_card(domain):
+    unrelated = "ثلج جليد برد شتاء صقيع"
+    e = engine(
+        proposal(corpus_ids=["fixture:other"]),
+        [record(domain=domain), record("fixture:other", text=unrelated)],
+    )
+    baseline = compose(e, claim(unrelated))
+    prefix = TEXT.replace("موز", "خوخ") + ". "
+    original = prefix + unrelated
+    c = claim(unrelated).model_copy(update={"span": Span(start=len(prefix), end=len(original))})
+    card = e.compose(c, original=original, lang="ar", input_kind="claim", no_checkable_claim=False)
+    for field in ("alignment", "evidence", "misquote_notice", "state"):
+        assert card[field] == baseline[field]
+    assert all(
+        len(prefix) <= s["start"] < s["end"] <= len(original)
+        for s in card["claim"]["scripture_spans"]
+    )
+
+
+def test_question_source_span_preserves_quote_finding():
+    altered = TEXT.replace("موز", "خوخ")
+    original = "Why this wording: " + altered + "?"
+    c = claim(TEXT, origin="question_subject")
+    c = c.model_copy(update={"span": Span(start=0, end=len(original))})
+    card = engine().compose(
+        c, original=original, lang="en", input_kind="question", no_checkable_claim=False
+    )
+    assert card["alignment"] == "CONTRADICTS"
+    assert any(s["classification"] == "NEAR_MISS" for s in card["claim"]["scripture_spans"])
+
+
+@pytest.mark.parametrize("status", ["error", "timeout", "unavailable", "exception"])
+@pytest.mark.parametrize("field", ["explanation_ar", "explanation_en", "label_ar", "summary_ar"])
+def test_generated_prose_requires_completed_scan(monkeypatch, status, field):
+    unsafe = "تفاحة خوخ"
+    value = proposal()
+    if field in {"label_ar", "summary_ar"}:
+        p = {"label_ar": "موقف تجريبي", "summary_ar": "راجع المصدر.", "corpus_ids": ["fixture:one"]}
+        p[field] = unsafe
+        value["positions"] = [p]
+    else:
+        value[field] = unsafe
+    e = engine(value, records=[record(text="تفاحة موز")])
+    # Exercise a two-token scan configuration: the three-word excerpt guard
+    # cannot detect this near-miss and must not substitute for a completed scan.
+    e.detector.config = replace(e.detector.config, trigger_b_min_window_tokens=2)
+    assert any(f.match.classification == "NEAR_MISS" for f in e.detector.detect(unsafe).findings)
+    detect = e.detector.detect
+
+    def failing_scan(text):
+        if text == unsafe:
+            if status == "exception":
+                raise RuntimeError("private diagnostics")
+            return Detection(status)
+        return detect(text)
+
+    monkeypatch.setattr(e.detector, "detect", failing_scan)
+    card = compose(e, lang="en")
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["gate_report"]["separation"] == "fail"
+    assert card["positions"] == []
+    assert unsafe not in (card["explanation_ar"], card["explanation_en"])
+
+
+@pytest.mark.parametrize("count", [11, 50])
+def test_original_text_returns_every_accepted_claim(count):
+    service = check_service()
+    original = " ".join([TEXT] * count)
+    service.extractor.model.value["claims"] = [
+        {
+            "text_ar": TEXT,
+            "source_text": TEXT,
+            "origin": "stated",
+            "span": {"start": i * (len(TEXT) + 1), "end": i * (len(TEXT) + 1) + len(TEXT)},
+        }
+        for i in range(count)
+    ]
+    result = service.check(
+        CheckRequest(
+            original_text=original,
+            claims=[{"id": f"c{i}", "text_ar": TEXT} for i in range(count)],
+        )
+    )
+    assert len(result["cards"]) == count
+    assert [c["claim"]["id"] for c in result["cards"]] == [f"c{i + 1}" for i in range(count)]
+
+
+def test_original_text_over_50_fails_explicitly():
+    service = check_service()
+    original = " ".join([TEXT] * 51)
+    service.extractor.model.value["claims"] = [
+        {
+            "text_ar": TEXT,
+            "source_text": TEXT,
+            "origin": "stated",
+            "span": {"start": i * (len(TEXT) + 1), "end": i * (len(TEXT) + 1) + len(TEXT)},
+        }
+        for i in range(51)
+    ]
+    with pytest.raises(ExtractionError, match="PIPELINE_DEGRADED"):
+        service.check(CheckRequest(original_text=original, claims=[{"id": "c1", "text_ar": TEXT}]))
+
+
+@pytest.mark.parametrize("original", [None, TEXT])
+def test_reported_extraction_overflow_is_not_silently_discarded(monkeypatch, original):
+    service = check_service()
+    extract = service.extractor.extract
+
+    def overflow(request):
+        return extract(request).model_copy(update={"dropped_count": 1})
+
+    monkeypatch.setattr(service.extractor, "extract", overflow)
+    with pytest.raises(ExtractionError, match="PIPELINE_DEGRADED"):
+        service.check(CheckRequest(original_text=original, claims=[{"id": "c1", "text_ar": TEXT}]))

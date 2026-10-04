@@ -74,17 +74,25 @@ Client levels and kinds are advisory: the server re-extracts, reclassifies and
 re-detects, retaining the more restrictive route. Claims have unique IDs, at most
 50 claims and a combined limit of 12,000 code points. Empty claims return 400;
 invalid shapes return 422; infrastructure or card-schema failures return 503.
+Original-input extraction explicitly accepts up to 50 claims and returns a card for
+each accepted claim. Extraction overflow fails with 503 `PIPELINE_DEGRADED`, rather
+than returning a silently truncated result.
 This endpoint currently supports text only; upload segments/timestamps are deferred.
 
 The composer reads state and alignment rules from policy. Models propose only
 retrieved IDs, confidence and separate bridging prose. Evidence is copied from
 loader-validated original records, with source reference and source grading.
 Generated quotations or matching source excerpts are rejected. Quran near-misses
+are associated only with the claim's original source span, including question
+spans. Generated explanation and position fields require a completed detector scan;
+error, timeout or unavailable scans fail the separation gate. Quran near-misses
 against the whole index force CONTRADICTS; hadith near-misses instead show a sourced
 wording notice. Unresolved detector/classifier/alignment, missing evidence, low
 confidence and personal cases abstain with a referral and ready-to-ask question.
 Unsupported glossary lookups carry `term: null`; the contract permits that only on
 abstaining term cards. Approved translations are not attached in this first composer.
+Term pairs use the loader-verified `text_ar` and checksummed `text_en` fields;
+unverified extra `term_ar`/`term_en` record fields are ignored.
 
 `/health` reports card schema version 1 in verification mode. Logs contain card
 counts/states only; no input, claims, source text or provider diagnostics. Services

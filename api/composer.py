@@ -109,8 +109,14 @@ class Composer:
         # Marked quotations, attribution and unmarked scripture matches all fail.
         if self.detector._marked(text):
             return False
-        detection = self.detector.detect(text)
-        if detection.findings:
+        try:
+            detection = self.detector.detect(text)
+        except Exception:
+            return False
+        if (
+            detection.span_detector_status != self.policy["span_detector"]["required_status"]
+            or detection.findings
+        ):
             return False
         key = " ".join(words(text))
         for r in self.records.values():
@@ -134,7 +140,10 @@ class Composer:
         no_checkable_claim: bool,
     ) -> dict:
         detection = self.detector.detect(original)
-        near = [f for f in detection.findings if f.match.classification == "NEAR_MISS"]
+        findings = [
+            f for f in detection.findings if claim.span.start <= f.start < f.end <= claim.span.end
+        ]
+        near = [f for f in findings if f.match.classification == "NEAR_MISS"]
         quran_near = any(f.match.record.domain == "quran" for f in near)
         gate = {k: "pass" for k in SCHEMA["properties"]["gate_report"]["required"]}
         card = {
@@ -151,7 +160,7 @@ class Composer:
                 "origin": claim.origin,
                 "level": claim.level,
                 "level_rationale_en": claim.level_rationale_en,
-                "scripture_spans": [f.card_span() for f in detection.findings],
+                "scripture_spans": [f.card_span() for f in findings],
                 "span_detector_status": detection.span_detector_status,
             },
             "state": "CANNOT_CONFIRM",
@@ -281,16 +290,17 @@ class Composer:
         card["explanation_en"] = proposal.explanation_en if lang == "en" else None
         if input_kind == "term":
             glossary = by_id[proposal.corpus_ids[0]].record
-            # Only an explicit source term pair is eligible, never the model's wording.
+            # The loader verifies these original fields and their checksums.
+            # Optional extra term fields carry no provenance and are never used.
             if not all(
                 isinstance(glossary.get(k), str) and glossary[k].strip()
-                for k in ("term_ar", "term_en")
+                for k in ("text_ar", "text_en")
             ):
                 card["evidence"] = []
                 return finish("NO_MATCHING_EVIDENCE")
             card["term"] = {
-                "term_ar": glossary["term_ar"],
-                "term_en": glossary["term_en"],
+                "term_ar": glossary["text_ar"],
+                "term_en": glossary["text_en"],
                 "glossary_corpus_id": glossary["corpus_id"],
             }
         positions = []

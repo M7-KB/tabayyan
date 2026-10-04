@@ -24,6 +24,7 @@ def tokens(text: str) -> tuple[str, ...]:
 class RetrievalResult:
     record: dict
     retrieval_score: float
+    bm25_score: float
 
     @property
     def corpus_id(self) -> str:
@@ -31,6 +32,10 @@ class RetrievalResult:
 
 
 class Retriever(Protocol):
+    def candidates(
+        self, query: str, *, top_k: int | None = None, domain: str | None = None
+    ) -> list[RetrievalResult]: ...
+
     def retrieve(
         self, query: str, *, top_k: int = 5, domain: str | None = None
     ) -> list[RetrievalResult]: ...
@@ -84,11 +89,29 @@ class BM25Retriever:
     ) -> list[RetrievalResult]:
         if type(top_k) is not int or top_k < 1:
             raise ValueError("top_k must be a positive integer")
+        return [
+            result
+            for result in self.candidates(query, domain=domain)
+            if result.retrieval_score >= self._floor
+        ][:top_k]
+
+    def candidates(
+        self, query: str, *, top_k: int | None = None, domain: str | None = None
+    ) -> list[RetrievalResult]:
+        """Return positive-overlap records without the evidence floor or deduplication.
+
+        Default to all candidates so near-miss detection can inspect low-scoring
+        twins. These candidates do not authorize evidence or bypass approval.
+        """
+        if top_k is not None and (type(top_k) is not int or top_k < 1):
+            raise ValueError("top_k must be a positive integer or None")
         if domain is not None and (not isinstance(domain, str) or not domain):
             raise ValueError("domain must be a nonempty string or None")
         scores: dict[int, float] = defaultdict(float)
+        overlap: Counter = Counter()
+        query_terms = set(tokens(query))
         # Count a query term once: repeating user text cannot inflate its score.
-        for term in sorted(set(tokens(query))):
+        for term in sorted(query_terms):
             for index, frequency in self._postings.get(term, {}).items():
                 if domain is not None and self._records[index]["domain"] != domain:
                     continue
@@ -96,11 +119,16 @@ class BM25Retriever:
                 length_ratio = self._lengths[index] / self._average_length
                 denominator = frequency + 1.5 * (0.25 + 0.75 * length_ratio)
                 scores[index] += self._idf[term] * frequency * 2.5 / denominator
+                overlap[index] += 1
         ranked = sorted(
-            (index for index, score in scores.items() if score > 0 and score >= self._floor),
+            (index for index, score in scores.items() if score > 0),
             key=lambda index: (-scores[index], self._records[index]["corpus_id"]),
         )
         return [
-            RetrievalResult(copy.deepcopy(self._records[index]), scores[index])
+            RetrievalResult(
+                copy.deepcopy(self._records[index]),
+                10.0 * overlap[index] / max(5, len(query_terms)),
+                scores[index],
+            )
             for index in ranked[:top_k]
         ]

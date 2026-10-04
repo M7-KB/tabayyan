@@ -45,8 +45,13 @@ T-503a quote-safety follow-up: equal normalized keys must never authorize a quot
 `BM25Retriever` implementation indexes ar-v1 normalized keys with Unicode word
 boundaries and case folding. It uses Okapi BM25 (`k1=1.5`, `b=0.75`, positive
 Robertson IDF), counts each query term once, and returns only positive scores at
-or above `retrieval_score_floor` from validated `TuningMetadata`. Scores are raw
-BM25 values, not probabilities. Ties sort by `corpus_id`; a domain filter keeps
+or above `retrieval_score_floor` from validated `TuningMetadata`. BM25 ranks
+candidates; `bm25_score` retains that raw rank score. `retrieval_score` is a
+corpus-independent gate: `10 * distinct matched query terms / max(5, distinct query terms)`.
+It is bounded from 0 to 10 and is not a probability. The default floor 8 requires
+at least four distinct matches and 80% query coverage. Repetition, corpus size,
+document frequency and unrelated document lengths cannot raise the gate score.
+Ranking ties sort by `corpus_id`; a domain filter keeps
 global index statistics unchanged, including for the glossary path.
 
 ```python
@@ -57,7 +62,7 @@ from api.retrieval import BM25Retriever
 _, tuning = load_config(Path("api/policy/content_policy.yaml"), Path("api/tuning.yaml"))
 retriever = BM25Retriever.from_artifact(tuning)  # requires an approved local artifact
 matches = retriever.retrieve("user claim", top_k=5)
-# Each match has corpus_id, retrieval_score, and a detached original record.
+# Each match has corpus_id, retrieval_score, bm25_score, and a detached original record.
 ```
 
 `from_artifact` calls the public corpus validator/loader and propagates rejection.
@@ -73,9 +78,15 @@ Run `python -m pytest` for the full Python suite. The retrieval tests use twelve
 synthetic, non-religious query cases with expected top-five targets or abstention,
 plus formula, floor-boundary, normalization, provenance and failure tests. These
 are engineering fixtures, not the twelve brief safety cases or a real-corpus
-evaluation. The initial floor of 8.0 still needs real-corpus calibration; short
+evaluation. The overlap floor of 8.0 still needs real-corpus calibration; short
 queries can abstain. No raw source text, index artifact, query logging, model
 call, endpoint or input persistence is added by this module.
+
+`candidates(query, top_k=None, domain=None)` exposes all positive-overlap records
+in BM25 order, without the floor or deduplication. T-411 can inspect below-floor
+near-misses and twins through this public protocol, without private index access.
+An explicit positive `top_k` limits candidate count; the default is unlimited.
+Candidates retain detached original records and never authorize evidence.
 
 ## Claim card contract (P-07)
 

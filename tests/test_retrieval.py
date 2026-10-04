@@ -73,7 +73,8 @@ def test_bm25_formula_length_and_frequency():
     records = [record("alpha alpha beta", "a"), record("beta", "b")]
     result = BM25Retriever(records, tuning(0)).retrieve("alpha")[0]
     expected = math.log(2) * 2 * 2.5 / (2 + 1.5 * (0.25 + 0.75 * 3 / 2))
-    assert result.retrieval_score == pytest.approx(expected)
+    assert result.bm25_score == pytest.approx(expected)
+    assert result.retrieval_score == 2
 
 
 def test_floor_boundary():
@@ -151,3 +152,40 @@ def test_artifact_factory_propagates_loader_validation(tmp_path):
         assert (
             BM25Retriever.from_artifact(tuning(0)).retrieve("alpha")[0].corpus_id == "fixture:one"
         )
+
+
+@pytest.mark.parametrize("count", [1, 10, 4471, 10000])
+def test_gate_is_independent_of_corpus_size_and_unrelated_lengths(count):
+    target = record("alpha beta gamma delta epsilon", "target")
+    records = [target] + [
+        record("unrelated " * (1 + i % 30), f"filler:{i}") for i in range(count - 1)
+    ]
+    search = BM25Retriever(records, tuning())
+    assert search.retrieve("alpha unknown") == []
+    assert search.candidates("alpha unknown")[0].retrieval_score == 2
+    assert search.retrieve("alpha beta gamma delta epsilon")[0].retrieval_score == 10
+
+
+def test_candidates_preserve_below_floor_twins_and_all_records_by_default():
+    records = [record("alpha beta", f"twin:{i:02}") for i in range(8)]
+    records.append(record("alpha changed", "near-miss"))
+    search = BM25Retriever(records, tuning())
+    assert search.retrieve("alpha beta") == []
+    candidates = search.candidates("alpha beta")
+    assert {r.corpus_id for r in candidates} == {r["corpus_id"] for r in records}
+    assert search.candidates("alpha beta", top_k=2) == candidates[:2]
+    candidates[0].record["ref"]["number"] = "changed"
+    assert search.candidates("alpha beta")[0].record["ref"]["number"] == "synthetic"
+
+
+@pytest.mark.parametrize("limit", [0, -1, 1.5, True, "5"])
+def test_invalid_candidate_limit(limit, retriever):
+    with pytest.raises(ValueError, match="top_k"):
+        retriever.candidates("anything", top_k=limit)
+
+
+def test_candidate_domain_and_empty_query(retriever):
+    assert retriever.candidates(TEXTS[0], domain="missing") == []
+    assert retriever.candidates("") == []
+    with pytest.raises(ValueError, match="domain"):
+        retriever.candidates(TEXTS[0], domain="")

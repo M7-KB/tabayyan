@@ -422,6 +422,9 @@ between the evidence and the generated explanation. It shows the link host as th
 excerpt with the source line, and the link. Live evidence that carries `source_ref` instead of `corpus_id` renders the same
 scripture block. The UI never shows a source name that the response does not carry.
 
+Each scripture block sets the Arabic quote in Amiri Quran (`@fontsource/amiri-quran`, OFL 1.1; see SOURCES.md) and
+ends with the source line from SPEC.md §0.7 (`strings.quoteSourceNote`), shown next to the source link.
+
 The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
 preview is compiled out of production builds. The state labels follow the SPEC.md §12 item 1 table; all
 except `supported_contradicts` are provisional until owner and specialist approval.

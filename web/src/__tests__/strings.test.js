@@ -33,6 +33,10 @@ describe('product strings', () => {
     expect(strings.privacyLines).toContain('لا نحفظه في خوادمنا، وقد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته.')
   })
 
+  it('use the source line from SPEC.md §0.7 on every quote', () => {
+    expect(strings.quoteSourceNote).toBe('النصوص منقولة من مصادرها المعتمدة كما هي، مع الرابط للتحقق.')
+  })
+
   it('use the exact AI disclosure text (SPEC.md §8)', () => {
     expect(strings.aiNotice).toBe('هذه أداة ذكاء اصطناعي، وليست فتوى.')
   })

@@ -118,6 +118,11 @@ package and `docs/raw/` from the tree, ignored both paths, and added the README
 disclosure. Removal does not erase public history. No ingestion or
 redistribution permission follows from their presence.
 
+## Web fonts (2026-10-04)
+
+- `@fontsource/amiri-quran` 5.3.0 — Amiri Quran, used for scripture quotes in `web/src/components/card/card.css`. Licence: SIL Open Font License 1.1 (`node_modules/@fontsource/amiri-quran/LICENSE`). Self-hosted through the npm package; no third-party font CDN.
+- `@fontsource/ibm-plex-sans-arabic` — interface font, already in use. Licence: SIL Open Font License 1.1.
+
 ## Machine-readable register
 
 Test-set reference only (T14–T18): [Dorar fake-hadith page 4](https://dorar.net/fake-hadith/4),

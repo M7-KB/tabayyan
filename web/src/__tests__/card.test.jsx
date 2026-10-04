@@ -358,3 +358,19 @@ describe('live source references (SPEC.md §0.8)', () => {
     expect(within(block).getByText(liveEvidence.quote_ar)).toBeInTheDocument()
   })
 })
+
+describe('source line on quotes (SPEC.md §0.7)', () => {
+  it('shows the source line next to the source link on every scripture block', () => {
+    const { container } = render(<ClaimCard card={supportedContradicts} />)
+    const blocks = container.querySelectorAll('[data-role="scripture"]')
+    expect(blocks.length).toBeGreaterThan(0)
+    for (const block of blocks) {
+      expect(within(block).getByText(strings.quoteSourceNote)).toBeInTheDocument()
+    }
+  })
+
+  it('does not show the source line on a card without a quote', () => {
+    render(<ClaimCard card={{ ...cannotConfirm, misquote_notice: null }} />)
+    expect(screen.queryByText(strings.quoteSourceNote)).not.toBeInTheDocument()
+  })
+})

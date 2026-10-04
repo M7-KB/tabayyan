@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource/ibm-plex-sans-arabic/arabic-400.css'
 import '@fontsource/ibm-plex-sans-arabic/arabic-500.css'
 import '@fontsource/ibm-plex-sans-arabic/arabic-700.css'
+import '@fontsource/amiri-quran/arabic-400.css'
 import './styles.css'
 import App from './App.jsx'
 

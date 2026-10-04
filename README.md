@@ -124,6 +124,54 @@ origin, allowlisted source/URL, source_ref consistency and exact excerpt matchin
 against raw connector results. Synthetic contract tests do not establish those
 properties. Consumers must support `source_ref` before live-source cards are enabled.
 
+### Request-scoped quote gatekeeper (SPEC §0.4)
+
+The text `/check` path now creates a fresh gatekeeper for each request. Its local
+comparison index contains the loader-validated KFC Quran and Bukhari records;
+eligible current-request source responses add to that index. The local index
+must be available even when a connector returns evidence. Exact matches across
+the full authorized set veto near-miss classification before either detector trigger runs.
+Scripture records must pass the display reference/provenance checks and their own
+hadith grading checks before entering that set. Rejected rows cannot suppress a
+local Quran correction, even when independent FAQ evidence remains valid.
+A separate embedded-text scan retains known rejected scripture. It cannot change
+claim alignment or veto a local correction; instead it rejects affected excerpts
+and glossary evidence, and replaces affected titles with the fixed source name.
+Embedded scripture still requires an authorized own-record reference and grading.
+Generated explanations, position labels/summaries and ordinary term fields also
+use this completed safety scan; any finding or failed scan rejects ordinary text.
+Hadith beyond the local records have comparison coverage only when returned by a
+connector in the current request; this is partial coverage, not a full hadith index.
+
+`SourceRequest.receive` is an internal connector boundary for parsed raw records;
+neither HTTP callers nor models can supply it. Source requests are consumed once,
+and a prior request's receipt is rejected. No live result enters a persistent
+index or cache. Source/domain/HTTPS-host checks reject unknown, misleading or
+disabled hosts. This module does not implement outbound HTTP/redirect/SSRF guards;
+the connector transport must enforce those before handing it a response. icadb,
+Bayyinat and unrecorded platform-result hosts stay disabled pending the spike.
+
+Models select record handles only. Matching uses normalization, but displayed
+quotes, provenance and grading are copied unchanged from the bound original.
+This first adapter treats each connector text record as a source excerpt; arbitrary
+model-written excerpts are not accepted. Failed quotes are dropped individually,
+positions citing them are removed, and state/alignment are recomputed from survivors.
+DISPUTED requires two surviving positions from different sources. No passing quote
+means CANNOT_CONFIRM with a referral and ready-to-ask question.
+
+Published-answer titles come from the same result as the excerpt. Unsafe scripture
+or ungraded hadith in a title produces a neutral source-name fallback. An excerpt
+with unverified/altered scripture or ungraded hadith is dropped. Embedded hadith
+have their own source/grading shown as evidence, including on disputed cards.
+Generated explanation scans fail closed on unavailable/failed detector runs.
+
+Live connector fetching is not enabled by this PR. `/check` currently uses only the
+mounted local artifact; a trusted connector adapter can supply a fresh SourceRequest
+to CheckService when its separate transport and terms work is approved. Synthetic
+tests cover request replay, source/metadata binding, titles, embedded grading, exact
+twins, quote drops, positions and the real HTTP construction path. Production model
+accuracy, the 12-case eval/CONTROL comparison and deployed readiness remain unmeasured.
+
 ## Arabic normalizer (normalizer portion of T-402)
 
 Python 3.11+, standard library only for the normalizer. Install the API development dependencies

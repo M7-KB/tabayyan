@@ -151,12 +151,18 @@ class QuoteGatekeeper:
             self._source_names[key] = source[2]
             self._titles[key] = r.get("title_ar")
             self._live.add(key)
-        self.detector = SpanDetector(
-            [Record(k, r["domain"], r["text_ar"]) for k, r in self._records.items()]
-            if self._local_available
-            else None,
-            detector_config,
+        # An exact twin changes the verdict even when it is never displayed.
+        # Apply the same reference/grading authorization before it can veto a
+        # near match. Keep every authorized local/current-request scripture row.
+        comparison = [
+            Record(k, r["domain"], r["text_ar"])
+            for k, r in self._records.items()
+            if r["domain"] in {"quran", "hadith"} and self._base_quote(k, r["text_ar"]) is not None
+        ]
+        self._local_available = any(
+            r.domain == "quran" and r.corpus_id not in self._live for r in comparison
         )
+        self.detector = SpanDetector(comparison if self._local_available else None, detector_config)
 
     @property
     def records(self) -> list[dict]:

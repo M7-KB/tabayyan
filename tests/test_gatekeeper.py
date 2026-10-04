@@ -142,6 +142,38 @@ def test_exact_span_does_not_suppress_a_separate_altered_span():
     assert {f.match.classification for f in result.findings} >= {"VERBATIM", "NEAR_MISS"}
 
 
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("trigger", ["A", "B"])
+@pytest.mark.parametrize("invalid", ["grading", "reference", "grading_url", None])
+def test_only_authorized_live_twins_can_veto_local_quran_correction(reverse, trigger, invalid):
+    altered = TEXT.replace("موز", "خوخ")
+    twin = raw("dorar-hadith", altered, domain="hadith")
+    if invalid == "grading":
+        del twin["grading"]
+    elif invalid == "reference":
+        twin["ref"] = {"number": 1}
+    elif invalid == "grading_url":
+        twin["grading"]["grading_source_url"] = "https://evil.invalid/grade"
+    faq = raw()
+    g = gate(twin, faq)
+    if reverse:
+        g.detector.index = tuple(reversed(g.detector.index))
+    matched = g.detector.classify(altered, trigger)
+    assert matched.classification == ("VERBATIM" if invalid is None else "NEAR_MISS")
+    assert (g.verify("live:dorar-hadith:one", altered) is not None) == (invalid is None)
+    span = '"' + altered + '"' if trigger == "A" else altered
+    found = g.detector.detect(span)
+    assert any(f.match.classification == "NEAR_MISS" for f in found.findings) == (
+        invalid is not None
+    )
+    card = compose(g, proposal(corpus_ids=["live:islamqa:one"]), span + "\n" + faq["text_ar"])
+    if invalid is not None:
+        assert card["alignment"] == "CONTRADICTS"
+        assert any(e["evidence_id"] == "local:one" for e in card["evidence"])
+    else:
+        assert card["alignment"] == "CONFIRMS"
+
+
 def test_title_and_excerpt_are_bound_to_the_same_source_result():
     a, b = raw(), raw("binbaz", ref="two")
     a["title_ar"], b["title_ar"] = "عنوان أول", "عنوان ثان"

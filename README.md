@@ -130,7 +130,10 @@ The text `/check` path now creates a fresh gatekeeper for each request. Its loca
 comparison index contains the loader-validated KFC Quran and Bukhari records;
 eligible current-request source responses add to that index. The local index
 must be available even when a connector returns evidence. Exact matches across
-the full set veto near-miss classification before either detector trigger runs.
+the full authorized set veto near-miss classification before either detector trigger runs.
+Scripture records must pass the display reference/provenance checks and their own
+hadith grading checks before entering that set. Rejected rows cannot suppress a
+local Quran correction, even when independent FAQ evidence remains valid.
 Hadith beyond the local records have comparison coverage only when returned by a
 connector in the current request; this is partial coverage, not a full hadith index.
 

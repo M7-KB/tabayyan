@@ -355,7 +355,7 @@ class Composer:
             return finish("NO_MATCHING_EVIDENCE")
         # Apply this guard to every displayed glossary item, in every input path,
         # before any later finish can return selected evidence.
-        for cid in proposal.corpus_ids:
+        for cid in selected_ids:
             selected = by_id[cid].record
             if selected["domain"] != "glossary":
                 continue
@@ -367,7 +367,9 @@ class Composer:
                 gate["separation"] = "fail"
                 card["evidence"] = []
                 return finish("VERBATIM_GATE_FAILED")
-            if any(f.match.record.domain == "hadith" for f in definition_scan.findings):
+            if self.gatekeeper is None and any(
+                f.match.record.domain == "hadith" for f in definition_scan.findings
+            ):
                 # Glossary evidence has no loader-verified hadith grading. A grade
                 # on the comparison record cannot authorize this embedded quote.
                 gate["grading"] = "fail"

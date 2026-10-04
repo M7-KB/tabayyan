@@ -4,7 +4,7 @@ Status: PR #5 was owner-merged at `81c9030` without the required independent `AP
 The skipped step is recorded; decision 13 and G24 still require approval before merge.
 Current direction (owner, 2026-10-04) is §0. It supersedes earlier sections where they conflict. Sharia specialist review is withdrawn (§0.7).
 Owner of this document: @Luffy (lead)
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 Source of truth for requirements: `docs/challenge-brief.md`
 Owner decisions folded into this document are listed in §10. The review history is §11.
 What is still the owner's call is §12 — nothing else is open.
@@ -31,14 +31,14 @@ Most of the 12 required cases are questions (the Kaaba, the authorship of the Qu
 1. **The model is the researcher.** It understands the input, assigns the level under the §5 rules (rule-first for level D; the more restrictive level wins), plans search queries, and calls tools. It may write a short bridging explanation (`explanation_ar`, `explanation_en`). That text is always labelled as generated and is kept in its own field, never inside a quote field.
 2. **The model's tools reach only the allowlist in §0.3.** The model cannot choose a host or fetch an arbitrary URL. Our code runs each connector call, and the connector HTTP client refuses any host outside the list, including after redirects (G29).
 3. **The gatekeeper is code, not the model.** It alone decides what is shown. The model never writes scripture, hadith gradings, published answers, or rulings.
-4. **Stage 5 (retrieve)** is now: local lookup in the Quran artifact and the four local Bukhari records, plus connector calls to allowlisted sources, using the extracted search phrases only. Stage 7 (gates) applies §0.4 to every quote.
-5. **Detector comparison set (scripture span detector, §5.2).** The detector compares a user span against the local index only: the Quran artifact and the four local Bukhari records. Same-request connector hits are added to the set for that request; they never remove a local record from it. The local verbatim veto runs first and does not depend on any search hit. If the local index is unavailable, `span_detector_status` is `index_unavailable` and the card fails closed to CANNOT_CONFIRM (§5.2). Hadith outside the local four are covered only by same-request connector results, and that partial coverage is disclosed in the README (§12 item 6).
+4. **Stage 5 (retrieve)** is now: local lookup in the Quran-only v30 artifact, plus connector calls to allowlisted sources, using the extracted search phrases only. Stage 7 (gates) applies §0.4 to every quote.
+5. **Detector comparison set (scripture span detector, §5.2).** The detector compares a user span against the local index only: the Quran-only v30 artifact. Same-request connector hits are added to the set for that request; they never remove a local record from it. The local verbatim veto runs first and does not depend on any search hit. If the local index is unavailable, `span_detector_status` is `index_unavailable` and the card fails closed to CANNOT_CONFIRM (§5.2). There is no local hadith index. Hadith are covered only by same-request connector results; until the live Dorar connector lands, hadith claims abstain with referral, and that partial coverage is disclosed in the README (§12 item 6).
 
 ### 0.3 Allowlist (owner list, 2026-10-04)
 
 Nothing outside this list is used. Each entry is in the challenge data package. Endpoint shapes, latency and terms per source are recorded in Robin's spike table (2026-10-04) and in SOURCES.md, not here.
 
-The four Bukhari records in the local artifact are graded from the artifact record itself (owner direction). They need no network result.
+Owner decision of 2026-10-05: the local artifact is KFC standard-Unicode Hafs version 30 only (6,236 records). Match on `aya_text_emlaey`, display `aya_text_unicode` from the same `(sura_no, aya_no)` record, copied exactly including the end-of-ayah mark. Hafs Smart and its font are dropped. Hadith comes from the live Dorar connector; until it lands, hadith claims abstain with referral.
 
 **Hosts not yet recorded are disabled.** A connector whose host is not yet recorded in the spike table (for example icadb, and any Bayyinat endpoint) is disabled in the connector client until Robin records its host. Disabled means refused, under G29, and the card does not depend on it.
 
@@ -54,13 +54,13 @@ The four Bukhari records in the local artifact are graded from the artifact reco
 | `binothaimeen.net` | Published answers |
 | `dorar.net` sections | Published answers and grading sections |
 
-**Open discrepancy, owner to confirm:** AGENTS.md non-negotiable 5 still names `shamela.ws` and the islamic-content.com glossary, and this list does not. This section uses the list above, since it is the explicit allowlist and says "nothing else". Until the owner confirms otherwise, `shamela.ws` and islamic-content.com are not called.
+Owner clarification (2026-10-04, event `1ce33b69e38de780106acc857330681892d39c18fedb27ee48e6bc1dc083c31f`): `shamela.ws` and the islamic-content.com glossary remain link-only. The subsequent 2026-10-05 decision drops the four local Bukhari records. Term content is intended to come through MCP; the observed spike tools do not yet establish terminology coverage.
 
 ### 0.4 Gatekeeper rules
 
 Every quoted religious text on screen (verse, hadith, published-answer excerpt, definition) must pass all three checks, or it is dropped:
 
-1. It matches verbatim, after the normalization of §4.2, a text in the local artifact (the Quran records and the four local Bukhari records, §0.3) **or** in a result returned by an allowlisted source during this request. The check runs against the raw result text we received, never against a model summary of it.
+1. It matches verbatim, after the normalization of §4.2, a text in the local artifact (the Quran-only v30 records, §0.3) **or** in a result returned by an allowlisted source during this request. The check runs against the raw result text we received, never against a model summary of it.
 2. It shows its source name and URL.
 3. A hadith shows the grading from the source's own record, including Dorar's section on circulating hadith that are not authentic. A hadith without grading is dropped.
 
@@ -94,7 +94,7 @@ Quoted verses or hadith inside the user's input are still checked under §5.2. A
 ### 0.7 Specialist review withdrawn (owner decision C, 2026-10-04)
 
 - Shown content comes from published, approved sources. Each source is responsible for its own content.
-- The owner reviews the curated items: the test set, the examples, and the KFC and Bukhari records. The owner records that review in the PR, with `approved_by: owner` and `reviewed_by: owner`.
+- The owner reviews the curated items: the test set, the examples, and the KFC records. The owner records review in handoff metadata. Records keep `approved_by: pending`; the validator is unchanged (owner, 2026-10-05).
 - **G14 is retired** from the release gates. No Sharia specialist approval is required. The README and the deck disclose this.
 - `ALLOW_PENDING_REVIEW=true` stays on the deployed service, as the owner decided.
 - The pending-specialist notice is withdrawn. Every card that carries a quote shows this line in Arabic, next to the source link:
@@ -228,10 +228,10 @@ Accounts, login, user profiles, persistence of user queries, analytics on query 
 ### Architectural decisions
 
 **A1. Two retrieval paths, both fixed to allowlisted sources (owner decision 2026-10-04, §0.2).**
-The Quran and the four local Bukhari records are read from a local, private, checksummed artifact built offline from the KFC full text and the Bukhari source. It is never in the repo. Other hadith and all other evidence come from connector calls to the §0.3 allowlist during the request. The connector HTTP client refuses every other host. Verbatim checking compares against the artifact or against this request's results, not a prebuilt snapshot. Live results make the demo less deterministic, so the eval replays recorded connector responses for the test set (§0.6). The span detector's comparison set is the local index (the Quran artifact and the four local Bukhari records) plus same-request connector hits, as set in §0.2 item 5. Connector hits never remove a local record from that set.
+The Quran-only v30 records are read from a local, private, checksummed artifact built offline from the supplied KFC file. It is never in the repo. Hadith and all other evidence come from connector calls to the §0.3 allowlist during the request; hadith claims abstain with referral until the live Dorar connector lands. The connector HTTP client refuses every other host. Verbatim checking compares against the artifact or against this request's results, not a prebuilt snapshot. Live results make the demo less deterministic, so the eval replays recorded connector responses for the test set (§0.6). The span detector's comparison set is the local index (the Quran-only v30 artifact) plus same-request connector hits, as set in §0.2 item 5. Connector hits never remove a local record from that set.
 
 **A2. The verbatim gate is code, not a prompt.**
-Any scripture span leaving the API must match a record of the local artifact (the Quran records and the four local Bukhari records), or a result returned by an allowlisted source during this request, character-for-character after a fixed normalization. The shown text is the original span from that record, and it must carry that record's id (§0.4 copy rule). A span that fails is not repaired and not re-asked for: it is dropped, and the card's state is recomputed under the §0.4 failure policy. Prompt instructions are a convenience; the gate is the guarantee. (Non-negotiable 1 and 2.)
+Any scripture span leaving the API must match a record of the local artifact (the Quran-only v30 records), or a result returned by an allowlisted source during this request, character-for-character after a fixed normalization. The shown text is the original span from that record, and it must carry that record's id (§0.4 copy rule). A span that fails is not repaired and not re-asked for: it is dropped, and the card's state is recomputed under the §0.4 failure policy. Prompt instructions are a convenience; the gate is the guarantee. (Non-negotiable 1 and 2.)
 
 **A3. Scripture and generated text live in different fields.**
 `evidence[].quote_ar`, `misquote_notice.evidence.quote_ar`, `published_answer.excerpt_ar` and `published_answer.title_ar` (§0.8) are the **only Arabic source-text** fields in the response permitted to hold scripture, a hadith text, or any quoted source text. `explanation_ar` is generated and is rejected by the gate if it contains a quoted span. The UI renders them in visually distinct blocks that are never merged. (Non-negotiable 3.)
@@ -728,7 +728,7 @@ image layer is as public as the repo). Instead:
   redistribution clearance or literal `public_display_allowed: true` for every source and grader.
   All current sources have public display disabled. Offline private ingestion does not authorize
   deployment. Unrelated sources retain their existing gates.
-- **Display permission (section 12 item 5).** The dated owner decision above covers private ingestion only. Whether verbatim display in a public app is permitted for these sources is recorded separately, with its exact scope, by the licence PR in `SOURCES.md`. Until that record exists, `public_display_allowed` stays false. Recorded permission and implemented permission are different: the licence PR records the first, and the runtime gate enforces the second. Such a source stays out of the deployed artifact; startup rejects the entire artifact if it includes one. The composer must abstain without it.
+- **Display permission (section 12 item 5).** The 2026-10-05 owner decision permits matched public display for KFC, Dorar hadith and allowlisted live results within the challenge app, with visible source and link; no bulk display, download or file redistribution. `SOURCES.md` records the scope. The runtime gate still rejects artifacts whose source or grading lacks display permission; unavailable evidence causes abstention. Permission does not substitute for the separate v30 field-binding implementation.
 - `ALLOW_PENDING_REVIEW` defaults to false everywhere. The owner enables it only on the judging
   service. It additionally permits literal `approved_by: pending`, never writes or promotes that field,
   and never bypasses licence, grading, checksum, normalization or verbatim checks. `/health` reports
@@ -1475,7 +1475,7 @@ silent substitution with a different model.**
 
 | Key | Who holds it | Where |
 |---|---|---|
-| Development key | @Vegapunk and @Nami | `OPENAI_API_KEY` in their own local environment, issued by the owner |
+| Development key | @Vegapunk, @Nami and @Robin (bounded spike only, max 20 calls, no bulk download) | `OPENAI_API_KEY` in their own local environment, issued by the owner |
 | Production key | the Render service only | Set in the Render dashboard by the owner. No agent holds it |
 
 - **API budget cap: $30.** @Vegapunk reports spend in the daily status once the pipeline starts making
@@ -1649,14 +1649,5 @@ version of this section is resolved and moved to §10.
    high could let a short unmarked hadith paraphrase through with no detector coverage at all.
    Recalibrated once P-03's corpus slice exists (T-508a, @Nami) against a measured run, not guessed.
 
-5. **Public verbatim display of use-only sources (owner).** Does the recorded
-   challenge-app ingestion scope permit public verbatim display without redistribution clearance?
-   Owner routing of 2026-10-04 mentions short-quote permission for KFC, Bukhari and Dorar. The exact
-   wording, and its scope, is not yet recorded in SOURCES.md or §10. **The owner records it there**, and
-   the licence PR cites it. Until then, `public_display_allowed` stays false and these sources stay out
-   of the deployed artifact. The composer abstains for unavailable evidence. This is separate from
-   pending content review.
-6. **Hadith coverage of the span detector (owner, disclosure).** The detector's local hadith index is
-   the four local Bukhari records. Other hadith are covered only by same-request connector results,
-   so an unmarked paraphrase of a hadith outside that set may go undetected. The README discloses this
-   limit (§0.2 item 5). Whether the four records are enough for the challenge is the owner's call.
+5. **Public verbatim display (resolved by owner, 2026-10-05; no specialist).** Public display is allowed in the deployed challenge app for kfc-mushaf, dorar-hadith and live results from allowlisted sources. Scope: only the matched verse, hadith, grading or short excerpt, with visible source and link. No bulk display, no download, no redistribution of files. Basis: the organizers' written reply of 2026-10-03 and the challenge data package, as reported by the owner. Evidence and flags are recorded in [SOURCES.md](SOURCES.md#owner-public-display-decision-2026-10-05). This does not waive source binding, grading, exact-host checks or quote gates.
+6. **Hadith coverage of the span detector (owner, disclosure).** There is no local hadith index. Hadith coverage is limited to same-request live Dorar results; unmarked paraphrases outside that set may go undetected. Until the connector lands, hadith claims abstain with referral. The README discloses this limit (§0.2 item 5).

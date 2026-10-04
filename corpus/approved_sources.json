@@ -1,7 +1,7 @@
 {
   "version": "p04-draft-1",
   "authority": "docs/challenge-brief.md#approved-references-by-domain",
-  "scope": "Candidate sources only. URLs are acquisition entry pages, not runtime fetch permissions. Licence and Sharia approval remain mandatory per item.",
+  "scope": "Source metadata, not arbitrary runtime fetch permission. Public-display scope is the dated owner decision in SOURCES.md; redistribution remains disabled. Local artifact: KFC Quran v30 only. Live sources require same-request provenance and exact-host checks under SPEC section 0.",
   "sources": [
     {
       "source_id": "kfc-mushaf",
@@ -14,9 +14,9 @@
       "ingestion_allowed": true,
       "approved_by": "pending",
       "selection_status": "candidate",
-      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
-      "license_scope": "Owner-authorized challenge-app use only; no redistribution",
-      "public_display_allowed": false,
+      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/docs/display-20261005/SOURCES.md#owner-public-display-decision-2026-10-05",
+      "license_scope": "Owner-authorized challenge-app use only; matched verse, hadith, grading or short excerpt with visible source and link; no bulk display, download or file redistribution",
+      "public_display_allowed": true,
       "license_url": "https://policy.qurancomplex.gov.sa/?Lan=en"
     },
     {
@@ -29,7 +29,7 @@
       "redistribution_allowed": false,
       "ingestion_allowed": true,
       "approved_by": "pending",
-      "selection_status": "candidate",
+      "selection_status": "dropped_2026-10-05",
       "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
       "license_scope": "Owner-authorized challenge-app use only; no redistribution",
       "public_display_allowed": false,
@@ -59,9 +59,9 @@
       "ingestion_allowed": true,
       "approved_by": "pending",
       "selection_status": "candidate",
-      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
-      "license_scope": "Owner-authorized challenge-app use only; no redistribution",
-      "public_display_allowed": false,
+      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/docs/display-20261005/SOURCES.md#owner-public-display-decision-2026-10-05",
+      "license_scope": "Owner-authorized challenge-app use only; matched verse, hadith, grading or short excerpt with visible source and link; no bulk display, download or file redistribution",
+      "public_display_allowed": true,
       "license_url": "pending"
     },
     {

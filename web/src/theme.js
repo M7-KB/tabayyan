@@ -3,7 +3,11 @@
 export const STORAGE_KEY = 'tabayyan-theme'
 const DARK_QUERY = '(prefers-color-scheme: dark)'
 
+// The choice made on this page view. It keeps the choice even when localStorage is blocked.
+let pageChoice = null
+
 function readChoice() {
+  if (pageChoice) return pageChoice
   try {
     const value = window.localStorage.getItem(STORAGE_KEY)
     return value === 'light' || value === 'dark' ? value : null
@@ -25,11 +29,17 @@ export function applyTheme(theme) {
 }
 
 export function saveChoice(theme) {
+  pageChoice = theme
   try {
     window.localStorage.setItem(STORAGE_KEY, theme)
   } catch {
     // Storage is blocked: the choice lasts for this page view only.
   }
+}
+
+// Clears the page-view choice. Used by tests to start each case from no choice.
+export function resetPageChoice() {
+  pageChoice = null
 }
 
 // Follows the system setting while the user has not chosen a theme.

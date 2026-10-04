@@ -41,6 +41,7 @@ const textPairs = [
   ['c-text', 'c-surface'],
   ['c-muted', 'c-bg'],
   ['c-muted', 'c-surface'],
+  ['c-placeholder', 'c-surface'],
   ['c-on-primary', 'c-primary'],
   ['c-disabled-text', 'c-disabled-bg'],
   ['c-link', 'c-bg'],
@@ -81,6 +82,15 @@ describe.each([
 
   it.each(nonTextPairs)('non-text pair %s on %s is at least 3:1', (fg, bg) => {
     expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('textarea placeholder', () => {
+  it('uses the theme-aware placeholder token at full opacity', () => {
+    const rule = allStyles.slice(allStyles.indexOf('textarea::placeholder {'))
+    const block = rule.slice(0, rule.indexOf('}'))
+    expect(block).toContain('color: var(--c-placeholder);')
+    expect(block).toContain('opacity: 1;')
   })
 })
 

@@ -1,7 +1,7 @@
 import { act, render, screen, fireEvent } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeToggle } from '../components/ThemeToggle.jsx'
-import { STORAGE_KEY, currentTheme } from '../theme.js'
+import { STORAGE_KEY, currentTheme, resetPageChoice } from '../theme.js'
 import { strings } from '../strings.js'
 
 // Fake matchMedia for the system setting. `dark` decides what '(prefers-color-scheme: dark)' reports.
@@ -23,10 +23,12 @@ function mockSystemDark(dark) {
 
 beforeEach(() => {
   window.localStorage.clear()
+  resetPageChoice()
   delete document.documentElement.dataset.theme
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   delete document.documentElement.dataset.theme
 })
 
@@ -81,5 +83,19 @@ describe('ThemeToggle', () => {
     fireEvent.click(screen.getByRole('button', { name: strings.themeToDark }))
     act(() => system.change(false))
     expect(document.documentElement.dataset.theme).toBe('dark')
+  })
+
+  it('keeps the explicit choice when storage is blocked and the system changes', () => {
+    const system = mockSystemDark(false)
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('storage blocked')
+    })
+    render(<ThemeToggle />)
+    fireEvent.click(screen.getByRole('button', { name: strings.themeToDark }))
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull()
+    act(() => system.change(true))
+    act(() => system.change(false))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(screen.getByRole('button', { name: strings.themeToLight })).toBeInTheDocument()
   })
 })

@@ -6,6 +6,7 @@
   --c-text: #1c1c1c;
   --c-surface: #ffffff;
   --c-muted: #4a4a4a;
+  --c-placeholder: #5c5c5c;
   --c-border: #b8b3a6;
   --c-border-strong: #6b6b6b;
   --c-primary: #1f5f4b;
@@ -50,6 +51,7 @@
   --c-text: #ffffff;
   --c-surface: #161b4a;
   --c-muted: #b7bce3;
+  --c-placeholder: #b7bce3;
   --c-border: #2a3170;
   --c-border-strong: #b7bce3;
   --c-primary: #6a5ae0;
@@ -191,6 +193,11 @@ textarea {
   border: 1px solid var(--c-border-strong);
   border-radius: 0.5rem;
   background: var(--c-surface);
+}
+
+textarea::placeholder {
+  color: var(--c-placeholder);
+  opacity: 1;
 }
 
 button {

@@ -811,6 +811,11 @@ Tests use synthetic non-scriptural fixtures; no private artifacts or credentials
 
 ## Owner display scope and Quran-only artifact (2026-10-05)
 
+The 6,236-record private v30 artifact is built and verified. Its committed checksum-only
+manifest and [handoff](docs/QURAN_V30_HANDOFF.md) record both raw and derived hashes,
+field mapping, licence limits and deployment prerequisites. The field-binding PR must
+land before this artifact is used for live display.
+
 The owner permits matched verses, hadith, gradings and short excerpts in the deployed
 challenge app with visible source and link; no bulk display, download or file redistribution.
 See [SOURCES.md](SOURCES.md#owner-public-display-decision-2026-10-05) for evidence and limits.

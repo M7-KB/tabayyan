@@ -29,6 +29,10 @@ describe('product strings', () => {
     expect(privacy).not.toContain('المقاطع')
   })
 
+  it('keeps the owner-approved provider-retention sentence, literally (SPEC.md §8)', () => {
+    expect(strings.privacyLines).toContain('لا نحفظه في خوادمنا، وقد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته.')
+  })
+
   it('use the exact AI disclosure text (SPEC.md §8)', () => {
     expect(strings.aiNotice).toBe('هذه أداة ذكاء اصطناعي، وليست فتوى.')
   })

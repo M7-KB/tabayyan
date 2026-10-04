@@ -1382,17 +1382,22 @@ silent substitution with a different model.**
 
 ### Privacy and AI disclosure (product text, Arabic)
 
+**Text-only build (owner decision 2026-10-04, current).** Shown on the input screen before the user submits, and in the README:
+
+```
+يُرسَل النص الذي تُدخله إلى مزوّد خدمة ذكاء اصطناعي، وتُرسَل عبارات البحث المستخرجة منه إلى المصادر المعتمدة. لا نحفظه في خوادمنا، وقد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته. لا تحتاج إلى حساب.
+```
+
+The block below is the full disclosure for when link and audio ship (§0.9). It is not shown in the text-only build.
+
 Shown on the input screen **before** the user submits, and repeated in the README:
 
 ```
 هذه أداة ذكاء اصطناعي، وليست فتوى.
-تُرسل النص الذي تُدخله إلى مزوّد خدمة ذكاء اصطناعي لمعالجته، ولا نحفظه لدينا.
-تُرسل عبارات البحث المستخرجة من النص فقط إلى المصادر المعتمدة، ولا نحفظها.
+تُرسل النصوص والملفات الصوتية والصور التي تُدخلها إلى مزوّد خدمة ذكاء اصطناعي لمعالجتها، ولا نحفظها لدينا.
+تُحذف الملفات الصوتية والصور بعد المعالجة مباشرة.
 لا تحتاج إلى حساب، ولا نخزّن أسئلتك.
 ```
-
-The text-only copy above is the input-screen notice while text is the only live input (owner, 2026-10-04).
-The audio/video version (upload deleted after processing) returns with the audio input task.
 
 On the upload screen, additionally, the consent checkbox of §6.6:
 

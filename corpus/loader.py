@@ -10,8 +10,16 @@ def load_corpus(
     *,
     sources_path: Path = ROOT / "corpus/approved_sources.json",
     register_path: Path = ROOT / "SOURCES.md",
+    allow_pending_review: bool = False,
+    require_redistribution: bool = True,
 ) -> list[dict]:
-    """Return all records only after all checks pass; pending review is never usable."""
+    """Return all records only after checks pass, with explicit review/use modes."""
     records = read_records(path)
-    validate_records(records, read_sources(sources_path), read_register(register_path))
+    validate_records(
+        records,
+        read_sources(sources_path),
+        read_register(register_path),
+        allow_pending_review=allow_pending_review,
+        require_redistribution=require_redistribution,
+    )
     return records

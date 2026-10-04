@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App.jsx'
 import { InputScreen } from '../components/InputScreen.jsx'
+import { features } from '../config/features.js'
 import { strings } from '../strings.js'
 
 describe('App shell', () => {
@@ -51,10 +52,28 @@ describe('text input', () => {
   })
 })
 
+describe('media upload is off in the text-first build', () => {
+  it('renders no upload form, file input or consent checkbox by default', () => {
+    const { container } = render(<InputScreen onSubmitText={vi.fn()} onSubmitMedia={vi.fn()} />)
+    expect(container.querySelector('.upload-form')).toBeNull()
+    expect(screen.queryByLabelText(strings.uploadChooseFile)).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: strings.consent })).not.toBeInTheDocument()
+  })
+})
+
 describe('upload consent gate (G22)', () => {
   function makeFile() {
     return new File(['audio'], 'clip.mp3', { type: 'audio/mpeg' })
   }
+
+  // The upload form is behind features.mediaUpload (off by default). These tests keep covering it.
+  beforeEach(() => {
+    features.mediaUpload = true
+  })
+
+  afterEach(() => {
+    features.mediaUpload = false
+  })
 
   it('renders the consent checkbox with the exact Arabic label, unticked', () => {
     render(<InputScreen onSubmitText={vi.fn()} onSubmitMedia={vi.fn()} />)

@@ -1,6 +1,7 @@
 """Offline routing and boundary tests; no religious answers or provider calls."""
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,53 @@ import yaml
 from api.classifier import LevelClassifier, LevelProposal, rule_level
 
 ROOT = Path(__file__).resolve().parents[1]
+
+ROUTING_CASES = [
+    ("زواجي", "D"),
+    ("يجوز لي", "D"),
+    ("رجل طلق", "D"),
+    ("هل عقد صحيح", "D"),
+    ("حكم جماعة", "D"),
+    ("هل كافر", "D"),
+    ("انتشر بالسيف", "C"),
+    ("خلاف فقهي", "C"),
+    ("أي مذهب", "C"),
+    ("أي الأقوال", "C"),
+    ("تفاصيل العقيدة", "C"),
+    ("كل المسلمين يتفقون", "C"),
+    ("إجماع حكم", "C"),
+    ("بالإجماع المسألة", "C"),
+    ("لماذا اجتهاد", "B"),
+    ("كيف مختلفة", "B"),
+    ("أسباب اختلاف", "B"),
+    ("لماذا أحكام", "B"),
+    ("مقاصد الشريعة", "B"),
+    ("مقارنة", "B"),
+    ("شبهة", "B"),
+]
+
+
+@pytest.mark.parametrize("text,level", ROUTING_CASES)
+@pytest.mark.parametrize("prefix", ["", "و", "ف", "ل", "ب", "ك", "ال", "وبال", "لل", "ولل"])
+@pytest.mark.parametrize("invisible", ["", "\u200d", "\u200c", "\u061c"])
+def test_all_arabic_rule_families_handle_clitics_and_format_characters(
+    text, level, prefix, invisible
+):
+    # Exercise each word of multiword cues, not just the first boundary.
+    def transform(match):
+        word = match.group()
+        root = word[2:] if word.startswith("ال") and prefix.endswith(("ال", "لل")) else word
+        return invisible.join(prefix + root)
+
+    variant = re.sub(r"[\u0621-\u064a]+", transform, text)
+    assert rule_level(variant) == level
+
+
+@pytest.mark.parametrize("text", ["ولزوجتي", "وبعقدي", "هل بالشخص حكم", "وهل بالصلاة صحيح"])
+def test_prefixed_personal_context_short_circuits_provider(text):
+    model = Model()
+    assert classifier(model).classify("General information", context=text).level == "D"
+    assert model.calls == []
 
 
 class Model:

@@ -1,6 +1,7 @@
 """Rule-first content levels; classification never establishes religious truth."""
 
 import re
+import unicodedata
 from pathlib import Path
 from typing import Literal
 
@@ -40,8 +41,24 @@ class ClassifierGuards(BaseModel):
     level_d_general_info_only: Literal[True]
 
 
+def _routing_key(text: str) -> str:
+    # Format characters can split a cue invisibly. Keep this separate from ar-v1.
+    visible = "".join(char for char in text if unicodedata.category(char) != "Cf")
+    return normalize_arabic(visible).casefold()
+
+
 def _patterns(*patterns: str) -> tuple[re.Pattern, ...]:
-    return tuple(re.compile(normalize_arabic(pattern).casefold()) for pattern in patterns)
+    def with_clitics(match: re.Match) -> str:
+        word = match.group()
+        # Optional conjunction, preposition and article; lam + al contracts to ll.
+        # Apply to every Arabic cue word, including words inside multiword cues.
+        root = word[2:] if word.startswith("ال") else word
+        return r"(?:[وف]?(?:[بكل]?(?:ال)?|لل))" + root
+
+    return tuple(
+        re.compile(re.sub(r"[\u0621-\u064a]+", with_clitics, _routing_key(pattern)))
+        for pattern in patterns
+    )
 
 
 # These are conservative routing cues, not a complete linguistic classifier.
@@ -94,7 +111,7 @@ answer, religious text, sources, grading or evidence state. Return only level an
 
 def rule_level(text: str) -> Level:
     """Return a minimum level; unmatched text still requires model classification."""
-    key = normalize_arabic(text).casefold()
+    key = _routing_key(text)
     for patterns, level in (
         ((*_PERSONAL, *_INDIVIDUAL_CASE, *_JUDGMENT), "D"),
         (_SENSITIVE, "C"),

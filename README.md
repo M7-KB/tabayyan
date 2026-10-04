@@ -254,7 +254,12 @@ T-410 separately owns independent literal pinning; P-08 tests real-file startup 
 `api/classifier.py` provides `LevelClassifier(model=adapter, policy_path=..., tuning_path=...)`.
 Call `classify(claim_text, context=original_input)` so extraction cannot remove a personal-case
 cue. Arabic normalization is applied only to deterministic routing keys, never to displayed text.
-Personal-case and judgment cues force D without a provider call. Other rules establish a minimum
+Routing keys remove Unicode format characters (including U+200D, U+200C and U+061C).
+Every Arabic cue word accepts conjunction, preposition and article clitics, including
+stacked forms and lam/article contraction. This conservative cue matcher is not a
+full morphological analyzer; ambiguous matches may refer. Original text and model data
+remain unchanged. Personal-case and judgment cues force D without a provider call.
+Other rules establish a minimum
 level; a model can raise it but cannot lower it. Hostility is not a routing cue.
 
 The classifier reads P-08's restrictive level order and `card_confidence_min`. Missing, malformed,

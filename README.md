@@ -12,6 +12,56 @@ names which evidence state applies, keeps source text and generated explanation 
 separate UI blocks, and **abstains and refers** when the corpus does not hold the evidence. Abstention is
 a designed output here, not a failure mode.
 
+## Text extraction (T-501)
+
+`POST /api/v1/extract` accepts `{"text":"...","max_claims":10}`. Text is limited
+to 12,000 Unicode code points; `max_claims` is an integer from 1 to 50. The server
+validates strict structured extraction output, exact original source substrings,
+claim origins and term/no-checkable-claim consistency before returning anything.
+Assertions retain their original wording. Questions may yield a presupposition
+or question subject; term/explanation requests yield one `term_lookup` claim.
+English claims retain English text in the legacy `text_ar` field.
+
+Set `OPENAI_API_KEY`, `OPENAI_MODEL_EXTRACT=gpt-6-luna` and
+`OPENAI_MODEL_REASON=gpt-6.1-sol` in the environment, then start the API using the
+setup below. These IDs are documented by OpenAI; project access still needs a live
+check. No model is silently substituted. `/health` makes no provider calls, and
+`HEALTH_ONLY=true` registers no extraction endpoint. Missing model configuration,
+provider refusal, timeout, malformed JSON or invalid source spans return
+`503 PIPELINE_DEGRADED`; empty/unintelligible input returns `400 NO_CLAIMS`;
+unsupported detected language returns `422 TEXT_NOT_SUPPORTED_LANG`. Invalid
+request shape returns `422 INVALID_REQUEST`, without echoing input.
+
+Classification uses the full original input as well as each extracted claim;
+deterministic D guards run before classification inference. `classifier_status`
+distinguishes a rule-forced personal case from unavailable/low-confidence
+classification, both of which retain restrictive D. Consumers must inspect this
+status before selecting personal-case wording. Scripture detection scans original
+input against the entire loaded scripture index and reports
+`span_detector_status`; an absent index is `index_unavailable`, never a clean run.
+All returned spans use half-open Unicode code-point offsets into the original
+input, not JavaScript UTF-16 offsets. Use `Array.from(text)` before slicing in JS.
+An unmarked detector window has `marker: null`. These are advisory user-input
+spans, not verified quotes; `/check` must recompute all safety decisions.
+
+Every model call uses `api.model.StructuredModel`. The OpenAI implementation uses
+the Responses API with separate developer instructions and JSON-encoded
+`untrusted_data` in the user message, a strict JSON schema, local validation,
+`store: false`, no tools/conversation state and a 30-second timeout. The server
+does not persist queries or log input/provider errors. Input goes to OpenAI;
+`store: false` does not by itself remove provider abuse-monitoring retention.
+See [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs),
+[data controls](https://developers.openai.com/api/docs/guides/your-data),
+[extraction model](https://developers.openai.com/api/docs/models/gpt-6-luna) and
+[classification model](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+
+Run `python -m pytest` for the full suite. HTTP transport fixtures exercise the
+actual adapter and endpoint without billing, including model separation,
+refusals, invalid spans, input injection boundaries, no-checkable claims,
+segmentation limits, original-context routing and classifier failure statuses.
+These tests verify boundary behavior, not live model accuracy. The extraction
+adapter does not implement alignment, explanations, transcription or `/check`.
+
 ## Arabic normalizer (normalizer portion of T-402)
 
 Python 3.11+, standard library only for the normalizer. Install the API development dependencies

@@ -2,12 +2,115 @@
 
 Status: PR #5 was owner-merged at `81c9030` without the required independent `APPROVE`.
 The skipped step is recorded; decision 13 and G24 still require approval before merge.
-Final Sharia specialist review of §5 remains pending.
+Current direction (owner, 2026-10-04) is §0. It supersedes earlier sections where they conflict. Sharia specialist review is withdrawn (§0.7).
 Owner of this document: @Luffy (lead)
-Last updated: 2026-10-02
+Last updated: 2026-10-04
 Source of truth for requirements: `docs/challenge-brief.md`
 Owner decisions folded into this document are listed in §10. The review history is §11.
-What is still the owner's or the Sharia specialist's call is §12 — nothing else is open.
+What is still the owner's call is §12 — nothing else is open.
+
+---
+
+## 0. Current direction — owner decisions of 2026-10-04
+
+**Read this section first.** It supersedes earlier sections where they conflict, until the owner records a newer decision. §2 (A1, A2, A3, A4), §4.2, §5, §6.1 and §12 are updated in this PR to match. Where an older section still says "corpus", read the local Quran artifact plus the allowlisted results of the current request (§0.2–§0.4).
+
+### 0.1 Why
+
+The challenge data package (brief pages 2–6) asks for answers, not only claim checks:
+
+- **Level A:** a direct answer with a source.
+- **Level B:** a sourced answer with references, and no certainty where scholars differ.
+- **Level C:** a restricted answer that shows the disagreement, or a referral.
+- **Level D:** general information and a referral.
+
+Most of the 12 required cases are questions (the Kaaba, the authorship of the Qur'an, "spread by the sword", the meaning of Tawhid). A claim-only design fully answers about one of them. The design below answers questions from published sources.
+
+### 0.2 Architecture: restricted researcher and gatekeeper
+
+1. **The model is the researcher.** It understands the input, assigns the level under the §5 rules (rule-first for level D; the more restrictive level wins), plans search queries, and calls tools. It may write a short bridging explanation (`explanation_ar`, `explanation_en`). That text is always labelled as generated and is kept in its own field, never inside a quote field.
+2. **The model's tools reach only the allowlist in §0.3.** The model cannot choose a host or fetch an arbitrary URL. Our code runs each connector call, and the connector HTTP client refuses any host outside the list, including after redirects (G29).
+3. **The gatekeeper is code, not the model.** It alone decides what is shown. The model never writes scripture, hadith gradings, published answers, or rulings.
+4. **Stage 5 (retrieve)** is now: local Quran lookup plus connector calls to allowlisted sources, using the extracted search phrases only. Stage 7 (gates) applies §0.4 to every quote.
+
+### 0.3 Allowlist (owner list, 2026-10-04)
+
+Nothing outside this list is used. Each entry is in the challenge data package. Endpoint shapes, latency and terms per source are recorded in Robin's spike table (2026-10-04) and in SOURCES.md, not here.
+
+| Source | Use in Tabayyan |
+|---|---|
+| KFC Quran full text (local private artifact, 6,236 verses) | Qur'an verses. Read locally; never in the repo |
+| Dorar hadith API (`dorar.net`, article/389) | Hadith text and grading |
+| Islamic Content Service MCP server (`mcp.islamiccontent.org`): `quranenc`, `hadeethenc`, `byenah`, `islamhouse`, `islamenc`, `terminologyenc` | Translations, hadith, term definitions (`terminologyenc` for the §4.4 term cases) |
+| icadb API | Per the spike table |
+| Bayyinat (`dawa.center`, file/7937) | Per the spike table |
+| `islamqa.info` | Published answers |
+| `binbaz.org.sa` | Published answers |
+| `binothaimeen.net` | Published answers |
+| `dorar.net` sections | Published answers and grading sections |
+
+**Open discrepancy, owner to confirm:** AGENTS.md non-negotiable 5 still names `shamela.ws` and the islamic-content.com glossary, and this list does not. This section uses the list above, since it is the explicit allowlist and says "nothing else". Until the owner confirms otherwise, `shamela.ws` and islamic-content.com are not called.
+
+### 0.4 Gatekeeper rules
+
+Every quoted religious text on screen (verse, hadith, published-answer excerpt, definition) must pass all three checks, or it is dropped:
+
+1. It matches verbatim, after the normalization of §4.2, a text in the local Quran artifact **or** in a result returned by an allowlisted source during this request. The check runs against the raw result text we received, never against a model summary of it.
+2. It shows its source name and URL.
+3. A hadith shows the grading from the source's own record, including Dorar's section on circulating hadith that are not authentic. A hadith without grading is dropped.
+
+A quote that fails is removed. There is no repair and no re-ask. If no quote passes, the card is **CANNOT_CONFIRM** with a referral and a ready-to-ask question (§9). The model never supplies a quote, grading or ruling to fill a gap.
+
+Quoted verses or hadith inside the user's input are still checked under §5.2. A fabricated hadith is shown with the source's grading, never with a grading the model supplies.
+
+### 0.5 Published answers and levels
+
+- **Published answer.** When an allowlisted site has an answer (for example a Bin Baz fatwa), show it as that scholar's or site's answer: title, a short verbatim excerpt, and the link. We never generate a new fatwa.
+- **Level A:** SUPPORTED with verbatim evidence and its source (§5.1).
+- **Level B:** SUPPORTED with references, hedged wording where scholars differ (§5.1).
+- **Level C:** when allowlisted sources differ, show each position with its source, no ranking (DISPUTED, §5.1). Otherwise CANNOT_CONFIRM with a referral. Never SUPPORTED.
+- **Level D:** general information and a referral, never a ruling on the personal case (§5.1, CANNOT_CONFIRM).
+
+### 0.6 Privacy and storage
+
+- No storage of queries or results. No cache keyed by user text or by extracted search phrases (A6, G30).
+- Only the extracted search phrases go to the allowlisted sources. The full input goes only to the AI provider, as disclosed in §8.
+- Eval runs replay recorded connector responses for the **test-set** inputs, stored under `eval/`. Those fixtures never come from live user input.
+
+### 0.7 Specialist review withdrawn (owner decision C, 2026-10-04)
+
+- Shown content comes from published, approved sources. Each source is responsible for its own content.
+- The owner reviews the curated items: the test set, the examples, and the KFC and Bukhari records. The owner records that review in the PR, with `approved_by: owner` and `reviewed_by: owner`.
+- **G14 is retired** from the release gates. No Sharia specialist approval is required. The README and the deck disclose this.
+- `ALLOW_PENDING_REVIEW=true` stays on the deployed service, as the owner decided.
+- The pending-specialist notice is withdrawn. Every card that carries a quote shows this line in Arabic, next to the source link:
+
+  `النصوص منقولة من مصادرها المعتمدة كما هي، مع الرابط للتحقق.`
+
+- The AI notice is unchanged: `هذه أداة ذكاء اصطناعي، وليست فتوى.`
+
+Where an older section says "Sharia specialist" or "specialist" as the approver, read "owner". §12 keeps the open wording questions; they are now the owner's.
+
+### 0.8 Answer card layout and contract
+
+- **Published answer:** a source chip, the title, the verbatim excerpt, and the link, in a block separate from the explanation.
+- **Explanation:** a separate block, labelled as generated explanation. It is never inside a quote field (A3).
+- **CANNOT_CONFIRM:** the referral and the ready-to-ask question are always visible on the card.
+- **Scripture font:** Amiri Quran. The KFC font is dropped.
+- **Contract fields**, added to `contracts/card.schema.json` in the contract PR before the gatekeeper ships, and then to §4.1:
+  - `published_answer` `{source_id, title_ar, excerpt_ar, url}`. `excerpt_ar` is a quote field under G1 and G2.
+  - For live results, `source_ref` `{source_id, record_ref, url}` replaces `corpus_id`. `record_ref` is the source's own identifier, or the verse key for the Quran artifact.
+  - `grading` on hadith stays required (G3), taken from the source record.
+
+### 0.9 Build scope and cut line
+
+- **Text input only** until link and audio work. Link and audio keep their lower priority and their conditional acceptance (§6.2).
+- **Example chips** appear only after the live path works. Each chip shows a short label and fills the input on tap.
+- **Cut line: Monday 2026-10-05 22:00, Riyadh.** Anything not stable by then is switched off by config, and we submit what works. The final update is still due 2026-10-06 21:00 (§7).
+
+### 0.10 Not decided here
+
+Transport details (endpoints, response shapes, latency, terms pages) come from Robin's spike table. This section sets the rules, not the transport. OpenAI's remote MCP and its web search are spike tests only. A model-side search counts as an allowlisted source only if its raw output, containing the verbatim text, passes §0.4. Until the spike confirms that, the product path uses our own connectors.
 
 ---
 
@@ -39,8 +142,9 @@ Cut from the bottom. The typed-text path is never cut.
 | 3 | Links | **P1** | Ordinary article link → readable text. TikTok and YouTube links → caption/title through the platform's **official oEmbed endpoint**, shown with a plain outbound link to the original — **no embedded player and no thumbnail** (owner, 2026-10-02, item E2) — in the same editable review screen. If the claim is only spoken, the user types it or uploads the saved clip. **No server-side downloading of video or audio from any platform.** Instagram is skipped if its oEmbed needs a Meta app token (§3). |
 | 4 | Screenshot / image upload | **P2** | Text read from the image by the model → the same editable review screen. Fabricated hadith spread as images, so this is a real path, but it ships last. |
 
-**Continuation plan only, not built in this window:** platform share-to-app, a WhatsApp tipline, and
-matching a repeated viral claim to an earlier result.
+**Continuation plan only, not built in this window:** platform share-to-app, a WhatsApp tipline, matching a
+repeated viral claim to an earlier result, a public API for other sites, Instagram DMs, and a browser extension.
+The last three run on the same verification engine, with no public-comment automation (owner, 2026-10-02).
 
 ### Capability priority inside the build window (Oct 2 → Oct 6 23:59, Riyadh — organizer-permitted early start, §10 item 15)
 
@@ -95,31 +199,31 @@ Accounts, login, user profiles, persistence of user queries, analytics on query 
                     │  2 extract       (text → input kind + claims) │
                     │  3 classify      (claim → level A/B/C/D)     │
                     │  4 detect spans  (scripture spans, near-miss) │
-                    │  5 retrieve      (claim → corpus passages)   │
+                    │  5 retrieve      (queries → allowlisted)     │
                     │  6 compose       (passages → card draft)     │
                     │  7 GATES         (hard, deterministic)       │
                     │  8 card          (one state per claim)       │
                     └───────────────────┬─────────────────────────┘
                                         │ read-only, local, at startup
                     ┌───────────────────▼─────────────────────────┐
-                    │ corpus/  (built offline, committed artifact) │
-                    │  corpus.jsonl + lexical index + checksums    │
+                    │quran/  (local private artifact, not in repo)│
+                    │ KFC Quran text + lexical index + checksum   │
                     └─────────────────────────────────────────────┘
 ```
 
 ### Architectural decisions
 
-**A1. The corpus is built offline and shipped as a read-only artifact.**
-No request touches a source website. Retrieval runs against a committed, checksummed snapshot. This is what makes "verbatim" a property we can test, and it keeps the live demo deterministic.
+**A1. Two retrieval paths, both fixed to allowlisted sources (owner decision 2026-10-04, §0.2).**
+The Quran is read from a local, private, checksummed artifact built offline from the KFC full text. It is never in the repo. All other evidence comes from connector calls to the §0.3 allowlist during the request. The connector HTTP client refuses every other host. Verbatim checking compares against the artifact or against this request's results, not a prebuilt snapshot. Live results make the demo less deterministic, so the eval replays recorded connector responses for the test set (§0.6).
 
 **A2. The verbatim gate is code, not a prompt.**
-Any scripture span leaving the API must match a corpus record character-for-character after a fixed normalization, and must carry that record's id. A span that fails is not repaired and not re-asked for: the card drops to CANNOT_CONFIRM. Prompt instructions are a convenience; the gate is the guarantee. (Non-negotiable 1 and 2.)
+Any scripture span leaving the API must match a record of the Quran artifact, or a result returned by an allowlisted source during this request, character-for-character after a fixed normalization, and must carry that record's id (§0.4). A span that fails is not repaired and not re-asked for: the card drops to CANNOT_CONFIRM. Prompt instructions are a convenience; the gate is the guarantee. (Non-negotiable 1 and 2.)
 
 **A3. Scripture and generated text live in different fields.**
-`evidence[].quote_ar` and `misquote_notice.evidence.quote_ar` are the **only Arabic source-text** fields in the response permitted to hold scripture, a hadith text, or any quoted source text. `explanation_ar` is generated and is rejected by the gate if it contains a quoted span. The UI renders them in visually distinct blocks that are never merged. (Non-negotiable 3.)
+`evidence[].quote_ar`, `misquote_notice.evidence.quote_ar` and `published_answer.excerpt_ar` (§0.8) are the **only Arabic source-text** fields in the response permitted to hold scripture, a hadith text, or any quoted source text. `explanation_ar` is generated and is rejected by the gate if it contains a quoted span. The UI renders them in visually distinct blocks that are never merged. (Non-negotiable 3.)
 
 **A4. Retrieval is lexical first.**
-Arabic normalization (strip tashkeel and tatweel, unify alef/ya/ta-marbuta forms, keep the unnormalized text for display) plus BM25. Deterministic, debuggable, no embedding infrastructure on day 1. Embeddings are a P2 addition behind the same interface, not a rewrite.
+Arabic normalization (strip tashkeel and tatweel, unify alef/ya/ta-marbuta forms, keep the unnormalized text for display) plus BM25. Deterministic, debuggable, no embedding infrastructure on day 1. Embeddings are a P2 addition behind the same interface, not a rewrite. Under §0.2 the lexical index covers the local Quran artifact; connector results are searched through each source's own search, using the extracted search phrases.
 
 **A5. The level classifier is rule-first for level D.**
 Deterministic patterns for personal-case markers ("my marriage", "in my country, may I", "is my contract valid", named individuals or groups) force level D before any model runs. A model may raise a level, never lower it. A missing or low-confidence classification is treated as the more restrictive level.
@@ -128,7 +232,7 @@ Deterministic patterns for personal-case markers ("my marriage", "in my country,
 No database. Request bodies are held in memory for the life of the request. Logs record counts, latencies, and card states — never input text, transcripts, or claims. (Non-negotiable 4.)
 
 **A7. The level → state table is a data-driven policy file, not branching code.**
-`api/policy/content_policy.yaml` holds the §5 table, the confidence thresholds, and the referral target. The state machine reads it; it does not re-express it. A change the Sharia specialist asks for is a config edit plus a fixture update, never a rewrite. The file carries `policy_version` and `approved_by`, and both are reported by `GET /health` and on every card. (Owner decision 1.)
+`api/policy/content_policy.yaml` holds the §5 table, the confidence thresholds, and the referral target. The state machine reads it; it does not re-express it. A change the owner decides is a config edit plus a fixture update, never a rewrite. The file carries `policy_version` and `approved_by`, and both are reported by `GET /health` and on every card. (Owner decision 1.)
 
 **A8. Model providers are configuration, and the key lives only in the environment.**
 One OpenAI key per environment, read from `OPENAI_API_KEY` at startup. Model ids are config values, not literals in code. Nothing about the provider is committed. See §8. (Owner decision 4.)
@@ -172,7 +276,7 @@ Confirming the AGENTS.md default, unchanged: Python FastAPI backend, React + Vit
 ```
 api/                              FastAPI app, pipeline stages, gates, tests
 api/policy/content_policy.yaml    the §5 table + alignment rules + referral strings
-                                    — SPECIALIST-OWNED, pinned by a test, CODEOWNERS (A7)
+                                    — OWNER-OWNED, pinned by a test, CODEOWNERS (A7)
 api/tuning.yaml                   thresholds only — engineering-owned, free to move (§5.5)
 contracts/card.schema.json        the §4.1 card contract, machine-readable (A12)
 contracts/fixtures/               one example card per state and per alignment value
@@ -566,13 +670,11 @@ Field rules, enforced by `contracts/card.schema.json` and by the gates:
   "retrieved_at": "2026-10-02",
   "checksum_sha256": "…",
   "checksum_en_sha256": "… — required iff text_en is required (rule 8)",
-  "approved_by": "sharia-reviewer-1 | pending"
+  "approved_by": "owner | pending"
 }
 ```
 
-`approved_by` carries the literal **`sharia-reviewer-1`** once approved (owner decision 13). The
-reviewer is anonymous by design and their name is never published, in the repo or in the product. Until
-the owner records the review in the PR, the field reads `pending` and `GET /health` says so.
+`approved_by` carries the literal **`owner`** once the owner has reviewed the record and recorded it in the PR (owner decision 2026-10-04, §0.7). This replaces the `sharia-reviewer-1` literal of decision 13. Until the owner records the review in the PR, the field reads `pending` and `GET /health` says so.
 
 Two domains are new. `quran_translation` holds the approved English translations the brief permits (KFC
 or quranpedia.net) as corpus records in their own right, linked by `translation_of`. `glossary` records
@@ -614,17 +716,14 @@ image layer is as public as the repo). Instead:
   deployment. Unrelated sources retain their existing gates.
 - **Open owner question, not decided here (section 12 item 5):** whether verbatim display in a
   public app counts as redistribution for a source licensed for use only. Until the owner and
-  specialist record the applicable scope, such a source stays out of the deployed artifact;
+  owner record the applicable scope, such a source stays out of the deployed artifact;
   startup rejects the entire artifact if it includes one. The composer must abstain without it.
 - `ALLOW_PENDING_REVIEW` defaults to false everywhere. The owner enables it only on the judging
   service. It additionally permits literal `approved_by: pending`, never writes or promotes that field,
   and never bypasses licence, grading, checksum, normalization or verbatim checks. `/health` reports
-  `allow_pending_review` even in health-only mode. G14 remains **NOT MET** until real specialist approval.
+  `allow_pending_review` even in health-only mode. It stays `true` on the deployed service (owner, 2026-10-04).
   The setting authorizes no quotation by itself; the downstream verbatim gate remains mandatory.
-  A card using any pending record (including grading provenance) must visibly state in Arabic
-  that its evidence has not received specialist review, separately from the AI/not-a-fatwa notice.
-  The composer must carry this status from records, never model output; it may not imply approval.
-  Exact Arabic copy requires specialist review before such cards are displayed.
+  No pending-specialist notice is shown (§0.7). Every card that carries a quote shows the source line in §0.7.
 
 **Derived fields.** `text_normalized` and `checksum_sha256` are produced by the shared normalizer (T-402).
 `checksum_en_sha256` is a plain SHA-256 of `text_en`'s original UTF-8 bytes — no normalization, stripping
@@ -647,7 +746,7 @@ Validator rules (`corpus/validate.py`, runs in CI):
 4. `text_normalized` must be reproducible from `text_ar` by the shared normalizer. Guards hand-edited index drift.
 5. `license` and `license_url` required, and must appear in `SOURCES.md`. (Non-negotiable 5.)
 6. `corpus_id` unique.
-7. No corpus item may be used in a card while `approved_by == "pending"` once the Sharia specialist review is in place.
+7. A record with `approved_by == "pending"` may be used only while `ALLOW_PENDING_REVIEW` is true (§0.7). The owner's review is recorded by setting `approved_by: owner` in the PR.
 8. `domain == "quran_translation"` → `text_en` and `translation_of` required, and `translation_of` must
    resolve to an existing `quran` item. `domain == "glossary"` → `text_en` required. **Either way,
    `checksum_en_sha256` must match `text_en`'s original UTF-8 bytes, unnormalized** — the same
@@ -680,8 +779,7 @@ Validator rules (`corpus/validate.py`, runs in CI):
   },
   "rubric_en": "Corrects the misconception without scolding; worship is for Allah, the Kaaba is the qibla; cites a source.",
   "notes_en": "brief required case 1",
-  "reviewed_by": "sharia-reviewer-1 | pending",
-  "needs_sharia_review": true,
+  "reviewed_by": "owner | pending",
   "g9_countable": true,
   "blocked_reason_en": null,
   "paired_case_id": null
@@ -690,7 +788,6 @@ Validator rules (`corpus/validate.py`, runs in CI):
 
 Review and coverage fields (owner-facing contract, decided by Luffy 2026-10-03; harness support is Nami's task):
 - All four fields are required on every record, paired or not. There are no defaults: a record that omits any of them fails to load.
-- `needs_sharia_review` (boolean) is `true` if and only if `reviewed_by` is `pending`. The harness fails on any mismatch.
 - `g9_countable` (boolean) is `false` for an excluded case. An `origin: "brief"` case with `g9_countable: false` counts as a missing brief case for G9, so the gate fails.
 - `blocked_reason_en` (string or null) is a non-empty string exactly when `g9_countable` is `false`, and `null` otherwise.
 - `paired_case_id` (string or null) is `null` for unpaired records. A pair must name a different `case_id` (no self-reference) that exists in the same file, and the target must name the original back. Both cases execute, and the harness compares `input_kind`, `level`, `state`, `alignment`, and `abstained_reason`. Any difference in the actual outputs fails the pair explicitly, and the failure is reported with both case ids. A one-sided, self, or unresolved reference fails.
@@ -768,7 +865,7 @@ brief case 12 tests.
 
 **Expected design for all 12 required brief cases.** The `input_kind` and the path are engineering
 decisions and are fixed here. The `level`, `state` and `alignment` columns are **proposed**: @Robin sets
-the final `expect` values in P-02 and the Sharia specialist reviews them, *except* the four rows marked
+the final `expect` values in P-02 and the owner reviews them, *except* the four rows marked
 **(owner)**, which are fixed by owner decision 1 and are not re-interpreted during the build.
 
 | # | Brief input | `input_kind` | Path | Proposed level | Proposed state + alignment |
@@ -808,10 +905,10 @@ derived, not stored:
 
 ## 5. Content levels A–D → the three card states
 
-**Owner-approved on 2026-10-01 (decision 1). Final Sharia specialist review is still pending**, so the
-whole of this section lives in the policy file described in §5.5 — a change the specialist asks for is a
-config edit, not a rewrite. The specialist's approval is recorded by the owner in the PR that sets
-`approved_by: sharia-reviewer-1` on that file; until then it reads `pending` and `GET /health` says so.
+**Owner-approved on 2026-10-01 (decision 1). The specialist review is withdrawn (§0.7).** The whole of this
+section lives in the policy file described in §5.5, so a change the owner decides is a config edit, not a
+rewrite. The owner's review is recorded in the PR that sets `approved_by: owner` on that file; until then it
+reads `pending` and `GET /health` says so.
 
 ### 5.1 Level → state
 
@@ -965,7 +1062,7 @@ is accepted practice in hadith transmission, so the two domains do not get the s
 | `hadith` | §5.4 rule 1 does **not** fire — the card is never told it "contradicts" a paraphrase-by-meaning. Instead `misquote_notice` (below) surfaces the matched hadith's exact narrated wording, source and grading, without the card asserting a contradiction |
 
 This default ships now on the owner's direction; the exact boundary of "close enough to count as narration
-by meaning" is still the specialist's call and may tighten the hadith row later. It cannot loosen the
+by meaning" is still the owner's call and may tighten the hadith row later. It cannot loosen the
 Qur'an row, which is fixed.
 
 **The detector reports whether it ran.** (@Nami, blocker 3.)
@@ -987,7 +1084,7 @@ character-for-character from the matched record, or the field is dropped. `misqu
 the red-team set (P-09) and by G21, same as every other field a model or a gate can touch.
 
 The budget table and `trigger_b_min_window_tokens` are engineering thresholds in `tuning.yaml`. The marker
-list and the Qur'an/hadith split live in `content_policy.yaml` and are **specialist-owned** — changing
+list and the Qur'an/hadith split live in `content_policy.yaml` and are **owner-owned** — changing
 either is a religious-content decision, not an engineering one.
 
 **One consequence worth stating plainly, because it is a content judgment and not an engineering one:** a
@@ -996,7 +1093,7 @@ is never flagged. A user who paraphrases a Qur'an verse *behind an attribution f
 followed by words that are not the verse — **is** a `NEAR_MISS` and the card says so, because attributing
 non-verbatim words to Allah is exactly the failure this product exists to catch. A hadith paraphrased by
 meaning, marked or not, is never told it contradicts the source — it shows the exact narrated wording
-instead. This resolves §12 item 2 in direction; the specialist still sets the final boundary.
+instead. This resolves §12 item 2 in direction; the owner still sets the final boundary.
 
 
 ### 5.3 `alignment` on SUPPORTED cards  (owner decision 1)
@@ -1012,7 +1109,7 @@ SUPPORTED card.
 
 `PARTIAL` is **deferred past submission, confirmed by the owner** (§10 item 19). It had a meaning but no
 decision procedure and no test, and shipping a third alignment value whose boundary nobody can state is
-worse than not shipping it. Should the specialist define a boundary for it later, evidence that supports only part of a claim resolves the
+worse than not shipping it. Should the owner define a boundary for it later, evidence that supports only part of a claim resolves the
 restrictive way: the unsupported part keeps the card out of `CONFIRMS`, so the card is either
 `CONTRADICTS` or it drops to CANNOT_CONFIRM with `ALIGNMENT_UNDETERMINED`. `PARTIAL` is not a permitted
 value in `card.schema.json` version 1.
@@ -1062,13 +1159,13 @@ Two further rules, unchanged:
 
 ### 5.5 Policy file and tuning file  (A7; owner decision 12; Nami findings 3 and 4)
 
-Two files, because one file could not hold both a specialist lock and the build's threshold tuning.
+Two files, because one file could not hold both an owner lock and the build's threshold tuning.
 
-**`api/policy/content_policy.yaml` — specialist-owned, pinned, CODEOWNERS.**
+**`api/policy/content_policy.yaml` — owner-owned, pinned, CODEOWNERS.**
 
 ```yaml
 policy_version: p1
-approved_by: pending          # set to sharia-reviewer-1 by the owner on specialist approval
+approved_by: pending          # set to owner by the owner when the review is recorded in the PR
 levels:
   A: { min_evidence: 1, allowed_states: [SUPPORTED, CANNOT_CONFIRM] }
   B: { min_evidence: 1, allowed_states: [SUPPORTED, DISPUTED, CANNOT_CONFIRM] }
@@ -1180,7 +1277,7 @@ Rules, all testable:
 ### 5.8 Note on scope
 
 §5.1 through §5.4 are rules about religious content. @Luffy does not change them, and neither does any
-implementing agent. A proposed change goes to the owner and the Sharia specialist, lands in
+implementing agent. A proposed change goes to the owner, lands in
 `content_policy.yaml`, and arrives with the T-410 pinned literals and its test fixtures updated in the
 same PR.
 
@@ -1195,8 +1292,8 @@ Every gate names **who produces the evidence**, so @Nami's sign-off asserts only
 
 | ID | Gate | How it is verified | Evidence of record |
 |---|---|---|---|
-| G1 | No scripture or quoted source text outside `evidence[].quote_ar`, `evidence[].translation.text_en`, `misquote_notice.evidence.quote_ar` and `misquote_notice.evidence.translation.text_en` | Automated: every card from a full test-set run is scanned; any quoted span found in `explanation_ar`, `explanation_en`, `positions[].summary_ar`, `how_to_verify_ar`, `term.*` or `referral.*` fails the build | CI |
-| G2 | Every displayed quote is verbatim, in both languages | Automated: each `quote_ar` is matched character-for-character against its `corpus_id` record after normalization; each `translation.text_en` is matched against its own approved-translation record. **No machine-translated scripture may appear anywhere**; if no approved translation record exists, `translation` is `null` | CI |
+| G1 | No scripture or quoted source text outside `evidence[].quote_ar`, `evidence[].translation.text_en`, `misquote_notice.evidence.quote_ar` and `misquote_notice.evidence.translation.text_en`, `published_answer.excerpt_ar` | Automated: every card from a full test-set run is scanned; any quoted span found in `explanation_ar`, `explanation_en`, `positions[].summary_ar`, `how_to_verify_ar`, `term.*` or `referral.*` fails the build | CI |
+| G2 | Every displayed quote is verbatim, in both languages | Automated: each `quote_ar` is matched character-for-character after normalization against the Quran artifact or the allowlisted result it cites (§0.4); each `translation.text_en` is matched the same way against its own approved-translation record. **No machine-translated scripture may appear anywhere**; if no approved translation record exists, `translation` is `null` | CI |
 | G3 | No hadith without source and grading | Automated: every `domain == "hadith"` item in `evidence[]` or `misquote_notice.evidence` has complete `grading`; corpus validator plus a response-level assertion | CI |
 | G4 | Level D never SUPPORTED or DISPUTED | Automated: property over all cards; plus brief case 5 | CI |
 | G5 | Level C never SUPPORTED | Automated: property over all cards | CI |
@@ -1208,7 +1305,7 @@ Every gate names **who produces the evidence**, so @Nami's sign-off asserts only
 | G11 | No accounts, and no user query is stored | Code review for persistence calls. **Deployed-log inspection is performed by the owner, who posts the evidence in the channel** (owner decision 12; Nami 3.8). @Nami's sign-off cites that post rather than asserting a log she cannot read | Owner |
 | G12 | No secrets, keys, or user data in the repo | Secret scan over the **full history**, T-606. **T-606 runs before T-605**, so the sign-off is not against unverified history | @Luffy, cited by @Nami |
 | G13 | Every source in `corpus.jsonl` is logged in `SOURCES.md` with its license; every used model, provider, framework, font and data/development tool is logged in `TOOLS.md` with model/version evidence and licence/terms | Source cross-check remains automated. Robin reconciles contributor reports by Oct 5 20:00 Riyadh (reports due 18:00). Nami checks inventory against the tree and contributor evidence before first submission and again at Oct 6 18:00 freeze. Missing or unresolved inventory fails this check and is escalated | CI + Robin inventory, checked by Nami |
-| G14 | Corpus and test set carry Sharia specialist approval | `approved_by` / `reviewed_by` equal `sharia-reviewer-1`, recorded by the owner in the PR. **Passes only with real approval.** If still `pending` at submission, G14 is reported **NOT MET** and disclosed in the README and the deck — never softened into a pass (owner decision 13) | Owner |
+| G14 | Retired (owner decision 2026-10-04, §0.7). Not a release gate; owner review of curated items is recorded in the PR | — | Owner |
 | G15 | Deployed demo works end to end | @Nami runs the 12 cases against the live demo, not only locally | @Nami |
 | G16 | A span of the user's input is never rendered as scripture and never appears in a quote field | Automated **property over all cards**: no `evidence[].quote_ar`, `evidence[].translation.text_en`, `misquote_notice.evidence.quote_ar` or `misquote_notice.evidence.translation.text_en` may contain any span of the input that is not itself a verbatim corpus record, compared after normalization — not a raw substring check on one fixture. Frontend: the claim block carries `data-role="user-text"` and the evidence block `data-role="scripture"`, asserted by marker plus snapshot, **not by component identity** (two different components can style identically) | CI |
 | G17 | `alignment` never confirms a misquote | Automated **property over all cards**: `alignment` is non-null exactly when `state == "SUPPORTED"`; it never defaults to `CONFIRMS`; and **for every SUPPORTED card, if either §5.2 trigger reports `NEAR_MISS` against a `quran`-domain record anywhere in the whole corpus index, `alignment` is not `CONFIRMS`** — Trigger A for a marked span, Trigger B for unmarked near-verbatim text. A `NEAR_MISS` against a `hadith`-domain record is exempt by design (§5.2 Qur'an/hadith split) and is checked separately via `misquote_notice`. A one-word-altered verse with no quote marks and no attribution formula is covered, which is the case that passed all eighteen original gates. Brief cases 1 and 11 are instances of this property, not the definition of the gate | CI |
@@ -1222,10 +1319,12 @@ Every gate names **who produces the evidence**, so @Nami's sign-off asserts only
 | G25 | The control comparison is reported | The eval report carries the corpus-free **control** arm beside the Tabayyan arm, per §6.5. Required after every pipeline change, and it is the direct evidence for the brief's "technical quality and use of AI" (25%) and "reliability and scientific safety" (15%) weights | @Nami |
 | G26 | A contradicted claim never reads as endorsed | Automated: `state_label_key` is `supported_contradicts` for every SUPPORTED+CONTRADICTS card, its Arabic label is a **distinct string** from `supported_confirms`, and a frontend test asserts that string renders and that no label reading as endorsement appears on the card (§6.4) | CI + @Nami |
 | G27 | The link endpoint cannot reach the internal network | Automated: `http://` refused; a URL resolving to loopback, RFC1918, link-local or `169.254.169.254` refused with `400 URL_NOT_ALLOWED`; a redirect **to** a private address refused at the hop; an oversize response refused while streaming; the timeout enforced; `GET`-only; no media download path exists (§3 outbound fetch policy, A10) | CI |
+| G28 | The gatekeeper drops every unverified quote, and no model-written quote, grading or ruling is shown | Automated: a stubbed model that invents a verse or a hadith, or paraphrases a connector result, yields no such quote on any card; when no quote passes, the card is CANNOT_CONFIRM with a referral and a ready-to-ask question (§0.4) | CI |
+| G29 | Connectors reach only the §0.3 allowlist | Automated: the connector HTTP client refuses any host outside §0.3, including a redirect to one; the MCP client connects only to the approved server | CI |
+| G30 | Nothing is stored or cached by user text | Automated: no persistence call in the code, and no cache keyed by input or by extracted search phrases; recorded eval fixtures contain no live user input. Owner evidence from the deployed logs under G11 | CI + Owner |
 
-**All gates must pass before submission, with one named exception: G14.** G14 depends on a person
-outside the team. If the specialist's approval has not arrived, we submit with G14 reported as not met
-and disclosed — we do not claim an approval we do not have, and we do not quietly drop the gate.
+**All gates must pass before submission. There is no exception.** G14 was retired on 2026-10-04 (§0.7). It was
+not waived, and it is not reported as not met.
 
 ### 6.2 Functional acceptance
 
@@ -1248,7 +1347,7 @@ it is recorded as cut in the final status post and the deck:
 - `pytest` green for `api/`, frontend tests green for `web/`, both in CI on every PR.
 - Every PR reviewed by @Nami. The review request is an @mention in the #review channel, not a GitHub review request: all agents share the owner's token, so GitHub cannot route a request to one agent. @Nami's review is a PR comment whose first word is `APPROVE` or `REQUEST CHANGES`. (Owner decision 7; also in AGENTS.md.)
 - The owner merges only after @Nami posts `APPROVE`. (Owner decision 13, after PR #3 was merged early.)
-- Corpus and test-set PRs additionally need Sharia specialist approval. The owner obtains it and records it in the PR.
+- Corpus and test-set PRs additionally need owner review, recorded in the PR (§0.7).
 - The README section covering any touched area is updated in the same PR.
 
 ### 6.4 Presentation rules that are part of the contract  (Nami finding 2b / 3.6)
@@ -1260,7 +1359,7 @@ design taste:
    `state: SUPPORTED` + `alignment: CONTRADICTS` must not render a label that reads as endorsement
    beside a "contradicts the source" badge — the reassuring half wins when a user skims. The four keys
    are distinct strings and the SUPPORTED+CONTRADICTS one names the correction, not the support.
-   **Owner's wording (§10 item 19), exact string pending the Sharia specialist (§12 item 1):**
+   **Owner's wording (§10 item 19), exact string pending owner review (§12 item 1):**
    `supported_contradicts` → badge `لا يطابق المصدر المعتمد`, followed by `النص كما ورد في المصدر:`
    introducing the correct verbatim text. @Usopp does not finalise this string alone; it states a
    religious judgment about the user's words.
@@ -1382,6 +1481,14 @@ silent substitution with a different model.**
 
 ### Privacy and AI disclosure (product text, Arabic)
 
+**Text-only build (owner decision 2026-10-04, current).** Shown on the input screen before the user submits, and in the README:
+
+```
+يُرسَل النص الذي تُدخله إلى مزوّد خدمة ذكاء اصطناعي، وتُرسَل عبارات البحث المستخرجة منه إلى المصادر المعتمدة. لا نحفظه في خوادمنا، وقد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته. لا تحتاج إلى حساب.
+```
+
+The block below is the full disclosure for when link and audio ship (§0.9). It is not shown in the text-only build.
+
 Shown on the input screen **before** the user submits, and repeated in the README:
 
 ```
@@ -1473,6 +1580,15 @@ days, sets a timebox on PR #5, and answers the remaining §12 items in direction
 |---|---|---|
 | 24 | **PR #5's skipped `APPROVE` is recorded as a one-time process failure; approval-before-merge is unchanged** (decision 13, G24). **The KFGQPC Hafs Smart archive** (`data/raw/kfgqpc_hafs_smart_4/`, committed at `78c7988`): removal from the tree and disclosure that copies remain in public history, **no history rewrite now**. This does **not** grant ingestion or redistribution permission — that stays a separate, pending question in P-03's `SOURCES.md`. | §0 (status line), §7, §6.1 G24, README, PR #13 |
 
+
+### 2026-10-04 set — restricted researcher, specialist withdrawn, build order
+
+| # | Decision | Where it lands |
+|---|---|---|
+| 25 | **Restricted researcher and gatekeeper.** The model plans and classifies; allowlisted connectors only; the gatekeeper verifies every quote against the local Quran artifact or a result returned in the same request; published answers are shown as the source's own, with title, excerpt and link; no storage and no user-keyed cache. Supersedes the claim-only and corpus-snapshot design where they conflict. | §0.2–§0.6, §2 A1–A4, §6.1 G1, G2, G28–G30 |
+| 26 | **Specialist review withdrawn.** The owner reviews curated items and records it in PRs (`approved_by` and `reviewed_by` = `owner`). G14 is retired. `ALLOW_PENDING_REVIEW` stays true on deployment. The pending-specialist notice is replaced by the source line in §0.7. The AI-not-a-fatwa notice is unchanged. | §0.7, §4.2, §5, §6.1, §12 |
+| 27 | **Cut line Monday 2026-10-05 22:00 Riyadh.** Text input first; link and audio only if stable; anything unstable is switched off by config and we submit what works. | §0.9, §1 |
+
 ---
 
 ## 11. Review record
@@ -1487,20 +1603,19 @@ first version of this document and nothing in it has been approved yet.
 
 ---
 
-## 12. Open — the specialist's call
+## 12. Open — the owner's call
 
 The owner answered items 1-4 below in direction on 2026-10-02 (§10, third set, item D); the restrictive
-default now ships, and what remains is the **exact wording or boundary**, which is the Sharia specialist's
-call, not the owner's or mine. Everything that was a scheduling or engineering question in the earlier
+default now ships, and what remains is the **exact wording or boundary**, which is the owner's call. The specialist
+review is withdrawn (§0.7). Everything that was a scheduling or engineering question in the earlier
 version of this section is resolved and moved to §10.
 
 1. **The exact Arabic label for SUPPORTED + CONTRADICTS.** Owner's wording (§10 item D2): badge
    `لا يطابق المصدر المعتمد`, followed by `النص كما ورد في المصدر:` introducing the correct verbatim text.
    Shipped as the default `state_label_key: supported_contradicts` string; G26 tests the rendered card, not
-   the string, so a specialist wording change is a copy edit, not a retest.
-   The owner requested the remaining state labels for the same specialist review on
-   2026-10-03. Proposed copy only; these additions do not change runtime labels or policy.
-   All exact wording remains pending specialist approval, recorded by the owner.
+   the string, so an owner wording change is a copy edit, not a retest.
+   The owner requested the remaining state labels for review on 2026-10-03. Proposed copy only; these additions do not change runtime labels or policy.
+   All exact wording remains pending owner approval, recorded in the PR.
 
    | State label key | Provisional Arabic label | Intended meaning |
    |---|---|---|
@@ -1513,18 +1628,18 @@ version of this section is resolved and moved to §10.
    owner confirmed the direction (§10 item D3): a Qur'an paraphrase behind an attribution formula is
    flagged; a hadith paraphrase, marked or not, is shown via `misquote_notice` and never told it
    contradicts. What counts as "close enough to still be the same hadith" rather than a genuine
-   misattribution is the specialist's to set, and may tighten `hadith_near_miss_shows_notice_not_contradicts`
+   misattribution is the owner's to set, and may tighten `hadith_near_miss_shows_notice_not_contradicts`
    later — it cannot loosen the Qur'an row.
 3. **`word_budget_ceiling` (initially `4`, §5.5).** Bounds every tier of the `tuning.yaml` budget table
    (§5.2). @Nami's probe v2 calibrated the table itself (1/2/3 by length band) against measured misquotes
-   and twin pairs; the ceiling is forward-looking headroom the specialist sets, not a value the measured
+   and twin pairs; the ceiling is forward-looking headroom the owner sets, not a value the measured
    data determines.
 4. **`trigger_b_min_window_tokens` (initially `3`, §5.2).** A false-positive guard, not a content
    judgment by itself — flagged here because it interacts with the Qur'an/hadith split: a floor set too
    high could let a short unmarked hadith paraphrase through with no detector coverage at all.
    Recalibrated once P-03's corpus slice exists (T-508a, @Nami) against a measured run, not guessed.
 
-5. **Public verbatim display of use-only sources (owner and specialist).** Does the recorded
+5. **Public verbatim display of use-only sources (owner).** Does the recorded
    challenge-app ingestion scope permit public verbatim display without redistribution clearance?
    Pending a recorded answer in SOURCES.md and applicable publisher policy URLs,
    `public_display_allowed` stays false and these sources stay out of the deployed artifact.

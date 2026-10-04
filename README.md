@@ -794,9 +794,11 @@ The source register records scoped owner-reported challenge-app ingestion for `k
 unchanged. `python -m corpus.validate --private-use --allow-pending-review --corpus <private-path>`
 checks such artifacts offline. Without `--private-use`, public-distribution validation still requires
 redistribution permission. Runtime uses the explicit file loader and additionally checks
-public-display permission for collection and grading sources. Historical display flags were false; the 2026-10-05 owner scope below supersedes KFC and Dorar,
-so use-only sources must stay out of the deployed artifact until the owner and specialist
-resolve SPEC section 12 item 5. `ALLOW_PENDING_REVIEW` cannot bypass this permission.
+public-display permission for collection and grading sources. KFC and Dorar hadith permit
+matched public display under the 2026-10-05 owner scope below. Sources or grading records
+without recorded display permission stay out of deployed artifacts; `ALLOW_PENDING_REVIEW`
+cannot bypass that permission. SPEC section 12 item 5 is resolved; no specialist approval
+is required for this display decision.
 Bukhari and Dorar publisher policy URLs remain pending; owner-decision self-links are separate
 evidence and cannot replace `license_url`.
 

@@ -726,8 +726,10 @@ image layer is as public as the repo). Instead:
   confirmed ingestion permission for both the collection and grading source; public-distribution
   validation still requires redistribution permission. Runtime additionally requires either
   redistribution clearance or literal `public_display_allowed: true` for every source and grader.
-  All current sources have public display disabled. Offline private ingestion does not authorize
-  deployment. Unrelated sources retain their existing gates.
+  KFC and Dorar hadith permit matched public display under the 2026-10-05 scope.
+  Sources or grading records without recorded display permission remain excluded from
+  deployed artifacts. Offline ingestion alone does not authorize display, and unrelated
+  sources retain their existing gates.
 - **Display permission (section 12 item 5).** The 2026-10-05 owner decision permits matched public display for KFC, Dorar hadith and allowlisted live results within the challenge app, with visible source and link; no bulk display, download or file redistribution. `SOURCES.md` records the scope. The runtime gate still rejects artifacts whose source or grading lacks display permission; unavailable evidence causes abstention. Permission does not substitute for the separate v30 field-binding implementation.
 - `ALLOW_PENDING_REVIEW` defaults to false everywhere. The owner enables it only on the judging
   service. It additionally permits literal `approved_by: pending`, never writes or promotes that field,

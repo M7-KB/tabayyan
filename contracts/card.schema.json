@@ -1009,10 +1009,17 @@
         "properties": {
           "input_kind": {
             "const": "term"
+          },
+          "state": {
+            "enum": [
+              "SUPPORTED",
+              "DISPUTED"
+            ]
           }
         },
         "required": [
-          "input_kind"
+          "input_kind",
+          "state"
         ]
       },
       "then": {

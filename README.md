@@ -60,7 +60,54 @@ actual adapter and endpoint without billing, including model separation,
 refusals, invalid spans, input injection boundaries, no-checkable claims,
 segmentation limits, original-context routing and classifier failure statuses.
 These tests verify boundary behavior, not live model accuracy. The extraction
-adapter does not implement alignment, explanations, transcription or `/check`.
+adapter does not implement alignment, explanations or transcription.
+
+## Text verification (T-502)
+
+`POST /api/v1/check` accepts `{"claims":[{"id":"c1","text_ar":"...","level":"A"}],
+"input_kind":"claim","locale":"ar"}`. Pass the original question/statement as
+`text_ar` so the server can recompute its origin and detect altered scripture.
+When submitting `/extract` results, also pass `original_text` with the full input:
+the server re-extracts it to preserve question origins, personal-case context and
+original scripture spans. The eval HTTP client supplies this field automatically.
+Client levels and kinds are advisory: the server re-extracts, reclassifies and
+re-detects, retaining the more restrictive route. Claims have unique IDs, at most
+50 claims and a combined limit of 12,000 code points. Empty claims return 400;
+invalid shapes return 422; infrastructure or card-schema failures return 503.
+Original-input extraction explicitly accepts up to 50 claims and returns a card for
+each accepted claim. Extraction overflow fails with 503 `PIPELINE_DEGRADED`, rather
+than returning a silently truncated result.
+This endpoint currently supports text only; upload segments/timestamps are deferred.
+
+The composer reads state and alignment rules from policy. Models propose only
+retrieved IDs, confidence and separate bridging prose. Evidence is copied from
+loader-validated original records, with source reference and source grading.
+Generated quotations or matching source excerpts are rejected. Quran near-misses
+are associated only with the claim's original source span, including question
+spans. Generated explanation and position fields require a completed detector scan;
+error, timeout or unavailable scans fail the separation gate. Quran near-misses
+against the whole index force CONTRADICTS; hadith near-misses instead show a sourced
+wording notice. Unresolved detector/classifier/alignment, missing evidence, low
+confidence and personal cases abstain with a referral and ready-to-ask question.
+Unsupported glossary lookups carry `term: null`; the contract permits that only on
+abstaining term cards. Approved translations are not attached in this first composer.
+Arabic term labels must be exact substrings of loader-verified `text_ar`, selected
+by a checked model proposal (or the extracted term itself). Definitions remain in
+evidence. Both ordinary term fields require completed separation scans; known
+scripture/quotes or scan failures abstain. English equivalents use checksummed
+`text_en`; unverified extra `term_ar`/`term_en` record fields are ignored.
+Every selected glossary evidence item requires a completed definition scan,
+regardless of input kind or position in the selected records. Known hadith in
+any selected glossary definition abstains because glossary records lack a
+loader-verified hadith grading; comparison-record grades cannot authorize that quote.
+
+`/health` reports card schema version 1 in verification mode. Logs contain card
+counts/states only; no input, claims, source text or provider diagnostics. Services
+and the local index are reused, while requests/results are not cached or stored.
+Run the full Python suite and Node data-contract checks. Synthetic composer tests
+exercise state rows, thresholds, whole-index twins, grading, isolation, errors and
+the HTTP workflow; they do not establish religious accuracy or deployed readiness.
+The live-source contract and request-scoped gatekeeper ship separately after this PR.
 
 ## Arabic normalizer (normalizer portion of T-402)
 
@@ -367,6 +414,14 @@ guards run before alignment; level D stays CANNOT_CONFIRM even with a detected n
 scaffold currently loads metadata and budget limits only. Pipeline utilities consume these files
 separately; the HTTP routes do not yet run the classifier, composer, detector or gates.
 T-410 separately owns independent literal pinning; P-08 tests real-file startup integration.
+
+T-502's preparatory retrieval regressions in `tests/test_composer_retrieval_contract.py`
+reject high raw BM25 scores below the overlap floor, accept low raw scores above
+that floor, and include the exact-floor boundary. These test retrieval prerequisites;
+card alignment still requires the composer and its other safety gates. The policy
+YAML now pins `overlap_score_at_least: retrieval_overlap_floor`, as approved by the
+owner on Oct 4. A literal regression rejects replacement with the raw-score gate;
+the legacy raw-score tuning field remains ranking metadata.
 
 ### Content level classifier (T-405)
 

@@ -1,23 +1,41 @@
 """Reject tracked private corpus/raw/index artifacts, including force-added files."""
 
 import subprocess
+from pathlib import PurePosixPath
 
 from corpus.validate import ROOT
 
 
 def is_private_artifact(path: str) -> bool:
-    return path == "corpus/corpus.jsonl" or (
-        path.startswith(
-            (
-                "corpus/private/",
-                "corpus/index/",
-                "corpus/indexes/",
-                "data/private/",
-                "data/raw/",
-                "docs/raw/",
+    path = path.replace("\\", "/").lower()
+    parts = PurePosixPath(path)
+    # Only public code, documentation and named metadata belong under corpus/.
+    public_metadata = {"corpus/manifest.json", "corpus/approved_sources.json"}
+    corpus_output = path.startswith("corpus/") and not (
+        path in public_metadata or parts.suffix in {".py", ".md"}
+    )
+    data_output = path.startswith("data/") and ".jsonl" in parts.name
+    index_output = any(
+        suffix in {".index", ".faiss", ".pkl", ".pickle", ".npy", ".npz", ".sqlite", ".db"}
+        for suffix in parts.suffixes
+    )
+    return (
+        corpus_output
+        or data_output
+        or index_output
+        or (
+            path.startswith(
+                (
+                    "corpus/private/",
+                    "corpus/index/",
+                    "corpus/indexes/",
+                    "data/private/",
+                    "data/raw/",
+                    "docs/raw/",
+                )
             )
+            and path != "data/raw/.gitkeep"
         )
-        and path != "data/raw/.gitkeep"
     )
 
 

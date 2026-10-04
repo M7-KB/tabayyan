@@ -24,3 +24,22 @@ dist/
 /corpus/index/
 /corpus/indexes/
 /data/private/
+
+# Corpus build outputs: only code, docs and named public metadata are allowed.
+/corpus/**
+!/corpus/**/
+!/corpus/**/*.py
+!/corpus/**/*.md
+!/corpus/approved_sources.json
+!/corpus/manifest.json
+/data/**/*.jsonl*
+*.index
+*.index.*
+*.faiss
+*.faiss.*
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.sqlite
+*.db

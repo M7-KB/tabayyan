@@ -233,7 +233,7 @@ This is a public unauthenticated endpoint making requests from inside Render's n
 guard lives in the HTTP client and is covered by tests, not in a prompt or a code comment.
 
 ### `GET /health`
-`200 → {"status": "ok", "corpus_version": "v1", "corpus_items": 1234, "policy_version": "p1", "policy_approved_by": "pending", "allow_pending_review": false, "tuning_version": "t1", "card_schema_version": "1", "build": "<sha>"}`
+`200 → {"status": "ok", "corpus_version": "v1", "corpus_items": 1234, "policy_version": "p1", "policy_approved_by": "pending", "allow_pending_review": false, "corpus_status": "loaded", "corpus_error": null, "pending_review_items": 0, "tuning_version": "t1", "card_schema_version": "1", "build": "<sha>"}`
 
 `policy_version` and `policy_approved_by` come from `api/policy/content_policy.yaml` (A7) and make the
 running policy auditable from the live demo. `tuning_version` comes from `api/tuning.yaml` (§5.5), so a
@@ -590,15 +590,30 @@ image layer is as public as the repo). Instead:
 - Startup reads at most 64 MiB, hashes those bytes, then validates the same bytes against rules 1-8.
   Missing files, invalid manifests, mismatched hashes or any invalid row leave zero corpus items.
   Health-only mode never reads the artifact or manifest, even when a path is configured.
+  `/health.corpus_status` distinguishes `disabled` (health-only), `not_configured`, `loaded`
+  and `unavailable`. On failure, `corpus_error` reports the safe validator reason (row and field
+  where applicable), also logged once at startup; it is null otherwise. Never log source text,
+  private paths or parser exception details. `pending_review_items` counts loaded pending records.
 - The dated owner decision in `SOURCES.md` permits private challenge-app ingestion of `kfc-mushaf`,
   `sahih-bukhari` and `dorar-hadith`, without permitting redistribution. Private-use validation requires
   confirmed ingestion permission for both the collection and grading source; public-distribution
-  validation still requires redistribution permission. Unrelated sources retain their existing gates.
+  validation still requires redistribution permission. Runtime additionally requires either
+  redistribution clearance or literal `public_display_allowed: true` for every source and grader.
+  All current sources have public display disabled. Offline private ingestion does not authorize
+  deployment. Unrelated sources retain their existing gates.
+- **Open owner question, not decided here (section 12 item 5):** whether verbatim display in a
+  public app counts as redistribution for a source licensed for use only. Until the owner and
+  specialist record the applicable scope, such a source stays out of the deployed artifact;
+  startup rejects the entire artifact if it includes one. The composer must abstain without it.
 - `ALLOW_PENDING_REVIEW` defaults to false everywhere. The owner enables it only on the judging
   service. It additionally permits literal `approved_by: pending`, never writes or promotes that field,
   and never bypasses licence, grading, checksum, normalization or verbatim checks. `/health` reports
   `allow_pending_review` even in health-only mode. G14 remains **NOT MET** until real specialist approval.
   The setting authorizes no quotation by itself; the downstream verbatim gate remains mandatory.
+  A card using any pending record (including grading provenance) must visibly state in Arabic
+  that its evidence has not received specialist review, separately from the AI/not-a-fatwa notice.
+  The composer must carry this status from records, never model output; it may not imply approval.
+  Exact Arabic copy requires specialist review before such cards are displayed.
 
 **Derived fields.** `text_normalized` and `checksum_sha256` are produced by the shared normalizer (T-402).
 `checksum_en_sha256` is a plain SHA-256 of `text_en`'s original UTF-8 bytes — no normalization, stripping
@@ -1441,7 +1456,7 @@ first version of this document and nothing in it has been approved yet.
 
 ## 12. Open — the specialist's call
 
-The owner answered every item below in direction on 2026-10-02 (§10, third set, item D); the restrictive
+The owner answered items 1-4 below in direction on 2026-10-02 (§10, third set, item D); the restrictive
 default now ships, and what remains is the **exact wording or boundary**, which is the Sharia specialist's
 call, not the owner's or mine. Everything that was a scheduling or engineering question in the earlier
 version of this section is resolved and moved to §10.
@@ -1475,3 +1490,9 @@ version of this section is resolved and moved to §10.
    judgment by itself — flagged here because it interacts with the Qur'an/hadith split: a floor set too
    high could let a short unmarked hadith paraphrase through with no detector coverage at all.
    Recalibrated once P-03's corpus slice exists (T-508a, @Nami) against a measured run, not guessed.
+
+5. **Public verbatim display of use-only sources (owner and specialist).** Does the recorded
+   challenge-app ingestion scope permit public verbatim display without redistribution clearance?
+   Pending a recorded answer in SOURCES.md and applicable publisher policy URLs,
+   `public_display_allowed` stays false and these sources stay out of the deployed artifact.
+   The composer abstains for unavailable evidence. This is separate from pending content review.

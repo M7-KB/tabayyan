@@ -36,6 +36,7 @@ def load_private_corpus(
     manifest_path: Path = ROOT / "corpus/manifest.json",
     *,
     allow_pending_review: bool = False,
+    require_public_display: bool = True,
     sources_path: Path = ROOT / "corpus/approved_sources.json",
     register_path: Path = ROOT / "SOURCES.md",
 ) -> tuple[list[dict], str]:
@@ -65,7 +66,11 @@ def load_private_corpus(
             read_register(register_path),
             allow_pending_review=allow_pending_review,
             require_redistribution=False,
+            require_public_display=require_public_display,
         )
+    except CorpusValidationError:
+        # Validator reasons contain only fixed messages and row/field identifiers.
+        raise
     except (ValueError, UnicodeError, RecursionError):
         # Do not expose parser exceptions, private filenames or source text.
         raise CorpusValidationError("Private corpus validation failed") from None

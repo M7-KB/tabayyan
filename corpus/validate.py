@@ -125,7 +125,7 @@ def _json(path):
     try:
         return _decode(path.read_text("utf-8"))
     except (OSError, UnicodeError, ValueError) as exc:
-        raise CorpusValidationError(f"Cannot read JSON artifact: {path.name}") from exc
+        raise CorpusValidationError("Cannot read JSON metadata artifact") from exc
 
 
 def read_records(path: Path) -> list[dict]:
@@ -227,6 +227,7 @@ def validate_records(
     *,
     allow_pending_review: bool = False,
     require_redistribution: bool = True,
+    require_public_display: bool = False,
 ) -> None:
     """All eight rules, plus fail-closed ingestion permission from P-04.
 
@@ -292,6 +293,19 @@ def validate_records(
             and (not require_redistribution or source.get("redistribution_allowed") is True),
             f"{prefix}: source ingestion/redistribution not cleared (rule 5)",
         )
+        if require_public_display:
+            _require(
+                source.get("redistribution_allowed") is True
+                or source.get("public_display_allowed") is True,
+                f"{prefix}: source public_display_allowed not cleared (rule 5)",
+            )
+            if domain == "hadith":
+                grader = sources[grading["grading_source_id"]]
+                _require(
+                    grader.get("redistribution_allowed") is True
+                    or grader.get("public_display_allowed") is True,
+                    f"{prefix}: grading public_display_allowed not cleared (rule 5)",
+                )
         corpus_id = record.get("corpus_id")
         _require(
             _text(corpus_id) and corpus_id not in ids,

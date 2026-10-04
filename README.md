@@ -429,14 +429,21 @@ the SHA-256 is over the complete file bytes, including line endings. `CORPUS_MAN
 can override that public manifest path. No URL/read token is needed. No actual manifest is supplied
 until the private artifact exists. Keep real artifacts under `corpus/private/` locally; built JSONL,
 raw files and indexes are ignored and checked for accidental tracked files in CI.
+The guard covers alternate JSONL names and backups, corpus build directories, data JSONL,
+and index/embedding/database extensions even when force-added. Public corpus code/docs,
+`approved_sources.json` and the checksum-only `manifest.json` are allowed.
 
 Startup reads at most 64 MiB and validates the same bytes it hashed. All rows must pass before any
 records reach app state. Missing files, hash mismatch or an invalid row leave `corpus_items: 0` and
-`corpus_version: null`. `HEALTH_ONLY=true` skips all artifact/config reads. The application logs no
-private path, parser exception or source text. `/health` stays degraded until the pipeline is integrated.
+`corpus_version: null`. `/health` distinguishes `corpus_status: not_configured`, `loaded`,
+`unavailable` and `disabled` (health-only); `corpus_error` is a safe row/field reason on failure,
+null otherwise. That reason is logged once at startup. `HEALTH_ONLY=true` skips all artifact/config
+reads. The application logs no private path, parser exception or source text. `/health` stays degraded until the pipeline is integrated.
 
 `ALLOW_PENDING_REVIEW=false` is the default. Only the owner-managed judging service may set it true.
-`/health` always reports `allow_pending_review`. Enabling it permits only literal `pending` in addition
+`/health` always reports `allow_pending_review` and `pending_review_items` (the loaded count).
+Future cards using pending evidence must visibly disclose the lack of specialist review in Arabic
+with specialist-reviewed copy; see SPEC section 4.2. Enabling it permits only literal `pending` in addition
 to `sharia-reviewer-1`; no `approved_by` value is changed. **G14 remains NOT MET** while review is pending.
 Licensing, grading, integrity and downstream verbatim checks still apply. This flag implements no
 quote or card generation and cannot authorize display of generated religious content.
@@ -445,7 +452,12 @@ The source register records scoped owner-reported challenge-app ingestion for `k
 `sahih-bukhari` and `dorar-hadith`; redistribution remains prohibited. All other permissions remain
 unchanged. `python -m corpus.validate --private-use --allow-pending-review --corpus <private-path>`
 checks such artifacts offline. Without `--private-use`, public-distribution validation still requires
-redistribution permission. Runtime uses the private mode only via the explicit file loader.
+redistribution permission. Runtime uses the explicit file loader and additionally checks
+public-display permission for collection and grading sources. All current sources have `public_display_allowed: false`,
+so use-only sources must stay out of the deployed artifact until the owner and specialist
+resolve SPEC section 12 item 5. `ALLOW_PENDING_REVIEW` cannot bypass this permission.
+Bukhari and Dorar publisher policy URLs remain pending; owner-decision self-links are separate
+evidence and cannot replace `license_url`.
 
 Run `python -m pytest`, `ruff check .`, `ruff format --check .`,
 `node --test tests/*.test.mjs` and `python -m corpus.check_public_tree` from the repo root.

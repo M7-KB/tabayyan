@@ -15,7 +15,9 @@
       "approved_by": "pending",
       "selection_status": "candidate",
       "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
-      "license_scope": "Owner-authorized challenge-app use only; no redistribution"
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution",
+      "public_display_allowed": false,
+      "license_url": "https://policy.qurancomplex.gov.sa/?Lan=en"
     },
     {
       "source_id": "sahih-bukhari",
@@ -29,7 +31,9 @@
       "approved_by": "pending",
       "selection_status": "candidate",
       "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
-      "license_scope": "Owner-authorized challenge-app use only; no redistribution"
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution",
+      "public_display_allowed": false,
+      "license_url": "pending"
     },
     {
       "source_id": "sahih-muslim",
@@ -41,7 +45,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "public_display_allowed": false
     },
     {
       "source_id": "dorar-hadith",
@@ -55,7 +60,9 @@
       "approved_by": "pending",
       "selection_status": "candidate",
       "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night",
-      "license_scope": "Owner-authorized challenge-app use only; no redistribution"
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution",
+      "public_display_allowed": false,
+      "license_url": "pending"
     },
     {
       "source_id": "jamhara-glossary",
@@ -67,7 +74,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "public_display_allowed": false
     },
     {
       "source_id": "bayyinat",
@@ -79,7 +87,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "public_display_allowed": false
     },
     {
       "source_id": "approved-quran-translation",
@@ -91,7 +100,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "pending_exact_item"
+      "selection_status": "pending_exact_item",
+      "public_display_allowed": false
     },
     {
       "source_id": "dorar-tafsir",
@@ -103,7 +113,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "public_display_allowed": false
     },
     {
       "source_id": "dorar-aqeeda",
@@ -115,7 +126,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "public_display_allowed": false
     },
     {
       "source_id": "dorar-fiqh",
@@ -127,7 +139,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "public_display_allowed": false
     },
     {
       "source_id": "dorar-history",
@@ -139,7 +152,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "candidate"
+      "selection_status": "candidate",
+      "public_display_allowed": false
     },
     {
       "source_id": "dawa-other",
@@ -151,7 +165,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "pending_exact_item"
+      "selection_status": "pending_exact_item",
+      "public_display_allowed": false
     },
     {
       "source_id": "jamhara-dawah",
@@ -163,7 +178,8 @@
       "redistribution_allowed": false,
       "ingestion_allowed": false,
       "approved_by": "pending",
-      "selection_status": "pending_exact_item"
+      "selection_status": "pending_exact_item",
+      "public_display_allowed": false
     }
   ],
   "pending_alternatives": [

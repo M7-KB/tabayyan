@@ -23,6 +23,7 @@ def private_files(tmp_path):
     item["approved_by"] = "pending"
     for source in sources.values():
         source["redistribution_allowed"] = False
+        source["public_display_allowed"] = True
     corpus = tmp_path / "private-name.jsonl"
     manifest = tmp_path / "manifest.json"
     source_path = tmp_path / "sources.json"
@@ -173,7 +174,7 @@ def test_bad_artifacts_fail_without_private_diagnostics(private_files, mutation,
         load(private_files, allow_pending_review=True)
     assert "private-name" not in str(caught.value)
     assert "private-source-text" not in str(caught.value)
-    assert caught.value.__suppress_context__
+    assert not isinstance(caught.value.__cause__, json.JSONDecodeError)
 
 
 @pytest.mark.parametrize("flag", [False, True])
@@ -203,6 +204,8 @@ def test_app_publishes_only_fully_validated_corpus(private_files, monkeypatch, f
         assert health["allow_pending_review"] is flag
         assert health["corpus_items"] == (1 if flag else 0)
         assert health["corpus_version"] == ("test-v1" if flag else None)
+        assert health["corpus_status"] == ("loaded" if flag else "unavailable")
+        assert health["pending_review_items"] == (1 if flag else 0)
         assert health["policy_approved_by"] == "pending"
         assert health["status"] == "degraded"  # Pipeline endpoints are still unimplemented.
         assert len(app.state.corpus) == health["corpus_items"]
@@ -211,7 +214,10 @@ def test_app_publishes_only_fully_validated_corpus(private_files, monkeypatch, f
         corpus.write_bytes(b"private-source-text")
     # A fresh startup cannot reuse a prior successfully loaded artifact.
     with TestClient(app) as client:
-        assert client.get("/health").json()["corpus_items"] == 0
+        health = client.get("/health").json()
+        assert health["corpus_items"] == 0
+        assert health["corpus_status"] == "unavailable"
+        assert health["corpus_error"] == "Private corpus checksum mismatch"
         assert app.state.corpus == []
 
 
@@ -255,7 +261,10 @@ def test_owner_clearance_is_scoped_to_three_sources():
         assert source["license_status"] == ("confirmed" if key in cleared else "pending")
         if key in cleared:
             assert register[key]["license"] == source["license_scope"]
-            assert register[key]["license_url"] == source["license_evidence_url"]
+            assert register[key]["license_url"] == source["license_url"]
+            assert register[key]["Owner decision evidence URL"] == source["license_evidence_url"]
+            assert "github.com/M7-KB/tabayyan" not in register[key]["license_url"]
+        assert source["public_display_allowed"] is False
 
 
 def test_private_tree_guard_and_public_manifest():
@@ -305,3 +314,100 @@ def test_private_mode_does_not_accept_unknown_source():
         validate_records(
             [item], *metadata("faq"), allow_pending_review=True, require_redistribution=False
         )
+
+
+@pytest.mark.parametrize("source_id", ["hadith", "dorar-hadith"])
+@pytest.mark.parametrize("permission", [None, False, "true"])
+def test_runtime_rejects_unresolved_public_display(private_files, source_id, permission):
+    _, sources, _, _, source_path, _, _ = private_files
+    sources[source_id]["public_display_allowed"] = permission
+    source_path.write_text(json.dumps({"sources": list(sources.values())}), encoding="utf-8")
+    with pytest.raises(CorpusValidationError, match="row 1: .*public_display_allowed"):
+        load(private_files, allow_pending_review=True)
+    # Offline ingestion validation is distinct from runtime public display.
+    assert load(private_files, allow_pending_review=True, require_public_display=False)[0]
+
+
+def test_startup_retains_safe_row_error(private_files, monkeypatch, caplog):
+    item, _, corpus, manifest, sources, register, write = private_files
+    bad = dict(item, corpus_id="private-source-text", text_normalized="private-source-text")
+    write([item, bad])
+
+    def actual_loader(path, manifest_path, *, allow_pending_review):
+        return load_private_corpus(
+            path,
+            manifest_path,
+            allow_pending_review=allow_pending_review,
+            sources_path=sources,
+            register_path=register,
+        )
+
+    monkeypatch.setattr("api.main.load_private_corpus", actual_loader)
+    app = create_app(
+        Settings(
+            openai_api_key="inert-test-value",
+            private_corpus_path=corpus,
+            corpus_manifest_path=manifest,
+            allow_pending_review=True,
+        )
+    )
+    with TestClient(app) as client:
+        health = client.get("/health").json()
+        assert health["corpus_status"] == "unavailable"
+        assert health["corpus_error"] == "row 2: text_normalized mismatch (rule 4)"
+        assert health["corpus_items"] == health["pending_review_items"] == 0
+        assert "private-source-text" not in client.get("/health").text
+    messages = [r.getMessage() for r in caplog.records if r.name == "api.main"]
+    assert messages == ["Private corpus unavailable: row 2: text_normalized mismatch (rule 4)"]
+    assert str(corpus) not in caplog.text
+    assert "private-source-text" not in caplog.text
+
+
+@pytest.mark.parametrize("approved_by", ["pending", "sharia-reviewer-1"])
+def test_health_counts_actual_pending_records(private_files, monkeypatch, approved_by):
+    item, _, corpus, manifest, sources, register, write = private_files
+    write([dict(item, approved_by=approved_by)])
+
+    def actual_loader(path, manifest_path, *, allow_pending_review):
+        return load_private_corpus(
+            path,
+            manifest_path,
+            allow_pending_review=allow_pending_review,
+            sources_path=sources,
+            register_path=register,
+        )
+
+    monkeypatch.setattr("api.main.load_private_corpus", actual_loader)
+    with TestClient(
+        create_app(
+            Settings(
+                openai_api_key="inert-test-value",
+                private_corpus_path=corpus,
+                corpus_manifest_path=manifest,
+                allow_pending_review=True,
+            )
+        )
+    ) as client:
+        health = client.get("/health").json()
+        assert health["corpus_status"] == "loaded"
+        assert health["corpus_error"] is None
+        assert health["pending_review_items"] == (1 if approved_by == "pending" else 0)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "corpus/corpus.v1.jsonl",
+        "corpus/quran.jsonl",
+        "corpus/build/corpus.jsonl",
+        "corpus/corpus.jsonl.bak",
+        "corpus/records/bukhari.jsonl",
+        "data/corpus.jsonl",
+        "corpus/faiss.index",
+        "data/embeddings.npy",
+        "data/vector.faiss.bak",
+    ],
+)
+def test_alternate_build_outputs_are_ignored_and_rejected(path):
+    assert is_private_artifact(path)
+    assert subprocess.run(["git", "check-ignore", path], capture_output=True).returncode == 0

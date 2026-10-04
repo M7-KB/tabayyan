@@ -1082,14 +1082,28 @@ referral:
 ```yaml
 tuning_version: t1
 card_confidence_min: 0.5
+level_confidence_min: 0.5       # classification only; independent of card evidence (T-405)
 alignment_confidence_min: 0.6
-retrieval_score_floor: 8.0
+retrieval_score_floor: 8.0      # legacy raw BM25 value; not enforced until SPEC/calibration update
+retrieval_overlap_floor: 0.25   # overlap_score gate in retrieve() (T-404); uncalibrated, real-corpus pass pending
+retrieval_overlap_min_terms: 1  # denominator lower bound for overlap_score
 word_budget_table:              # §5.2 — no tier may exceed word_budget_ceiling in content_policy.yaml
   "4": 1                        # n <= 4 tokens
   "10": 2                       # n <= 10 tokens
   "else": 3                     # n > 10 tokens
 trigger_b_min_window_tokens: 3  # Trigger B only; recalibrated after P-03 (T-508a)
 ```
+
+**Classifier and retrieval gates (T-405, T-404).** Two thresholds are independent of the card floor. The
+level classifier's `level_confidence_min` gates classification only; a low-confidence or unavailable
+classification resolves to level D with `classifier_status` set to `low_confidence` or `unavailable`. The
+composer must check `classifier_status` before applying any level-D personal-case copy. Retrieval's
+`overlap_score` (distinct matched query terms over `max(retrieval_overlap_min_terms, distinct query terms)`)
+is a separate gate in `retrieve()`, and `retrieval_score` is a rank value only. `retrieval_score_floor` is
+legacy metadata until the calibration update.
+
+**The span detector always searches the whole scripture index.** It never takes retrieval candidates as its
+index. A candidate list can narrow what the card cites; it cannot narrow what the detector can match.
 
 The state machine reads both files and asserts against them; it does not duplicate the §5.1 table in
 Python. The startup check that no `word_budget_table` tier exceeds `word_budget_ceiling` is a hard

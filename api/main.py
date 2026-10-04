@@ -6,9 +6,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.classifier import LevelClassifier
 from api.config import load_config
-from api.errors import install_handlers
+from api.errors import install_handlers, response
+from api.extract import ExtractionError, Extractor, ExtractRequest, ExtractResponse
+from api.provider import OpenAIStructuredModel
 from api.settings import Settings
+from api.span_detector import DetectorConfig, Record, SpanDetector
 from corpus.private_artifact import load_private_corpus
 from corpus.validate import CorpusValidationError
 
@@ -64,6 +68,50 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Content-Type"],
     )
     install_handlers(app)
+
+    if not settings.health_only:
+
+        @app.post("/api/v1/extract", response_model=ExtractResponse)
+        def extract(request: ExtractRequest):
+            try:
+                if not request.text.strip():
+                    raise ExtractionError(400, "NO_CLAIMS")
+                # Construction is lazy so health checks do not call the provider.
+                # Tests can inject the same swappable service through app.state.
+                service = getattr(app.state, "extractor", None)
+                if service is None:
+                    key = settings.openai_api_key.get_secret_value()
+                    model = OpenAIStructuredModel(api_key=key, model=settings.openai_model_extract)
+                    classifier = LevelClassifier(
+                        model=OpenAIStructuredModel(
+                            api_key=key, model=settings.openai_model_reason
+                        ),
+                        policy_path=settings.content_policy_path,
+                        tuning_path=settings.tuning_path,
+                    )
+                    detector = SpanDetector(
+                        [
+                            Record(r["corpus_id"], r["domain"], r["text_ar"])
+                            for r in app.state.corpus
+                        ],
+                        DetectorConfig.from_files(
+                            settings.content_policy_path,
+                            settings.tuning_path,
+                        ),
+                    )
+                    service = Extractor(model=model, classifier=classifier, detector=detector)
+                return service.extract(request)
+            except ExtractionError as exc:
+                return response(
+                    exc.status,
+                    exc.code,
+                    "Extraction could not be completed",
+                    "تعذر إتمام استخراج الادعاءات",
+                )
+            except Exception:
+                return response(
+                    503, "PIPELINE_DEGRADED", "Extraction unavailable", "استخراج الادعاءات غير متاح"
+                )
 
     @app.get("/health")
     async def health() -> dict:

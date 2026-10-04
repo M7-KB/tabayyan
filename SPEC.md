@@ -331,6 +331,17 @@ Response:
 the user waits on retrieval. `scripture_spans` is advisory to the UI; the server recomputes it during
 `/check` and never trusts the client copy.
 
+T-501 transport details: all spans are half-open Unicode code-point offsets into the original
+input, including scripture spans (JavaScript consumers must convert from UTF-16 before slicing).
+Unmarked detector windows use `marker: null`. Each claim additionally returns `classifier_status`
+(`rule_forced | model_validated | low_confidence | unavailable`) and `span_detector_status`, so missing
+classification or an unavailable scripture index is explicit. The API accepts up to 12,000 code points
+and `max_claims` from 1 to 50; omitted `max_claims` defaults to 10. Stated assertions retain original
+wording; generated question subjects/presuppositions remain untrusted claims, never evidence.
+English input retains English in the legacy `text_ar` field. Provider or source-span validation
+failure returns `503 PIPELINE_DEGRADED`, unsupported language `422 TEXT_NOT_SUPPORTED_LANG`, invalid
+request shape `422 INVALID_REQUEST`. No extracted claim establishes a quote, alignment or state.
+
 When the input is a term lookup or an explanation request with no checkable proposition,
 `no_checkable_claim` is `true` and `claims` holds one `term_lookup` claim rather than zero — see §4.4.
 `400 NO_CLAIMS` is returned only for input that is neither a claim, a question, nor a term.

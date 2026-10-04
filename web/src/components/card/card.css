@@ -75,8 +75,16 @@
 .scripture-block .quote {
   margin: 0.25rem 0;
   padding: 0.5rem 0.75rem;
+  font-family: 'Amiri Quran', serif;
   font-size: 1.15rem;
-  font-weight: 500;
+  font-weight: 400;
+  line-height: 1.9;
+}
+
+.quote-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #4a4a4a;
 }
 
 .quote-en {

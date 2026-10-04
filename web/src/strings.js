@@ -31,7 +31,7 @@ export const strings = {
 
   // Card UI (T-505). stateLabels and sourceTextIntro follow the SPEC.md §12 item 1 table. Only
   // supported_contradicts and sourceTextIntro are owner-given; the other three labels are PROVISIONAL
-  // and need Sharia specialist approval before release.
+  // and need owner review before release (SPEC.md §0.7).
   stateLabels: {
     supported_confirms: 'يؤيده المصدر المعتمد',
     supported_contradicts: 'لا يطابق المصدر المعتمد',

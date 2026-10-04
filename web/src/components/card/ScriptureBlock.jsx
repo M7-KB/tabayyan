@@ -29,6 +29,7 @@ export function ScriptureBlock({ item }) {
           {strings.sourceLink}
         </a>
       </p>
+      <p className="quote-note">{strings.quoteSourceNote}</p>
       {item.translation && (
         <section className="translation-block" data-role="translation" aria-label={strings.translationLabel}>
           <blockquote className="quote quote-en" lang="en" dir="ltr">

@@ -270,6 +270,121 @@ def test_conflicting_scripture_duplicates_remain_unsafe_embedded_text():
         assert gate(h, conflict, a).verify("live:islamqa:one", text) is None
 
 
+ORDINARY_FIELDS = [
+    "explanation_ar",
+    "explanation_en",
+    "label_ar",
+    "summary_ar",
+    "term_ar",
+    "term_en",
+]
+REJECTED_TEXTS = ["قلم دفتر ورقة مسطرة حقيبة", "نافذة باب جدار سقف أرضية"]
+
+
+def ordinary_case(field, text):
+    a = raw()
+    if field.startswith("term_"):
+        a.update(
+            source_id="terminologyenc",
+            domain="glossary",
+            source_url="https://mcp.islamiccontent.org/test/one",
+            text_ar="مصطلح تجريبي مستقل",
+            text_en="Synthetic independent term",
+        )
+        if field == "term_ar":
+            a["text_ar"] = text
+        else:
+            a["text_en"] = text
+    key = "live:" + a["source_id"] + ":one"
+    p = proposal(corpus_ids=[key])
+    if field.startswith("explanation_"):
+        p[field] = text
+    elif field in {"label_ar", "summary_ar"}:
+        position = {
+            "label_ar": "Independent label",
+            "summary_ar": "Independent summary",
+            "corpus_ids": [key],
+        }
+        position[field] = text
+        p["positions"] = [position]
+    else:
+        p["term_label_ar"] = a["text_ar"]
+    return a, p
+
+
+def compose_ordinary(g, p, a, field):
+    card = composer_with(g, p).compose(
+        claim(a["text_ar"]),
+        original=a["text_ar"],
+        lang="en",
+        input_kind="term" if field.startswith("term_") else "claim",
+        no_checkable_claim=False,
+    )
+    VALIDATOR.validate(card)
+    return card
+
+
+@pytest.mark.parametrize("field", ORDINARY_FIELDS)
+@pytest.mark.parametrize("marked", [False, True])
+@pytest.mark.parametrize("text", REJECTED_TEXTS)
+@pytest.mark.parametrize("rejection", ["conflict", "grading", "reference", "grading_url"])
+def test_rejected_scripture_cannot_enter_any_ordinary_field(field, marked, text, rejection):
+    h = raw("dorar-hadith", text, domain="hadith")
+    records = [h]
+    if rejection == "conflict":
+        records.append({**h, "text_ar": next(t for t in REJECTED_TEXTS if t != text)})
+    elif rejection == "grading":
+        del h["grading"]
+    elif rejection == "reference":
+        h["ref"] = {"number": 1}
+    else:
+        h["grading"]["grading_source_url"] = "https://evil.invalid/grade"
+    candidate = '"' + text + '"' if marked else text
+    a, p = ordinary_case(field, candidate)
+    g = gate(*records, a)
+    # Even a source-backed glossary exemption cannot bypass the completed scan.
+    assert not composer_with(g, p)._isolated(candidate, glossary_label_id="live:terminologyenc:one")
+    card = compose_ordinary(g, p, a, field)
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["evidence"] == [] and card["positions"] == [] and card["term"] is None
+    assert text not in card["explanation_ar"]
+    assert text not in (card["explanation_en"] or "")
+
+
+@pytest.mark.parametrize("field", ORDINARY_FIELDS)
+def test_safe_ordinary_fields_survive_rejected_scripture_knowledge(field):
+    a, p = ordinary_case(field, "Independent safe wording")
+    records = [raw("dorar-hadith", text, domain="hadith") for text in REJECTED_TEXTS]
+    card = compose_ordinary(gate(*records, a), p, a, field)
+    assert card["state"] == "SUPPORTED"
+    assert card["gate_report"]["separation"] == "pass"
+
+
+@pytest.mark.parametrize("field", ORDINARY_FIELDS)
+@pytest.mark.parametrize("failure", ["timeout", "error", "index_unavailable"])
+def test_ordinary_fields_fail_closed_when_safety_scan_does_not_complete(
+    monkeypatch, field, failure
+):
+    from api.span_detector import Detection
+
+    target = "Independent safe wording"
+    a, p = ordinary_case(field, target)
+    g = gate(a)
+    scan = g.scan_scripture
+
+    def failing_scan(text):
+        if text != target:
+            return scan(text)
+        if failure == "error":
+            raise RuntimeError("Synthetic scan failure")
+        return Detection(failure)
+
+    monkeypatch.setattr(g, "scan_scripture", failing_scan)
+    card = compose_ordinary(g, p, a, field)
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["evidence"] == [] and card["positions"] == [] and card["term"] is None
+
+
 def test_duplicate_record_refs_fail_closed_even_when_seen_three_times():
     r = raw()
     assert len(gate(r, r, r).records) == 1

@@ -237,9 +237,16 @@ class QuoteGatekeeper:
             return None
         return copy.deepcopy(r)
 
+    def scan_scripture(self, text: str):
+        """Scan safety knowledge without authorizing display or alignment vetoes."""
+        return self._embedded_detector.detect(text)
+
     def _embedded(self, text: str) -> list[dict] | None:
         """Require each detected scripture span to have its own authorized record."""
-        detection = self._embedded_detector.detect(text)
+        try:
+            detection = self.scan_scripture(text)
+        except Exception:
+            return None
         if detection.span_detector_status != "ran":
             return None
         dependencies = {}

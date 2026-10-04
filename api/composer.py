@@ -149,7 +149,11 @@ class Composer:
         if self.detector._marked(text):
             return False
         try:
-            detection = self.detector.detect(text)
+            detection = (
+                self.gatekeeper.scan_scripture(text)
+                if self.gatekeeper is not None
+                else self.detector.detect(text)
+            )
         except Exception:
             return False
         if (

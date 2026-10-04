@@ -40,6 +40,8 @@
   --c-state-cc-bg: #e6ebf1;
 
   font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  /* Turn off required ligatures for UI text: the rlig lam-alif glyph renders wrongly at small sizes in some browsers. Scripture resets this in card.css. */
+  font-feature-settings: 'rlig' 0;
   line-height: 1.7;
   color: var(--c-text);
   background: var(--c-bg);

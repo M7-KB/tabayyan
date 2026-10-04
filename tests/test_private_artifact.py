@@ -264,7 +264,9 @@ def test_owner_clearance_is_scoped_to_three_sources():
             assert register[key]["license_url"] == source["license_url"]
             assert register[key]["Owner decision evidence URL"] == source["license_evidence_url"]
             assert "github.com/M7-KB/tabayyan" not in register[key]["license_url"]
-        assert source["public_display_allowed"] is False
+        # Owner decision 2026-10-05 permits matched KFC/Dorar display only;
+        # Bukhari is dropped, and all file redistribution remains disabled.
+        assert source["public_display_allowed"] is (key in {"kfc-mushaf", "dorar-hadith"})
 
 
 def test_private_tree_guard_and_public_manifest():

@@ -797,12 +797,29 @@ The source register records scoped owner-reported challenge-app ingestion for `k
 unchanged. `python -m corpus.validate --private-use --allow-pending-review --corpus <private-path>`
 checks such artifacts offline. Without `--private-use`, public-distribution validation still requires
 redistribution permission. Runtime uses the explicit file loader and additionally checks
-public-display permission for collection and grading sources. All current sources have `public_display_allowed: false`,
-so use-only sources must stay out of the deployed artifact until the owner and specialist
-resolve SPEC section 12 item 5. `ALLOW_PENDING_REVIEW` cannot bypass this permission.
+public-display permission for collection and grading sources. KFC and Dorar hadith permit
+matched public display under the 2026-10-05 owner scope below. Sources or grading records
+without recorded display permission stay out of deployed artifacts; `ALLOW_PENDING_REVIEW`
+cannot bypass that permission. SPEC section 12 item 5 is resolved; no specialist approval
+is required for this display decision.
 Bukhari and Dorar publisher policy URLs remain pending; owner-decision self-links are separate
 evidence and cannot replace `license_url`.
 
 Run `python -m pytest`, `ruff check .`, `ruff format --check .`,
 `node --test tests/*.test.mjs` and `python -m corpus.check_public_tree` from the repo root.
 Tests use synthetic non-scriptural fixtures; no private artifacts or credentials are used by public CI.
+
+## Owner display scope and Quran-only artifact (2026-10-05)
+
+The owner permits matched verses, hadith, gradings and short excerpts in the deployed
+challenge app with visible source and link; no bulk display, download or file redistribution.
+See [SOURCES.md](SOURCES.md#owner-public-display-decision-2026-10-05) for evidence and limits.
+KFC and Dorar display flags are true; source binding and grading checks still apply.
+The local artifact is KFC standard-Unicode Hafs v30 only: match `aya_text_emlaey`,
+display `aya_text_unicode` of the same `(sura_no, aya_no)` record, unchanged including
+the end-of-ayah mark. Hafs Smart and the four local Bukhari records are dropped.
+There is no local hadith index; same-request Dorar results provide partial coverage,
+so unmarked hadith outside those results may go undetected. Until the live Dorar
+connector lands, hadith claims abstain with referral. The binding implementation and
+Render switch remain separate reviewed work. Records keep `approved_by: pending`,
+with `ALLOW_PENDING_REVIEW=true`; owner review is recorded in handoff metadata.

@@ -24,6 +24,9 @@ describe('App shell', () => {
     for (const line of strings.privacyLines) {
       expect(within(privacy).getByText(line)).toBeInTheDocument()
     }
+    expect(
+      within(privacy).getByText('لا نحفظه في خوادمنا، وقد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته.'),
+    ).toBeVisible()
   })
 })
 

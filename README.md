@@ -393,7 +393,9 @@ npm run build
 
 The page shows a temporary development-preview banner (remove it when T-504 wires the check endpoint),
 the input screen has the AI-not-a-fatwa notice (always visible), the privacy notice before submit, and
-the upload consent checkbox that gates the upload button. The privacy notice covers text input only
+the upload consent checkbox that gates the upload button. The upload form is hidden in this text-first build:
+it sits behind `features.mediaUpload` in `web/src/config/features.js`, which is `false` by default. The audio
+task sets it to `true`. The privacy notice covers text input only
 (text first; audio/video and image input are not live yet, image input is P2). It says the text goes to
 the AI provider, only the extracted search phrases go to approved sources (SPEC §0.6), we do not store
 the text, and the provider may keep data briefly under its own policy. No API calls yet: submit

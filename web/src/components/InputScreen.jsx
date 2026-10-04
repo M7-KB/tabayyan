@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { strings } from '../strings.js'
+import { features } from '../config/features.js'
 import { PrivacyNotice } from './PrivacyNotice.jsx'
 
 export function InputScreen({ onSubmitText, onSubmitMedia }) {
@@ -55,37 +56,39 @@ export function InputScreen({ onSubmitText, onSubmitMedia }) {
         </button>
       </form>
 
-      <form className="upload-form" onSubmit={handleUploadSubmit}>
-        <fieldset>
-          <legend>{strings.uploadHeading}</legend>
-          <p className="hint">{strings.uploadLimits}</p>
+      {features.mediaUpload && (
+        <form className="upload-form" onSubmit={handleUploadSubmit}>
+          <fieldset>
+            <legend>{strings.uploadHeading}</legend>
+            <p className="hint">{strings.uploadLimits}</p>
 
-          <label className="file-label">
-            <span>{strings.uploadChooseFile}</span>
-            <input
-              type="file"
-              accept="audio/*,video/*"
-              onChange={(event) => setFile(event.target.files[0] ?? null)}
-            />
-          </label>
-          {file && <p className="file-name">{file.name}</p>}
+            <label className="file-label">
+              <span>{strings.uploadChooseFile}</span>
+              <input
+                type="file"
+                accept="audio/*,video/*"
+                onChange={(event) => setFile(event.target.files[0] ?? null)}
+              />
+            </label>
+            {file && <p className="file-name">{file.name}</p>}
 
-          <label className="consent-label">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(event) => setConsent(event.target.checked)}
-            />
-            <span>{strings.consent}</span>
-          </label>
+            <label className="consent-label">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(event) => setConsent(event.target.checked)}
+              />
+              <span>{strings.consent}</span>
+            </label>
 
-          {uploadHint && <p className="hint">{uploadHint}</p>}
+            {uploadHint && <p className="hint">{uploadHint}</p>}
 
-          <button type="submit" disabled={!canUpload}>
-            {strings.uploadSubmit}
-          </button>
-        </fieldset>
-      </form>
+            <button type="submit" disabled={!canUpload}>
+              {strings.uploadSubmit}
+            </button>
+          </fieldset>
+        </form>
+      )}
     </section>
   )
 }

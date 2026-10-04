@@ -12,8 +12,9 @@ from pydantic import Field
 
 from api.config import load_config
 from api.extract import ExtractedClaim, StrictObject
+from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.model import StructuredModel
-from api.retrieval import RetrievalResult, Retriever
+from api.retrieval import BM25Retriever, RetrievalResult, Retriever
 from api.span_detector import SpanDetector, words
 from corpus.normalize import normalize_arabic
 
@@ -79,6 +80,9 @@ def evidence_from(result: RetrievalResult) -> dict:
         "verbatim_verified": True,
         "retrieval_score": result.retrieval_score,
     }
+    if "source_ref" in r:
+        del item["corpus_id"]
+        item["source_ref"] = copy.deepcopy(r["source_ref"])
     # A copied quote must also retain the validated indexing key.
     if (
         not normalize_arabic(item["quote_ar"])
@@ -99,12 +103,44 @@ class Composer:
         records: list[dict],
         policy_path: Path,
         tuning_path: Path,
+        gatekeeper: QuoteGatekeeper | None = None,
     ):
         self.model, self.retriever, self.detector = model, retriever, detector
         self.records = {r["corpus_id"]: copy.deepcopy(r) for r in records}
         self.order = {r["corpus_id"]: i for i, r in enumerate(records)}
         self.metadata, self.tuning = load_config(policy_path, tuning_path)
         self.policy = yaml.safe_load(policy_path.read_text("utf-8"))
+        self.gatekeeper = gatekeeper
+        self.policy_path, self.tuning_path = policy_path, tuning_path
+
+    def for_request(self, source_request: SourceRequest | None = None):
+        if self.gatekeeper is None:
+            return self
+        gatekeeper = QuoteGatekeeper(
+            local_records=self.gatekeeper.local_records,
+            request=source_request or SourceRequest(),
+            detector_config=self.gatekeeper.config,
+        )
+        records = gatekeeper.records
+        return Composer(
+            model=self.model,
+            retriever=BM25Retriever(records, self.tuning),
+            detector=gatekeeper.detector,
+            records=records,
+            policy_path=self.policy_path,
+            tuning_path=self.tuning_path,
+            gatekeeper=gatekeeper,
+        )
+
+    def _evidence(self, result: RetrievalResult):
+        if self.gatekeeper is None:
+            return evidence_from(result)
+        original = self.gatekeeper.verify(result.corpus_id, result.record["text_ar"])
+        if original is None:
+            raise ValueError("Source quote rejected")
+        return evidence_from(
+            RetrievalResult(original, result.retrieval_score, result.overlap_score)
+        )
 
     def _isolated(self, text: str, *, glossary_label_id: str | None = None) -> bool:
         if not isinstance(text, str) or not text.strip():
@@ -219,6 +255,24 @@ class Composer:
                 card["referral"]["ready_to_ask_question_ar"] = (
                     "هل يمكن توضيح هذه المسألة وبيان مصادرها، وما المعلومات اللازمة للتحقق منها؟"
                 )
+            if self.gatekeeper is not None:
+                # Show a hadith's own source/grading even when it is embedded in
+                # an answer excerpt on a disputed or abstaining card.
+                for e in list(card["evidence"]):
+                    for r in self.gatekeeper.dependencies(e["evidence_id"], e["quote_ar"]):
+                        if r["corpus_id"] not in {x["evidence_id"] for x in card["evidence"]}:
+                            card["evidence"].append(self._evidence(RetrievalResult(r, 0, 0)))
+                card["published_answer"] = None
+                if card["state"] == "SUPPORTED":
+                    for e in list(card["evidence"]):
+                        bound = self.gatekeeper.published_answer(e["evidence_id"], e["quote_ar"])
+                        if bound is None:
+                            continue
+                        card["published_answer"], dependencies = bound
+                        for r in dependencies:
+                            if r["corpus_id"] not in {x["evidence_id"] for x in card["evidence"]}:
+                                card["evidence"].append(self._evidence(RetrievalResult(r, 0, 0)))
+                        break
             VALIDATOR.validate(card)
             return card
 
@@ -262,14 +316,33 @@ class Composer:
         card["alignment_confidence"] = proposal.alignment_confidence
         by_id = {r.corpus_id: r for r in candidates}
         # Reject invented IDs even when a valid ID appears alongside them.
-        if len(set(proposal.corpus_ids)) != len(proposal.corpus_ids) or any(
-            cid not in by_id or cid not in self.records or by_id[cid].record != self.records[cid]
-            for cid in proposal.corpus_ids
+        if self.gatekeeper is None and (
+            len(set(proposal.corpus_ids)) != len(proposal.corpus_ids)
+            or any(
+                cid not in by_id
+                or cid not in self.records
+                or by_id[cid].record != self.records[cid]
+                for cid in proposal.corpus_ids
+            )
         ):
             gate["verbatim"] = "fail"
             return finish("VERBATIM_GATE_FAILED")
+        selected_ids = []
+        if self.gatekeeper is not None:
+            for cid in dict.fromkeys(proposal.corpus_ids):
+                try:
+                    if cid not in by_id or by_id[cid].record != self.records[cid]:
+                        raise ValueError("Unbound source")
+                    item = self._evidence(by_id[cid])
+                except Exception:
+                    gate["verbatim"] = "fail"
+                    continue
+                selected_ids.append(cid)
+                card["evidence"].append(item)
         try:
-            card["evidence"] = [evidence_from(by_id[cid]) for cid in proposal.corpus_ids]
+            if self.gatekeeper is None:
+                selected_ids = proposal.corpus_ids
+                card["evidence"] = [self._evidence(by_id[cid]) for cid in selected_ids]
         except (KeyError, ValueError, TypeError):
             gate["grading"] = gate["verbatim"] = "fail"
             card["evidence"] = []
@@ -309,7 +382,12 @@ class Composer:
         prose = [proposal.explanation_ar]
         if lang == "en":
             prose.append(proposal.explanation_en)
-        prose.extend(s for p in proposal.positions for s in (p.label_ar, p.summary_ar))
+        prose.extend(
+            s
+            for p in proposal.positions
+            if self.gatekeeper is None or set(p.corpus_ids) <= set(selected_ids)
+            for s in (p.label_ar, p.summary_ar)
+        )
         if not all(self._isolated(s) for s in prose):
             gate["separation"] = "fail"
             card["evidence"] = []
@@ -317,7 +395,7 @@ class Composer:
         card["explanation_ar"] = proposal.explanation_ar
         card["explanation_en"] = proposal.explanation_en if lang == "en" else None
         if input_kind == "term":
-            glossary = by_id[proposal.corpus_ids[0]].record
+            glossary = by_id[selected_ids[0]].record
             # The loader verifies these original fields and their checksums.
             # Optional extra term fields carry no provenance and are never used.
             if not all(
@@ -343,12 +421,15 @@ class Composer:
                 "term_en": glossary["text_en"],
                 "glossary_corpus_id": glossary["corpus_id"],
             }
+            if "source_ref" in glossary:
+                del card["term"]["glossary_corpus_id"]
+                card["term"]["source_ref"] = copy.deepcopy(glossary["source_ref"])
         positions = []
         used = set()
         gap = proposal.evidence_gap
         for p in proposal.positions:
             ids = set(p.corpus_ids)
-            if len(ids) != len(p.corpus_ids) or not ids <= set(proposal.corpus_ids) or ids & used:
+            if len(ids) != len(p.corpus_ids) or not ids <= set(selected_ids) or ids & used:
                 gap = True
                 continue
             used |= ids
@@ -360,6 +441,17 @@ class Composer:
                     "evidence_ids": p.corpus_ids,
                 }
             )
+        if self.gatekeeper is not None:
+            seen_sources = set()
+            separate = []
+            for p in positions:
+                sources = {by_id[cid].record["source_id"] for cid in p["evidence_ids"]}
+                if sources & seen_sources:
+                    gap = True
+                    continue
+                seen_sources |= sources
+                separate.append(p)
+            positions = separate
         positions.sort(key=lambda p: min(self.order[cid] for cid in p["evidence_ids"]))
         facts = {
             "min_evidence": len(card["evidence"]),
@@ -388,7 +480,7 @@ class Composer:
             "proposal": proposal.alignment_proposal,
             "quran_near_miss": quran_near,
             "confidence_at_least": proposal.alignment_confidence,
-            "overlap_score_at_least": min(by_id[cid].overlap_score for cid in proposal.corpus_ids),
+            "overlap_score_at_least": min(by_id[cid].overlap_score for cid in selected_ids),
         }
         for rule in self.policy["alignment_rules"]:
             applies = True
@@ -414,10 +506,10 @@ class Composer:
                 correct = next(
                     f.match.record.corpus_id for f in near if f.match.record.domain == "quran"
                 )
-                if correct not in {e["corpus_id"] for e in card["evidence"]}:
+                if correct not in {e["evidence_id"] for e in card["evidence"]}:
                     try:
                         card["evidence"].append(
-                            evidence_from(RetrievalResult(self.records[correct], 0, 0))
+                            self._evidence(RetrievalResult(self.records[correct], 0, 0))
                         )
                     except Exception:
                         card["evidence"] = []
@@ -431,7 +523,7 @@ class Composer:
         finding = near[0]
         try:
             record = self.records[finding.match.record.corpus_id]
-            item = evidence_from(RetrievalResult(record, 0, 0))
+            item = self._evidence(RetrievalResult(record, 0, 0))
         except Exception:
             return
         card["misquote_notice"] = {

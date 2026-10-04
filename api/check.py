@@ -1,5 +1,6 @@
 """Stateless text-check orchestration; client classification is advisory."""
 
+import copy
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -7,6 +8,7 @@ from pydantic import Field, model_validator
 
 from api.composer import Composer
 from api.extract import ExtractionError, Extractor, ExtractRequest, StrictObject
+from api.gatekeeper import SourceRequest
 
 
 class CheckClaim(StrictObject):
@@ -35,16 +37,17 @@ class CheckService:
         self.extractor, self.composer = extractor, composer
         self.corpus_version = corpus_version
 
-    def check(self, request: CheckRequest) -> dict:
+    def check(self, request: CheckRequest, *, source_request: SourceRequest | None = None) -> dict:
         if not request.claims:
             raise ExtractionError(400, "NO_CLAIMS")
         cards = []
+        composer = self.composer.for_request(source_request)
+        extractor = copy.copy(self.extractor)
+        extractor.detector = composer.detector
         if request.original_text is not None:
             # Re-extract the original input rather than an earlier model paraphrase.
             # This preserves personal-case context, question origin and quote spans.
-            extracted = self.extractor.extract(
-                ExtractRequest(text=request.original_text, max_claims=50)
-            )
+            extracted = extractor.extract(ExtractRequest(text=request.original_text, max_claims=50))
             if extracted.dropped_count:
                 raise ExtractionError(503, "PIPELINE_DEGRADED")
             client_floor = max((c.level for c in request.claims), key="ABCD".index)
@@ -59,7 +62,7 @@ class CheckService:
                     }
                 )
                 cards.append(
-                    self.composer.compose(
+                    composer.compose(
                         claim,
                         original=request.original_text,
                         lang=extracted.detected_lang,
@@ -69,9 +72,7 @@ class CheckService:
                 )
             return self._response(cards)
         for submitted in request.claims:
-            extracted = self.extractor.extract(
-                ExtractRequest(text=submitted.text_ar, max_claims=50)
-            )
+            extracted = extractor.extract(ExtractRequest(text=submitted.text_ar, max_claims=50))
             if extracted.dropped_count:
                 raise ExtractionError(503, "PIPELINE_DEGRADED")
             kind = max(
@@ -88,7 +89,7 @@ class CheckService:
                     }
                 )
                 cards.append(
-                    self.composer.compose(
+                    composer.compose(
                         claim,
                         original=submitted.text_ar,
                         lang=extracted.detected_lang,

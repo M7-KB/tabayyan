@@ -12,6 +12,7 @@ from api.composer import Composer
 from api.config import load_config
 from api.errors import install_handlers, response
 from api.extract import ExtractionError, Extractor, ExtractRequest, ExtractResponse
+from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.provider import OpenAIStructuredModel
 from api.retrieval import BM25Retriever
 from api.settings import Settings
@@ -83,15 +84,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if service is None:
                     key = settings.openai_api_key.get_secret_value()
                     reason = OpenAIStructuredModel(api_key=key, model=settings.openai_model_reason)
-                    detector = SpanDetector(
-                        [
-                            Record(r["corpus_id"], r["domain"], r["text_ar"])
-                            for r in app.state.corpus
-                        ],
-                        DetectorConfig.from_files(
+                    gatekeeper = QuoteGatekeeper(
+                        local_records=app.state.corpus,
+                        request=SourceRequest(),
+                        detector_config=DetectorConfig.from_files(
                             settings.content_policy_path, settings.tuning_path
                         ),
                     )
+                    detector = gatekeeper.detector
                     extractor = Extractor(
                         model=OpenAIStructuredModel(
                             api_key=key, model=settings.openai_model_extract
@@ -112,6 +112,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             records=app.state.corpus,
                             policy_path=settings.content_policy_path,
                             tuning_path=settings.tuning_path,
+                            gatekeeper=gatekeeper,
                         ),
                         corpus_version=app.state.corpus_version,
                     )

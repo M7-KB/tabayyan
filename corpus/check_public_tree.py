@@ -32,6 +32,7 @@ def is_private_artifact(path: str) -> bool:
                     "data/private/",
                     "data/raw/",
                     "docs/raw/",
+                    "eval/private/",
                 )
             )
             and path != "data/raw/.gitkeep"

@@ -287,9 +287,8 @@ class Composer:
         if detection.span_detector_status != self.policy["span_detector"]["required_status"]:
             gate["span_detector"] = "fail"
             return finish(self.policy["span_detector"]["failure_reason"])
-        if claim.classifier_status in {"unavailable", "low_confidence"}:
-            return finish("LOW_CONFIDENCE")
-        if claim.level == "D":
+        classification_failed = claim.classifier_status in {"unavailable", "low_confidence"}
+        if claim.level == "D" and not classification_failed:
             card["explanation_ar"] = "تحتاج هذه الحالة إلى مراجعة جهة إفتاء مؤهلة."
             card["explanation_en"] = (
                 "This case needs a qualified fatwa body." if lang == "en" else None
@@ -305,6 +304,8 @@ class Composer:
         if not candidates:
             self._notice(card, near)
             return finish("NO_MATCHING_EVIDENCE")
+        if classification_failed:
+            return finish("LOW_CONFIDENCE")
         try:
             proposal = CardProposal.model_validate(
                 self.model.complete_json(

@@ -109,6 +109,15 @@ exercise state rows, thresholds, whole-index twins, grading, isolation, errors a
 the HTTP workflow; they do not establish religious accuracy or deployed readiness.
 The request-scoped gatekeeper ships separately from the card contract below.
 
+Abstention reasons follow known causes: after a completed scripture scan, a
+confirmed personal-case classification retains `LEVEL_D_PERSONAL_CASE`; a
+validated no-proposition question uses `NO_CHECKABLE_CLAIM`; no available
+retrieval candidates uses `NO_MATCHING_EVIDENCE`. A failed/uncertain classifier
+uses `LOW_CONFIDENCE` when candidates exist, and still prevents composition or
+a supported/disputed result. An unresolved question subject is extracted as a
+no-proposition question, rather than an invented topic. None of these reason
+choices changes the evidence gates or expected evaluation states.
+
 ### Live-source card contract (SPEC §0.8)
 
 Version 1 now accepts either the legacy local `corpus_id` or a live `source_ref`

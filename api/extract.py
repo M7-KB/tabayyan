@@ -79,6 +79,9 @@ text_ar is the proposition to check (retain English for English input, despite t
 Question with an implied assertion: extract that assertion with origin presupposition.
 For example, a question asking why Muslims worship the Kaaba implies Muslims worship the Kaaba.
 Ordinary question: extract its subject with origin question_subject, without inventing an answer.
+If the question has only an unresolved subject ("this issue", "such a thing")
+and no identifying context, it has no checkable proposition: use one term_lookup
+claim spanning the input and no_checkable_claim true; retain input_kind question.
 Term explanation/translation: one term_lookup claim, no_checkable_claim true.
 Meaningful input with no checkable proposition: one term_lookup claim spanning the input,
 no_checkable_claim true. Only empty/unintelligible input has claims empty and false.

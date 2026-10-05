@@ -1,5 +1,35 @@
 # Tools register
 
+## Private-index implementation log (2026-10-05)
+
+Authority: owner planning event
+`d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f`.
+Implementation evidence: R1 [PR #91](https://github.com/M7-KB/tabayyan/pull/91),
+R3 [PR #92](https://github.com/M7-KB/tabayyan/pull/92), R2
+[PR #94](https://github.com/M7-KB/tabayyan/pull/94), R4
+[PR #96](https://github.com/M7-KB/tabayyan/pull/96). These are review branches;
+listing them does not claim owner merge, deployment, live quality or source coverage.
+
+| Date | Task | AI tool / provider | Model identifier | Use | Evidence | Terms status |
+|---|---|---|---|---|---|---|
+| 2026-10-05 | R1/R3/R2/R4 | Codex / OpenAI | Session identifies GPT-6; exact provider API coding-model ID not exposed | Collector, search aliases, private validators, matchers, synthetic tests and docs; no generated religious source text | PRs #91/#92/#94/#96 | Service/account terms not independently verified |
+| 2026-10-05 | R4 configured provider | OpenAI embeddings API | `text-embedding-3-large`, 1024 dimensions (configuration only) | Source embeddings at startup and transient query embedding; no actual provider request was made in development | [R4 integration docs](https://github.com/M7-KB/tabayyan/blob/feat/private-index-matchers/docs/PRIVATE_INDEX_MATCHERS.md), [official request reference](https://developers.openai.com/api/reference/resources/embeddings/methods/create) | O5 authorizes published private-index embeddings; account access, billing and live output remain unverified |
+
+Supporting tools used: bundled Buzz CLI (thread reads and authorized result/review
+messages), Git/GitHub CLI (worktrees, feature branches and PRs), PowerShell,
+Node.js 24.18.0/npm and Node test runner, Python 3.11/pytest with existing workspace
+dependencies, Ruff 0.9.10, and official-domain web search/page retrieval for the
+embedding API contract. Skills used: Buzz CLI and OpenAI Docs. No relay-backed
+skills loaded. No live crawling by agents, source-provider calls or private
+religious source files committed. Real owner queries were not used as fixtures.
+
+Collector dependencies: parse5 7.3.0 (MIT), entities 6.0.1 (BSD-2-Clause), pinned
+in [the lockfile](https://github.com/M7-KB/tabayyan/blob/feat/owner-private-source-collector/tools/source-collector/package-lock.json).
+Installed package licence notices were inspected. R3's own-code MIT notice is
+[documented separately](https://github.com/M7-KB/tabayyan/blob/feat/arabic-retrieval-clitics/corpus/RETRIEVAL_NORMALIZER_LICENSE.md).
+Code licences grant no source-content permission; those scoped owner decisions
+and pending publisher evidence belong in SOURCES.md.
+
 Owner and editor: Robin. Contributors report AI-tool use in the planning channel,
 with date, task/PR, tool/provider, exact model identifier if available, use, evidence
 and terms/licence status. Only Robin edits this register, in a dedicated PR rebased

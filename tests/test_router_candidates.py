@@ -115,3 +115,49 @@ def test_level_d_keeps_user_question_and_skips_nominated_retrieval():
 def test_assertions_keep_stated_wording():
     checker, _, _ = service(route_proposal(TEXT))
     assert checker.router.route(TEXT).extracted.claims[0].text_ar == TEXT
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "هل يجوز الصلاة متأخراً؟",
+        "هل لا يجوز الصلاة متأخراً؟",
+        "إذا تأخرت، هل يجوز الصلاة متأخراً؟",
+        "إذا تأخرت\nهل يجوز الصلاة متأخراً؟",
+    ],
+)
+def test_narrow_subject_span_restores_permission_negation_and_conditions(question):
+    subject = "الصلاة متأخراً"
+    start = question.index(subject)
+    routed = route_proposal(question)
+    routed["claims"][0].update(
+        origin="question_subject",
+        text_ar=subject,
+        source_text=subject,
+        span={"start": start, "end": start + len(subject)},
+    )
+    checker, _, _ = service(routed)
+    claim = checker.router.route(question).extracted.claims[0]
+    assert claim.text_ar == question
+    assert question[claim.span.start : claim.span.end] == question
+
+
+def test_multiple_narrowed_questions_retain_their_own_complete_context():
+    questions = ["If not ripe, is eating fruit allowed?", "If not fresh, is storing fruit allowed?"]
+    text = " ".join(questions)
+    routed = route_proposal(text)
+    routed["claims"] = []
+    for subject in ("eating fruit", "storing fruit"):
+        start = text.index(subject)
+        routed["claims"].append(
+            {
+                "text_ar": subject,
+                "source_text": subject,
+                "origin": "question_subject",
+                "span": {"start": start, "end": start + len(subject)},
+            }
+        )
+    checker, _, _ = service(routed)
+    claims = checker.router.route(text).extracted.claims
+    assert [claim.text_ar for claim in claims] == questions
+    assert [text[c.span.start : c.span.end] for c in claims] == questions

@@ -130,7 +130,18 @@ class Router:
                 if claim.origin == "stated" and claim.text_ar != claim.source_text:
                     raise ValueError("Invalid stated claim")
                 if claim.origin == "question_subject":
-                    claim.text_ar = claim.source_text
+                    # A literal subject-only substring can still lose permission,
+                    # negation or conditions. Restore its complete question/context.
+                    left = max(text.rfind(mark, 0, start) for mark in ("?", "؟")) + 1
+                    endings = [text.find(mark, max(start, end - 1)) for mark in ("?", "؟")]
+                    right = min((i + 1 for i in endings if i >= 0), default=len(text))
+                    while left < right and text[left].isspace():
+                        left += 1
+                    while right > left and text[right - 1].isspace():
+                        right -= 1
+                    claim.span = Span(start=left, end=right)
+                    claim.source_text = claim.text_ar = text[left:right]
+                    start, end = left, right
                 identity = (start, end, claim.text_ar)
                 if identity in seen:
                     raise ValueError("Duplicate claim")

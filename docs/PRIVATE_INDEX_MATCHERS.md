@@ -32,6 +32,12 @@ its vector is transient, never cached or saved. This embedding request is in
 addition to the router/composer calls; V3 must account for it in the 35 s deadline.
 No query reaches the publisher, and the matcher makes no source HTTP requests.
 
+The supplied budget covers lexical scoring, embedding and cosine/fusion ranking
+under one absolute deadline. CPU scoring runs off the event loop and checks
+expiry during its loops; the embedding gets only the remaining budget. Expired
+work cannot dispatch embedding or return late candidates. Cancelled workers may
+finish a bounded primitive before the next checkpoint; their result is discarded.
+
 BM25 uses one best alias match per query word; repetitions do not inflate its
 score. Cosine candidates below 0.25 are dropped (configurable); reciprocal-rank
 fusion uses 1/(60+rank) and deterministic ID ties. The top five records are

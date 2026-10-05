@@ -53,7 +53,7 @@ def test_level_d_never_embeds_and_deadline_is_bounded():
     assert asyncio.run(search.candidates("private case", level="D")) == []
     assert embedder.calls == []
     asyncio.run(search.candidates("desk", level="B", timeout=2))
-    assert embedder.calls[0][1] == 2
+    assert 0 < embedder.calls[0][1] <= 2
     with pytest.raises(ValueError):
         asyncio.run(search.candidates("desk", level="unknown"))
 
@@ -67,6 +67,44 @@ def test_stalled_query_embedder_respects_remaining_deadline():
     embedder.embed = stall
     with pytest.raises(IndexUnavailable, match="index_request_timeout"):
         asyncio.run(search.candidates("desk", level="A", timeout=0.01))
+
+
+def test_cpu_scoring_with_2000_records_cannot_return_late_candidates():
+    rows = tuple(
+        {"id": str(index), "title": "Sample desk", "similar_phrasings": []} for index in range(2000)
+    )
+    search = BayyinatMatcher(rows, [vector()] * len(rows), FakeEmbedder())
+    with pytest.raises(IndexUnavailable, match="index_request_timeout"):
+        asyncio.run(search.candidates("desk", level="A", timeout=0.001))
+
+
+def test_expired_lexical_stage_does_not_dispatch_embedding_or_block_event_loop():
+    import threading
+
+    search, embedder = matcher()
+    entered = threading.Event()
+    release = threading.Event()
+    original = search._lexical
+
+    def delayed(query, deadline):
+        entered.set()
+        release.wait(timeout=1)
+        return original(query, deadline)
+
+    search._lexical = delayed
+
+    async def run():
+        task = asyncio.create_task(search.candidates("desk", level="A", timeout=0.01))
+        try:
+            with pytest.raises(IndexUnavailable, match="index_request_timeout"):
+                await task
+            assert entered.is_set()
+            assert not release.is_set()
+            assert embedder.calls == []
+        finally:
+            release.set()
+
+    asyncio.run(run())
 
 
 def test_startup_loads_validated_handoff_before_embedding_and_builds_atomically(tmp_path):

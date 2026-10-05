@@ -6,6 +6,7 @@ import math
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter
 from typing import Protocol
 
 import httpx
@@ -20,6 +21,11 @@ DIMENSIONS = 1024
 
 class IndexUnavailable(RuntimeError):
     """Text-free retrieval failure; caller uses its retryable failure policy."""
+
+
+def _check_deadline(deadline: float) -> None:
+    if perf_counter() >= deadline:
+        raise IndexUnavailable("index_request_timeout")
 
 
 def _unit(vector: object) -> tuple[float, ...]:
@@ -157,23 +163,69 @@ class PrivateIndexMatcher:
             raise IndexUnavailable("index_startup_timeout") from None
         return cls(records, vectors, embedder)
 
-    def _lexical(self, query: str) -> dict[int, float]:
+    def _lexical(self, query: str, deadline: float) -> dict[int, float]:
+        _check_deadline(deadline)
         scores = defaultdict(float)
         # Repeated words and multiple aliases cannot multiply one query word's score.
         groups = dict.fromkeys(retrieval_token_groups(query))
+        _check_deadline(deadline)
         count = len(self._records)
         for group in groups:
+            _check_deadline(deadline)
             best = defaultdict(float)
             for alias in group:
                 postings = self._postings.get(alias, {})
                 idf = math.log(1 + (count - len(postings) + 0.5) / (len(postings) + 0.5))
                 for index, frequency in postings.items():
+                    _check_deadline(deadline)
                     ratio = self._lengths[index] / self._average
                     score = idf * frequency * 2.5 / (frequency + 1.5 * (0.25 + 0.75 * ratio))
                     best[index] = max(best[index], score)
             for index, score in best.items():
                 scores[index] += score
         return dict(scores)
+
+    def _rank(
+        self,
+        lexical: dict[int, float],
+        vectors: list,
+        top_k: int,
+        semantic_floor: float,
+        deadline: float,
+    ) -> list[IndexCandidate]:
+        """Worker-local scoring with cooperative expiry; no late/partial result."""
+        _check_deadline(deadline)
+        if len(vectors) != 1:
+            raise IndexUnavailable("invalid_embedding_response")
+        vector = _unit(vectors[0])
+        semantic = {}
+        for index, stored in enumerate(self._vectors):
+            _check_deadline(deadline)
+            score = sum(a * b for a, b in zip(vector, stored, strict=True))
+            if score >= semantic_floor:
+                semantic[index] = score
+        fusion = defaultdict(float)
+        for scores in (lexical, semantic):
+            _check_deadline(deadline)
+            ranked = sorted(scores, key=lambda index: (-scores[index], self._records[index]["id"]))
+            for rank, index in enumerate(ranked, 1):
+                _check_deadline(deadline)
+                fusion[index] += 1 / (60 + rank)
+        ranked = sorted(fusion, key=lambda index: (-fusion[index], self._records[index]["id"]))
+        result = []
+        for index in ranked[:top_k]:
+            _check_deadline(deadline)
+            result.append(
+                IndexCandidate(
+                    self.source_id,
+                    copy.deepcopy(self._records[index]),
+                    fusion[index],
+                    lexical.get(index, 0),
+                    semantic.get(index, 0),
+                )
+            )
+        _check_deadline(deadline)
+        return result
 
     async def candidates(
         self,
@@ -202,33 +254,21 @@ class PrivateIndexMatcher:
             raise IndexUnavailable("index_request_timeout")
         if not query.strip():
             return []
-        lexical = self._lexical(query)
+        budget = min(timeout, 10)
+        deadline = perf_counter() + budget
+        loop_deadline = asyncio.get_running_loop().time() + budget
         try:
-            async with asyncio.timeout(min(timeout, 10)):
-                vectors = await self._embedder.embed([query], timeout=min(timeout, 10))
+            # Offload CPU work so request/HTTP timers can run. Worker checkpoints
+            # use the same absolute deadline; late results are never returned.
+            async with asyncio.timeout_at(loop_deadline):
+                lexical = await asyncio.to_thread(self._lexical, query, deadline)
+                _check_deadline(deadline)
+                vectors = await self._embedder.embed([query], timeout=deadline - perf_counter())
+                _check_deadline(deadline)
+                result = await asyncio.to_thread(
+                    self._rank, lexical, vectors, top_k, semantic_floor, deadline
+                )
+                _check_deadline(deadline)
+                return result
         except TimeoutError:
             raise IndexUnavailable("index_request_timeout") from None
-        if len(vectors) != 1:
-            raise IndexUnavailable("invalid_embedding_response")
-        vector = _unit(vectors[0])
-        semantic = {
-            index: sum(a * b for a, b in zip(vector, stored, strict=True))
-            for index, stored in enumerate(self._vectors)
-        }
-        semantic = {index: value for index, value in semantic.items() if value >= semantic_floor}
-        fusion = defaultdict(float)
-        for scores in (lexical, semantic):
-            ranked = sorted(scores, key=lambda index: (-scores[index], self._records[index]["id"]))
-            for rank, index in enumerate(ranked, 1):
-                fusion[index] += 1 / (60 + rank)
-        ranked = sorted(fusion, key=lambda index: (-fusion[index], self._records[index]["id"]))
-        return [
-            IndexCandidate(
-                self.source_id,
-                copy.deepcopy(self._records[index]),
-                fusion[index],
-                lexical.get(index, 0),
-                semantic.get(index, 0),
-            )
-            for index in ranked[:top_k]
-        ]

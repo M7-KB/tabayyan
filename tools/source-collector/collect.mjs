@@ -72,6 +72,11 @@ function section(document, names, ids = []) {
 export function extract(html, url) {
   const document = parse(html);
   const nodes = walk(document);
+  // Arabic only, whatever the URL shape: the page must declare an Arabic document language.
+  // Undeclared or non-Arabic pages are not followed and yield no record.
+  if (!/^ar(?:-|$)/i.test(attr(nodes.find(n => n.tagName === 'html') ?? {}, 'lang'))) {
+    return { links: [], reason: 'not_arabic_page' };
+  }
   const title = clean(text(nodes.find(n => n.tagName === 'h1') ?? {}));
   const links = [...new Set(nodes.filter(n => n.tagName === 'a').map(n =>
     allowedUrl(attr(n, 'href'), url)).filter(Boolean))];

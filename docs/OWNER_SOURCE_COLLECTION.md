@@ -34,7 +34,9 @@ One global limiter spaces request starts at least 1 second apart. Only HTTPS
 bayenat.net pages and islamic-content.com/dictionary pages are fetched. Listings
 are followed for discovery. Bayyinat routes are restricted to question/answer,
 doubt, category/topic paths, plus the Arabic home root (`/` or `/ar/`). Only Arabic
-pages are collected; other language prefixes are refused. Unknown route shapes
+pages are collected: each page must declare an Arabic document language
+(`<html lang="ar…">`) whatever its URL. Undeclared or non-Arabic pages are not
+followed and yield no record. Language prefixes other than `/ar` are refused. Unknown route shapes
 are refused and require a parser/route update from owner-supplied HTML.
 Assets, unrelated dictionary paths, authentication
 pages, arbitrary query parameters and redirects are refused. No retries or

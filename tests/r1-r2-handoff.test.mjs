@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -16,17 +16,21 @@ test('actual R1 collector to R2 loader: publisher language and page selectors',
     const directory = await mkdtemp(path.join(os.tmpdir(), 'tabayyan-handoff-'));
     try {
       const output = path.join(directory, 'collection');
+      const arPage = body => `<!doctype html><html lang="ar"><body>${body}</body></html>`;
       const pages = {
-        'https://bayenat.net/': '<a href="/question/1?lang=ar">One</a>' +
-          '<a href="/question/1?language=ar">Two</a><a href="/question/1?page=2">Three</a>',
-        'https://islamic-content.com/dictionary':
-          '<a href="/dictionary/word/1?lang=ar">Term</a>',
+        'https://bayenat.net/': arPage('<a href="/question/1?lang=ar">One</a>' +
+          '<a href="/question/1?language=ar">Two</a><a href="/question/1?page=2">Three</a>' +
+          '<a href="/question/1?lang=en">English</a>'),
+        'https://islamic-content.com/dictionary': arPage(
+          '<a href="/dictionary/word/1?lang=ar">Term</a>'),
       };
-      const bay = '<h1>Sample</h1><section id="short-answer"><p>Short &amp; exact.</p></section>';
-      const term = '<h1>Sample</h1><section id="definition_short"><p>Brief.</p></section>';
+      const bay = arPage('<h1>Sample</h1><section id="short-answer"><p>Short &amp; exact.</p></section>');
+      const term = arPage('<h1>Sample</h1><section id="definition_short"><p>Brief.</p></section>');
       const manifest = await collect({ output, fetcher: { get: async url =>
         pages[url] ?? (url.includes('bayenat.net') ? bay : term) } });
       assert.equal(manifest.complete, true);
+      const bayyinat = await readFile(path.join(output, 'bayyinat.jsonl'), 'utf8');
+      assert.ok(!bayyinat.includes('lang=en'), 'English selectors must not be collected');
       const script = `import json,sys\nfrom pathlib import Path\nsys.path.insert(0,'.')\n` +
         `from corpus.short_indexes import load_short_index\n` +
         `directory=Path(sys.argv[1])\nmanifest=json.loads((directory/'manifest.json').read_text())\n` +

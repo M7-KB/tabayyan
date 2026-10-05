@@ -7,13 +7,14 @@ import { createHash } from 'node:crypto';
 import { allowedUrl, extract, Fetcher, collect } from './collect.mjs';
 
 // Synthetic non-religious content; Arabic strings are publisher section labels only.
-const bay = '<h1>Sample question</h1><section><h2>عبارات مشابهة للسؤال</h2>' +
+const arPage = body => `<!doctype html><html lang="ar"><body>${body}</body></html>`;
+const bay = arPage('<h1>Sample question</h1><section><h2>عبارات مشابهة للسؤال</h2>' +
   '<p>Alternate label</p></section><section id="short-answer">' +
   '<p>Short &amp; exact.</p></section><h2>الجواب المفصل</h2>' +
-  '<p>Detailed text must not enter the record.</p>';
-const glossary = '<h1>Sample term</h1><div id="definition_short">Brief &amp; exact.</div>' +
+  '<p>Detailed text must not enter the record.</p>');
+const glossary = arPage('<h1>Sample term</h1><div id="definition_short">Brief &amp; exact.</div>' +
   '<table id="translations"><tr><th>Language</th><th>Text</th></tr>' +
-  '<tr><td>English</td><td>Sample translation</td></tr></table>';
+  '<tr><td>English</td><td>Sample translation</td></tr></table>');
 
 test('URL allowlist rejects host tricks, unrelated paths, assets and personal queries', () => {
   for (const url of ['http://bayenat.net/x', 'https://bayenat.net.evil/x',
@@ -31,6 +32,18 @@ test('URL allowlist rejects host tricks, unrelated paths, assets and personal qu
   assert.equal(allowedUrl('https://bayenat.net/questions/1?lang=ar'),
     'https://bayenat.net/questions/1?lang=ar');
 });
+test('pages must declare an Arabic document language, whatever the URL', () => {
+  const english = bay.replace('lang="ar"', 'lang="en"');
+  const undeclared = bay.replace(' lang="ar"', '');
+  for (const html of [english, undeclared]) {
+    const result = extract(html, 'https://bayenat.net/questions/1');
+    assert.equal(result.record, undefined);
+    assert.equal(result.reason, 'not_arabic_page');
+    assert.deepEqual(result.links, []);
+  }
+  const listing = extract(arPage('<a href="/questions/1">Sample</a>'), 'https://bayenat.net/');
+  assert.deepEqual(listing.links, ['https://bayenat.net/questions/1']);
+});
 test('extract short source fields only, preserving decoded text', () => {
   const result = extract(bay, 'https://bayenat.net/question/1');
   assert.equal(result.record.short_answer, 'Short & exact.');
@@ -41,7 +54,7 @@ test('extract short source fields only, preserving decoded text', () => {
   assert.deepEqual(term.translations, { English: 'Sample translation' });
   for (const url of ['https://bayenat.net/question/1',
     'https://islamic-content.com/dictionary/word/1']) {
-    assert.equal(extract('<h1>Sample</h1><p>Full text</p>', url).record, undefined);
+    assert.equal(extract(arPage('<h1>Sample</h1><p>Full text</p>'), url).record, undefined);
   }
 });
 test('global 1 request/s limit and manual redirects', async () => {
@@ -65,21 +78,21 @@ test('ambiguous following siblings and nested detailed containers fail closed', 
       '<div><p>Detailed text.</p></div></div>',
     '<h1>Sample</h1><div id="short-answer"><p>Short.</p><h2>Full answer</h2></div>',
     '<h1>Sample</h1><div id="short-answer"><p class="detailed-answer">Detailed.</p></div>',
-  ]) assert.equal(extract(html, 'https://bayenat.net/question/1').record, undefined);
+  ]) assert.equal(extract(arPage(html), 'https://bayenat.net/question/1').record, undefined);
 });
 test('missing short content or title on a question prevents complete handoff', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'tabayyan-collector-'));
   try {
     const seeds = ['https://bayenat.net/question/1', 'https://bayenat.net/question/2',
       'https://islamic-content.com/dictionary/word/1'];
-    for (const [index, broken] of ['<h1>Question</h1><p>Full text only</p>',
-      '<div id="short-answer">Short but missing title</div>'].entries()) {
+    for (const [index, broken] of [arPage('<h1>Question</h1><p>Full text only</p>'),
+      arPage('<div id="short-answer">Short but missing title</div>')].entries()) {
       const result = await collect({ output: path.join(directory, String(index)), seeds,
         fetcher: { get: async url => url.endsWith('/question/2') ? broken :
           url.includes('bayenat') ? bay : glossary } });
       assert.equal(result.complete, false);
     }
-    assert.equal(extract('<a href="/question/1">Sample</a>',
+    assert.equal(extract(arPage('<a href="/question/1">Sample</a>'),
       'https://bayenat.net/').reason, 'bayyinat_listing');
   } finally {
     assert.equal(path.dirname(path.resolve(directory)), path.resolve(os.tmpdir()));

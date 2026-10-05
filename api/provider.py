@@ -169,7 +169,8 @@ class OpenAIStructuredModel:
         self, *, instructions: str, data: dict[str, str], schema: dict[str, Any]
     ) -> object:
         try:
-            body = self._post(self._payload(instructions, data, schema)).json()
+            payload = self._payload(instructions, data, schema)
+            body = self._post(payload).json()
             if body.get("status") != "completed":
                 raise ProviderUnavailable("incomplete")
             texts = []
@@ -187,7 +188,7 @@ class OpenAIStructuredModel:
             value = json.loads(
                 texts[0], parse_constant=_reject_constant, object_pairs_hook=_unique_keys
             )
-            Draft202012Validator(schema).validate(value)
+            Draft202012Validator(payload["text"]["format"]["schema"]).validate(value)
             return value
         except ProviderUnavailable as exc:
             logger.warning("Structured provider failure: category=%s", exc.category)

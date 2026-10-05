@@ -55,9 +55,12 @@ application lifetime and closed on shutdown. Router/extraction calls use explici
 once within that budget. `Retry-After` seconds and HTTP dates are respected; if
 the delay cannot fit, the call fails rather than retrying early. Refusals, incomplete
 responses and invalid JSON/schema output are never retried.
+Retrying a POST after a transport/read failure may bill both attempts. Returned
+JSON is validated against the exact strict schema sent to the provider.
 
 Startup warms the exact structured schemas with synthetic empty data, in parallel,
-when both models are configured. `OPENAI_SCHEMA_WARMUP=false` disables this for
+when both models are configured (router and decision schemas, plus the standalone
+extraction/classification schemas). `OPENAI_SCHEMA_WARMUP=false` disables this for
 offline tests; `HEALTH_ONLY=true` always skips it. Warm-up failure does not prevent
 health service startup or prove readiness. Logs report only fixed failure categories,
 never provider bodies or exception text. The server
@@ -77,19 +80,35 @@ adapter does not implement alignment, explanations or transcription.
 
 ## Text verification (T-502)
 
-`POST /api/v1/check` accepts `{"claims":[{"id":"c1","text_ar":"...","level":"A"}],
-"input_kind":"claim","locale":"ar"}`. Pass the original question/statement as
-`text_ar` so the server can recompute its origin and detect altered scripture.
-When submitting `/extract` results, also pass `original_text` with the full input:
-the server re-extracts it to preserve question origins, personal-case context and
-original scripture spans. The eval HTTP client supplies this field automatically.
-Client levels and kinds are advisory: the server re-extracts, reclassifies and
-re-detects, retaining the more restrictive route. Claims have unique IDs, at most
-50 claims and a combined limit of 12,000 code points. Empty claims return 400;
-invalid shapes return 422; infrastructure or card-schema failures return 503.
-Original-input extraction explicitly accepts up to 50 claims and returns a card for
-each accepted claim. Extraction overflow fails with 503 `PIPELINE_DEGRADED`, rather
-than returning a silently truncated result.
+`POST /api/v1/check` accepts `{"original_text":"..."}` without a prior `/extract`
+call. The full original input (at most 12,000 Unicode code points) goes through one
+strict router call for claims, exact source spans, premise, content level, domain
+kind, topic IDs and proposed Quran references. There is no duplicate preflight,
+second extraction, per-claim classification call or search-phrase model call.
+Up to 50 accepted claims are composed in parallel (at most eight workers), in
+source order. The composer selects candidate IDs and proposes a state; the existing
+policy, provenance, scripture-span, grading, separation and alignment gates may
+downgrade it, never upgrade it. Source text is copied by ID, never from model output.
+
+Legacy `claims` requests remain accepted and are joined for the single router call;
+when `original_text` is present it is authoritative. Client levels and deterministic
+personal-case cues in client claims can only restrict the result. An entire request
+with any level-D claim skips source dispatch and composition inference. Empty input
+returns 400; invalid shapes return 422; router/infrastructure failures return 503.
+
+The router owns topic selection: `search_queries` contains at most three closed
+`Topic` IDs and `safe_to_search` must be true. Code maps IDs through `TOPIC_QUERIES`
+and rejects any full input or claim that appears in the built query. Unknown topics
+authorize no source call. No free-text query is sent. Proposed Quran references and
+private-index routing are the subsequent V3 integration, not active in V2.
+
+SPEC 0.11 owner items O1/O2/O3/O5 remain open. Bayyinat is disabled; glossary matching
+is off; term cards return CANNOT_CONFIRM with `term: null`, no evidence or definition,
+and `glossary_link: "https://islamic-content.com/dictionary"` for the UI. Generated
+explanations are dropped: both `explanation_ar` and `explanation_en` are null on the
+one-pass path, which the card contract allows. Fixed referral/question fields remain.
+No private text is sent for embeddings. O4's end-to-end deadline remains an owner
+decision; V1's role-specific provider timeouts do not establish that guarantee.
 This endpoint currently supports text only; upload segments/timestamps are deferred.
 
 The composer reads state and alignment rules from policy. Models propose only

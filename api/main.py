@@ -8,9 +8,9 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.check import CheckRequest, CheckService
+from api.check import CheckRequest
 from api.classifier import LevelClassifier, LevelProposal
-from api.composer import CardProposal, Composer
+from api.composer import Composer, DecisionProposal
 from api.config import load_config
 from api.discovery import DefaultDiscovery
 from api.errors import install_handlers, response
@@ -24,8 +24,10 @@ from api.extract import (
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.hadeethenc_discovery import HadeethEncDiscovery
 from api.islamic_mcp import IslamicContentConnector
+from api.one_pass import OnePassCheckService
 from api.provider import OpenAIStructuredModel, ProviderUnavailable
 from api.retrieval import BM25Retriever
+from api.router import Router, RouterProposal
 from api.settings import Settings
 from api.span_detector import DetectorConfig, Record, SpanDetector
 from corpus.private_artifact import load_private_corpus
@@ -91,9 +93,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 and settings.openai_model_reason
             ):
                 await asyncio.gather(
+                    asyncio.to_thread(warm, app, True, RouterProposal.model_json_schema()),
+                    asyncio.to_thread(warm, app, False, DecisionProposal.model_json_schema()),
                     asyncio.to_thread(warm, app, True, ExtractionProposal.model_json_schema()),
                     asyncio.to_thread(warm, app, False, LevelProposal.model_json_schema()),
-                    asyncio.to_thread(warm, app, False, CardProposal.model_json_schema()),
                 )
             yield
 
@@ -119,7 +122,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         @app.post("/api/v1/check")
         def check(request: CheckRequest):
             try:
-                if not request.claims:
+                if not request.claims and not request.original_text:
                     raise ExtractionError(400, "NO_CLAIMS")
                 service = getattr(app.state, "checker", None)
                 if service is None:
@@ -132,7 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         ),
                     )
                     detector = gatekeeper.detector
-                    extractor = Extractor(
+                    router = Router(
                         model=model_adapter(app, router=True),
                         classifier=LevelClassifier(
                             model=reason,
@@ -141,8 +144,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         ),
                         detector=detector,
                     )
-                    service = CheckService(
-                        extractor=extractor,
+                    service = OnePassCheckService(
+                        router=router,
                         composer=Composer(
                             model=reason,
                             retriever=BM25Retriever(app.state.corpus, app.state.tuning),

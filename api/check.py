@@ -19,7 +19,7 @@ class CheckClaim(StrictObject):
 
 
 class CheckRequest(StrictObject):
-    claims: list[CheckClaim] = Field(max_length=50)
+    claims: list[CheckClaim] = Field(default_factory=list, max_length=50)
     input_kind: Literal["claim", "question", "term"] = "claim"
     locale: Literal["ar", "en"] = "ar"
     original_text: str | None = Field(default=None, min_length=1, max_length=12000)

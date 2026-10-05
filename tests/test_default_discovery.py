@@ -45,6 +45,14 @@ def test_source_outage_and_consumed_scope():
 
 @pytest.mark.parametrize("mcp_enabled", [False, True])
 def test_real_default_check_route_only_sends_minimized_query(monkeypatch, mcp_enabled):
+    from tests.test_composer import Stub
+    from tests.test_one_pass import route_proposal
+
+    original = "Verify the public topic. Private context SENTINEL_9381"
+    routed = route_proposal(
+        original, detected_lang="en", input_kind="hadith", search_queries=["hadith"]
+    )
+    monkeypatch.setattr("api.main.OpenAIStructuredModel", lambda **kwargs: Stub(routed))
     mcp, hadeethenc = Adapter(), Adapter()
     service, model, _ = make_service(value={"phrases": ["hadith"], "safe_to_search": True})
     service.extractor.model = model
@@ -59,7 +67,6 @@ def test_real_default_check_route_only_sends_minimized_query(monkeypatch, mcp_en
         islamic_content_mcp_url="https://mcp.islamiccontent.org/mcp" if mcp_enabled else "",
     )
     app = create_app(settings)
-    original = "Verify the public topic. Private context SENTINEL_9381"
     with TestClient(app) as client:
         assert client.get("/health").status_code == 200
         assert not mcp.calls and not hadeethenc.calls

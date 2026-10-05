@@ -585,11 +585,15 @@ def test_real_endpoint_constructs_gatekeeper_and_does_not_accept_source_injectio
 
         def complete_json(self, **kwargs):
             fields = kwargs["schema"].get("properties", {})
+            if "search_queries" in fields:
+                from tests.test_one_pass import route_proposal
+
+                return route_proposal(text)
             if "claims" in fields:
                 return copy.deepcopy(extraction)
             if "level" in fields:
                 return {"level": "A", "confidence": 0.9}
-            return proposal(corpus_ids=["local:one"])
+            return proposal(corpus_ids=["local:one"], state="SUPPORTED")
 
     monkeypatch.setattr("api.main.OpenAIStructuredModel", Model)
     app = create_app(Settings(openai_api_key="inert-test-value"))

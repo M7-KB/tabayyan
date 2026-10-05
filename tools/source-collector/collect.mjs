@@ -27,6 +27,8 @@ export function allowedUrl(value, base) {
   let decodedPath;
   try { url = new URL(value, base); decodedPath = decodeURIComponent(url.pathname); }
   catch { return null; }
+  if (decodedPath.includes('\\') || decodedPath.includes('%') || decodedPath.split('/').some(part =>
+    part === '.' || part === '..') || /%2f|%5c/i.test(url.pathname)) return null;
   if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
   if (!['bayenat.net', 'islamic-content.com'].includes(url.hostname)) return null;
   if (url.hostname === 'bayenat.net' && !/^(?:\/(?:[a-z]{2}\/)?)?(?:questions?|answers?|doubts?|shubuhat|categories?|topics?)(?:\/|$)|^\/(?:[a-z]{2}\/?|)?$/i
@@ -86,7 +88,7 @@ export function extract(html, url) {
       ['short-answer', 'short_answer']);
     if (!short) return { links, reason: 'missing_explicit_short_answer' };
     return { links, record: {
-      id: new URL(url).pathname, url, title,
+      id: new URL(url).pathname + new URL(url).search, url, title,
       similar_phrasings: section(document, ['عبارات مشابهة للسؤال'])
         .split('\n').filter(Boolean),
       short_answer: short,
@@ -115,7 +117,7 @@ export function extract(html, url) {
       }
     }
   }
-  return { links, record: { id: new URL(url).pathname, url, term_ar: title,
+  return { links, record: { id: new URL(url).pathname + new URL(url).search, url, term_ar: title,
     definition_short: definition, translations } };
 }
 

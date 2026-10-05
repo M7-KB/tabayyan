@@ -52,6 +52,10 @@ an API/build/startup dependency. Agents must not run live collection.
   display full pages or upload these snapshots/records to chat/public Git.
 
 DOM text extraction decodes entities and standardizes HTML layout spaces/newlines.
+
+Record identity is URL path plus its unchanged query: language/pagination
+selectors remain distinct. Only page/lang/language parameters are allowed;
+selectors are never stripped to pretend that different content is identical.
 No Arabic letters or diacritics are folded. Hashes include JSONL newline bytes.
 R2 must verify hashes and validate records. Records alone do not authorize UI
 evidence, embedded scripture, hadith gradings or level-D answers.

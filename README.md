@@ -902,12 +902,16 @@ request-local Arabic library discovery on `/api/v1/check`. An empty value disabl
 it. Other URLs are refused. The application calls MCP directly; no model-side MCP
 or generated search summary supplies evidence. Server classification runs first;
 personal cases, unavailable classification and term lookups skip discovery.
-An additional structured-model step extracts at most three generic search
-phrases (six words/eighty characters each, 160 characters total), removing
-private names, individual facts and unrelated context. Only this minimized
-query reaches MCP; the full input and extracted claim never serve as a fallback.
-Invalid/unavailable proposals, identifiers, personal-case phrases and proposals
-containing a complete claim skip discovery. Queries remain request-local.
+An additional structured-model step selects at most three topic IDs from a
+closed vocabulary in `api/search_phrases.py`, derived from the challenge brief's
+generic domains and glossary. An independent code mapping supplies each fixed
+Arabic search phrase; no model-provided phrase or user substring is transmitted.
+Unknown IDs, names, private-context tokens, invalid/unavailable proposals and
+queries containing a complete claim skip discovery. The model's safety flag
+cannot bypass the closed mapping. Full input/claims never serve as fallback
+queries. Queries remain request-local. This conservative vocabulary limits
+retrieval coverage: unlisted topics abstain through existing evidence gates;
+additions require code review. Topic selection quality still requires live eval.
 
 One search selects at most two Arabic library item IDs. Each selected item is
 read in the same request. Only the publisher's bounded `[COMMENTARY]` section,

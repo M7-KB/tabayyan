@@ -2,7 +2,7 @@
 // strings.test.js enforces this.
 export const strings = {
   appName: 'تبيّن',
-  tagline: 'تحقّق من الادعاءات الدينية في النص أو الرابط أو المقطع الصوتي',
+  tagline: 'تحقّق من الادعاءات والأسئلة الدينية من مصادرها المعتمدة.',
   skipToContent: 'تخطَّ إلى المحتوى',
   aiNotice: 'هذه أداة ذكاء اصطناعي، وليست فتوى.',
   themeToDark: 'تفعيل الوضع الداكن',
@@ -11,12 +11,17 @@ export const strings = {
   previewBanner: 'نسخة تجريبية للتطوير. التحقق من الادعاءات غير مفعّل بعد.',
 
   inputHeading: 'ما الذي تريد التحقق منه؟',
-  textLabel: 'النص المراد التحقق منه',
-  textPlaceholder: 'الصق النص هنا…',
-  textEmptyHint: 'اكتب نصاً أو الصقه لتتمكن من المتابعة.',
-  textSubmit: 'متابعة',
+  textLabel: 'الادعاء أو السؤال المراد التحقق منه',
+  textPlaceholder: 'اكتب الادعاء أو السؤال هنا…',
+  textEmptyHint: 'اكتب الادعاء أو السؤال لتتمكن من الإرسال.',
+  textSubmit: 'إرسال',
 
-  privacyHeading: 'الخصوصية',
+  // Example chips: a short label and the approved text it fills into the composer. These are owner-reviewed
+  // items. The list stays empty until the owner supplies the approved texts, and no chip row is shown meanwhile.
+  examplesLabel: 'أمثلة للتجربة',
+  exampleChips: [],
+
+  privacySummary: 'يُرسَل نصك إلى مزوّد ذكاء اصطناعي، ولا نحفظه في خوادمنا.',
   privacyLines: [
     'يُرسَل النص الذي تُدخله إلى مزوّد خدمة ذكاء اصطناعي، وتُرسَل عبارات البحث المستخرجة منه إلى المصادر المعتمدة.',
     'لا نحفظه في خوادمنا، وقد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته.',

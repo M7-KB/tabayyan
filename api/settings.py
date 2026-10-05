@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     allow_pending_review: bool = False
     private_corpus_path: Path | None = None
     corpus_manifest_path: Path = ROOT / "corpus/manifest.json"
-    islamic_content_mcp_url: str = ""
+    islamic_content_mcp_url: str = "https://mcp.islamiccontent.org/mcp"
 
     @field_validator("islamic_content_mcp_url")
     @classmethod

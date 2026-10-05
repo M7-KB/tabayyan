@@ -981,8 +981,8 @@ with `ALLOW_PENDING_REVIEW=true`; owner review is recorded in handoff metadata.
 
 ### Direct Islamic Content MCP connector
 
-Set `ISLAMIC_CONTENT_MCP_URL=https://mcp.islamiccontent.org/mcp` to enable
-request-local Arabic library discovery on `/api/v1/check`. An empty value disables
+The default `ISLAMIC_CONTENT_MCP_URL=https://mcp.islamiccontent.org/mcp` enables
+request-local Arabic library discovery on `/api/v1/check`. An explicit empty value disables
 it. Other URLs are refused. The application calls MCP directly; no model-side MCP
 or generated search summary supplies evidence. Server classification runs first;
 personal cases, unavailable classification and term lookups skip discovery.
@@ -1051,8 +1051,20 @@ unavailable results provide no evidence and must abstain. At most four calls
 occur per discovery invocation, each with the existing transport deadline and
 byte cap, with no retry or automatic pagination. The host/path pairs are fixed.
 Call only for non-personal hadith retrieval before the source request is consumed.
-Default HTTP-route wiring remains separate backend integration work; the current
-endpoint does not yet call discovery automatically.
+The default `/check` route calls this adapter for minimized phrases containing
+an explicit hadith topic (`حديث`, `الحديث`, `احاديث`, `الاحاديث`, `hadith`,
+or `hadeeth`). The approved fixed topic mapping supplies that routing cue; no model-written
+phrase reaches either adapter. MCP library discovery
+runs alongside it; health/extraction routes never call source APIs. Both adapters
+share the same request-local source scope before quote checking consumes it.
+Personal cases, term lookups, unavailable classification and failed phrase
+extraction reach neither source. Each adapter's existing request limits remain:
+MCP has one shared ten-second deadline, while HadeethEnc has up to four source
+requests with individual transport deadlines. These and sequential model calls
+can exceed the eval client's default thirty-second wait. Independent outages
+contribute no evidence from the failing adapter; existing quote/state gates and
+expected states are unchanged. This wiring has offline transport/route coverage;
+Render reachability and live model quality require a separate deployed check.
 No HadeethEnc response or user query is saved. Explanations remain model prose
 under the existing separation gate; quoted source bytes never adapt to the asker.
 

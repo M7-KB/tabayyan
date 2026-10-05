@@ -10,9 +10,11 @@ from api.check import CheckRequest, CheckService
 from api.classifier import LevelClassifier
 from api.composer import Composer
 from api.config import load_config
+from api.discovery import DefaultDiscovery
 from api.errors import install_handlers, response
 from api.extract import ExtractionError, Extractor, ExtractRequest, ExtractResponse
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
+from api.hadeethenc_discovery import HadeethEncDiscovery
 from api.islamic_mcp import IslamicContentConnector
 from api.provider import OpenAIStructuredModel
 from api.retrieval import BM25Retriever
@@ -117,9 +119,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             gatekeeper=gatekeeper,
                         ),
                         corpus_version=app.state.corpus_version,
-                        connector=IslamicContentConnector()
-                        if settings.islamic_content_mcp_url
-                        else None,
+                        connector=DefaultDiscovery(
+                            mcp=IslamicContentConnector()
+                            if settings.islamic_content_mcp_url
+                            else None,
+                            hadeethenc=HadeethEncDiscovery(),
+                        ),
                     )
                     # Store only services/indexes, never request data or result cards.
                     app.state.checker = service

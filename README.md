@@ -492,12 +492,21 @@ confirmed claims, with `input_kind` from the extract response, to `/api/v1/check
 the AI-not-a-fatwa notice in the header and offers a way back to edit the claims.
 
 Error states each give a next step: extraction errors have retry and back actions, check errors have retry
-and edit actions, and `PIPELINE_DEGRADED` never shows a partial result. Shared JSON posting and error codes
+and edit actions, and `PIPELINE_DEGRADED` never shows a partial result.
+
+A check response must answer every confirmed claim. Each card's `claim.id` must match a confirmed id, or be a
+server split child `<confirmed id>:<child id>`. An unrelated card, a second card for the same claim, or a
+missing claim fails the whole response with `PIPELINE_DEGRADED` (`coversConfirmedClaims` in `check.js`).
+
+Each extract and check request has a client deadline (`EXTRACT_DEADLINE_MS` 45 s, `CHECK_DEADLINE_MS` 90 s in
+`config/api.js`) and shows `TIMEOUT` when it passes. While either request is pending, the user can cancel
+and return to the text or the claims. Cancel and timeout keep the input text and claim edits. A newer
+attempt replaces an older one, and a late response from a cancelled or superseded attempt is dropped. Shared JSON posting and error codes
 live in `web/src/api/http.js`; `CheckError` is an alias of its `ApiError`. The API origin comes from
 `VITE_API_BASE_URL` (`web/src/config/api.js`), with no trailing slash. An empty value means same-origin
 requests. The preview banner hides when `GET /health` returns 200 with a `status` field.
 
-Tests (`web/src/__tests__/extract.test.js`, `health.test.js`, `claim-flow.test.jsx`) stub `fetch` per endpoint.
+Tests (`web/src/__tests__/extract.test.js`, `health.test.js`, `claim-flow.test.jsx`, `check.test.js`, `attempts.test.jsx`) stub `fetch` per endpoint. `attempts.test.jsx` uses fake timers and controlled promises for deadlines, cancel and late responses.
 Live check on 2026-10-05: `POST /api/v1/extract` and `POST /api/v1/check` on the Render API returned 200, and
 the returned card validates against `contracts/card.schema.json`.
 

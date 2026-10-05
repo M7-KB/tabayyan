@@ -4,7 +4,7 @@ import { strings } from '../strings.js'
 // Claim review (SPEC.md §6.2). The extracted claims are shown as editable text, and nothing is checked until the
 // user confirms. Emptying a claim's text drops it. `status` is 'loading' | 'confirm' | 'error'.
 // `edits` maps claim id to the user's text, so the screen can switch states without losing what the user typed.
-export function ClaimReview({ status, claims = [], edits = {}, errorCode, onEdit, onConfirm, onBack, onRetry }) {
+export function ClaimReview({ status, claims = [], edits = {}, errorCode, onEdit, onConfirm, onBack, onRetry, onCancel }) {
   const headingRef = useRef(null)
 
   useEffect(() => {
@@ -18,6 +18,11 @@ export function ClaimReview({ status, claims = [], edits = {}, errorCode, onEdit
           {strings.extractingHeading}
         </h2>
         <p role="status">{strings.extracting}</p>
+        <div className="review-actions">
+          <button type="button" onClick={onCancel}>
+            {strings.extractCancel}
+          </button>
+        </div>
       </section>
     )
   }

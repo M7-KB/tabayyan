@@ -36,11 +36,40 @@ export function isValidCard(card) {
   return validateCardSchema(card) === true
 }
 
-export function parseCheckResponse(body) {
+// The server may split one confirmed claim into children whose ids are `<claim id>:<child id>`.
+// The longest matching confirmed id wins, so an exact match is always preferred.
+function confirmedIdOf(claimId, confirmedIds) {
+  if (confirmedIds.has(claimId)) return claimId
+  let owner = null
+  for (const id of confirmedIds) {
+    if (claimId.startsWith(`${id}:`) && (owner === null || id.length > owner.length)) owner = id
+  }
+  return owner
+}
+
+// The response must cover every confirmed claim. A card for an unknown claim, or a second card for the same
+// claim id, fails the whole response, so the UI never shows a partial or mixed result.
+export function coversConfirmedClaims(cards, confirmedIds) {
+  const confirmed = new Set(confirmedIds)
+  const covered = new Set()
+  const seenClaimIds = new Set()
+
+  for (const card of cards) {
+    const owner = confirmedIdOf(card.claim.id, confirmed)
+    if (owner === null) return false
+    if (seenClaimIds.has(card.claim.id)) return false
+    seenClaimIds.add(card.claim.id)
+    covered.add(owner)
+  }
+
+  return [...confirmed].every((id) => covered.has(id))
+}
+
+export function parseCheckResponse(body, confirmedIds) {
   if (!body || typeof body !== 'object' || !Array.isArray(body.cards)) {
     throw new CheckError('PIPELINE_DEGRADED')
   }
-  if (!body.cards.every(isValidCard)) {
+  if (!body.cards.every(isValidCard) || !coversConfirmedClaims(body.cards, confirmedIds)) {
     throw new CheckError('PIPELINE_DEGRADED')
   }
   return body
@@ -48,5 +77,5 @@ export function parseCheckResponse(body) {
 
 export async function postCheck(request, { baseUrl = '', fetchImpl, signal } = {}) {
   const body = await postJson(`${baseUrl}${CHECK_PATH}`, request, { fetchImpl, signal })
-  return parseCheckResponse(body)
+  return parseCheckResponse(body, request.claims.map((claim) => claim.id))
 }

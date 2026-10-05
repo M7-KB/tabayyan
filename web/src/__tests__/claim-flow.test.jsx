@@ -17,6 +17,11 @@ function jsonResponse(status, body) {
   }
 }
 
+// One card per confirmed claim id, as the server answers when every claim is checked.
+function cardsFor(ids) {
+  return ids.map((id) => ({ ...structuredClone(supportedConfirms), claim: { ...supportedConfirms.claim, id } }))
+}
+
 function claim(id, text) {
   return { id, text_ar: text, span: { start: 0, end: text.length }, origin: 'stated', level: 'B' }
 }
@@ -70,7 +75,7 @@ describe('text path: extract, confirm, check', () => {
       extract: () => jsonResponse(200, extraction),
       check: (init) => {
         checkBodies.push(JSON.parse(init.body))
-        return jsonResponse(200, { cards: [supportedConfirms] })
+        return jsonResponse(200, { cards: cardsFor(['c1']) })
       },
     })
     render(<App />)
@@ -92,7 +97,10 @@ describe('text path: extract, confirm, check', () => {
     const user = userEvent.setup()
     stubApi({
       extract: () => jsonResponse(200, extraction),
-      check: () => jsonResponse(200, { cards: [supportedConfirms, cannotConfirm] }),
+      check: () =>
+        jsonResponse(200, {
+          cards: [...cardsFor(['c1']), { ...cannotConfirm, claim: { ...cannotConfirm.claim, id: 'c2' } }],
+        }),
     })
     render(<App />)
     await submitText(user)
@@ -106,7 +114,7 @@ describe('text path: extract, confirm, check', () => {
     const user = userEvent.setup()
     stubApi({
       extract: () => jsonResponse(200, extraction),
-      check: () => jsonResponse(200, { cards: [supportedConfirms] }),
+      check: () => jsonResponse(200, { cards: cardsFor(['c1', 'c2']) }),
     })
     render(<App />)
     await submitText(user)

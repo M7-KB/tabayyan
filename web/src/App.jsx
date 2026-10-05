@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AiNotice } from './components/AiNotice.jsx'
 import { ArchMark } from './components/ArchMark.jsx'
 import { ClaimReview } from './components/ClaimReview.jsx'
@@ -13,7 +13,7 @@ import { postExtract } from './api/extract.js'
 import { checkApiHealth } from './api/health.js'
 import { ApiError } from './api/http.js'
 import { MediaError, transcribeStub } from './api/transcribe.js'
-import { API_BASE_URL } from './config/api.js'
+import { API_BASE_URL, CHECK_DEADLINE_MS, EXTRACT_DEADLINE_MS } from './config/api.js'
 import { strings } from './strings.js'
 
 // Synthetic card preview for development only. Dead-code-eliminated from production builds.
@@ -49,30 +49,76 @@ export default function App() {
     )
   }
 
+  // One extract or check request is in flight at a time. Each has a client deadline, and a cancel that aborts
+  // it. Only the latest attempt may update the flow, so a cancelled, timed-out or superseded response is dropped.
+  const attemptRef = useRef(null)
+
+  function beginAttempt(deadlineMs) {
+    attemptRef.current?.cancel()
+    const controller = new AbortController()
+    const attempt = {
+      signal: controller.signal,
+      timedOut: false,
+      timer: setTimeout(() => {
+        attempt.timedOut = true
+        controller.abort()
+      }, deadlineMs),
+      cancel() {
+        clearTimeout(attempt.timer)
+        controller.abort()
+      },
+    }
+    attemptRef.current = attempt
+    return attempt
+  }
+
+  function cancelPending() {
+    attemptRef.current?.cancel()
+    attemptRef.current = null
+  }
+
+  function failureCodeOf(attempt, error) {
+    return attempt.timedOut ? 'TIMEOUT' : errorCodeOf(error)
+  }
+
   async function handleSubmitText(inputText) {
     setFlow({ step: 'extracting', inputText })
+    const attempt = beginAttempt(EXTRACT_DEADLINE_MS)
     try {
-      const extraction = await postExtract(inputText, { baseUrl: API_BASE_URL })
-      setFlow({
-        step: 'confirm',
-        inputText,
-        inputKind: extraction.input_kind,
-        claims: extraction.claims,
-        edits: {},
-      })
+      const extraction = await postExtract(inputText, { baseUrl: API_BASE_URL, signal: attempt.signal })
+      if (attemptRef.current === attempt) {
+        setFlow({
+          step: 'confirm',
+          inputText,
+          inputKind: extraction.input_kind,
+          claims: extraction.claims,
+          edits: {},
+        })
+      }
     } catch (error) {
-      setFlow({ step: 'extract-error', inputText, errorCode: errorCodeOf(error) })
+      if (attemptRef.current === attempt) {
+        setFlow({ step: 'extract-error', inputText, errorCode: failureCodeOf(attempt, error) })
+      }
+    } finally {
+      clearTimeout(attempt.timer)
     }
   }
 
   async function runCheck(state, checked) {
     setFlow({ ...state, step: 'checking', checked })
+    const attempt = beginAttempt(CHECK_DEADLINE_MS)
     try {
       const request = buildCheckRequest({ claims: checked, inputKind: state.inputKind })
-      const result = await postCheck(request, { baseUrl: API_BASE_URL })
-      setFlow({ ...state, step: 'results', checked, cards: result.cards })
+      const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
+      if (attemptRef.current === attempt) {
+        setFlow({ ...state, step: 'results', checked, cards: result.cards })
+      }
     } catch (error) {
-      setFlow({ ...state, step: 'check-error', checked, errorCode: errorCodeOf(error) })
+      if (attemptRef.current === attempt) {
+        setFlow({ ...state, step: 'check-error', checked, errorCode: failureCodeOf(attempt, error) })
+      }
+    } finally {
+      clearTimeout(attempt.timer)
     }
   }
 
@@ -85,11 +131,14 @@ export default function App() {
     runCheck(flow, kept)
   }
 
+  // Going back cancels any pending request. The input text, claims and edits stay in the flow state.
   function backToInput() {
+    cancelPending()
     setFlow({ step: 'input', inputText: flow.inputText })
   }
 
   function backToClaims() {
+    cancelPending()
     setFlow((prev) => ({ ...prev, step: 'confirm' }))
   }
 
@@ -150,7 +199,7 @@ export default function App() {
             onCancel={() => setMedia({ status: 'idle' })}
           />
         )}
-        {flow.step === 'extracting' && <ClaimReview status="loading" />}
+        {flow.step === 'extracting' && <ClaimReview status="loading" onCancel={backToInput} />}
         {flow.step === 'extract-error' && (
           <ClaimReview
             status="error"
@@ -169,7 +218,7 @@ export default function App() {
             onBack={backToInput}
           />
         )}
-        {flow.step === 'checking' && <Results status="loading" />}
+        {flow.step === 'checking' && <Results status="loading" onCancel={backToClaims} />}
         {flow.step === 'results' && <Results status="done" cards={flow.cards} onEdit={backToClaims} />}
         {flow.step === 'check-error' && (
           <Results

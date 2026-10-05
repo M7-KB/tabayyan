@@ -84,7 +84,7 @@ class OnePassCheckService(CheckService):
         restricted = any(c.level == "D" for c in claims)
         started = monotonic()
         source_request = source_request or SourceRequest()
-        if self.connector is not None and not restricted and route.kind != "term":
+        if self.connector is not None and not restricted and route.kind not in {"verse", "term"}:
             query = self.search_phrases.from_queries(
                 route.queries,
                 safe_to_search=route.safe_to_search,

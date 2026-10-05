@@ -1,6 +1,7 @@
 """Request correlation without input, source text or exception messages."""
 
 import logging
+from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from threading import Lock
@@ -48,8 +49,8 @@ def finish(outcome, started):
     )
 
 
-def record(stage: str, outcome: str, started: float) -> None:
-    elapsed = round((monotonic() - started) * 1000)
+def record(stage: str, outcome: str, started: float, *, ended: float | None = None) -> None:
+    elapsed = round(((monotonic() if ended is None else ended) - started) * 1000)
     current = summary.get()
     if current is not None:
         with current.lock:
@@ -63,3 +64,16 @@ def record(stage: str, outcome: str, started: float) -> None:
         outcome,
         elapsed,
     )
+
+
+@contextmanager
+def timed(stage):
+    started = monotonic()
+    outcome = "completed"
+    try:
+        yield
+    except BaseException:
+        outcome = "failed"
+        raise
+    finally:
+        record(stage, outcome, started)

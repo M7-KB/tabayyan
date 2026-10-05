@@ -13,6 +13,7 @@ from api.config import TuningMetadata
 from corpus.loader import load_corpus
 from corpus.normalize import normalize_arabic
 from corpus.quran_binding import matching_text
+from corpus.retrieval_normalize import retrieval_token_groups
 from corpus.validate import ROOT
 
 
@@ -63,9 +64,9 @@ class BM25Retriever:
         for index, record in enumerate(self._records):
             if record["text_normalized"] != normalize_arabic(matching_text(record)):
                 raise ValueError("retrieval key differs from ar-v1")
-            terms = tokens(record["text_normalized"])
-            self._lengths.append(len(terms))
-            for term, frequency in Counter(terms).items():
+            groups = retrieval_token_groups(record["text_normalized"])
+            self._lengths.append(len(groups))
+            for term, frequency in Counter(alias for group in groups for alias in group).items():
                 self._postings[term][index] = frequency
         count = len(self._records)
         self._average_length = sum(self._lengths) / count if count else 0.0
@@ -112,16 +113,22 @@ class BM25Retriever:
             raise ValueError("domain must be a nonempty string or None")
         scores: dict[int, float] = defaultdict(float)
         overlap: Counter = Counter()
-        query_terms = set(tokens(query))
+        query_terms = set(retrieval_token_groups(query))
         # Count a query term once: repeating user text cannot inflate its score.
-        for term in sorted(query_terms):
-            for index, frequency in self._postings.get(term, {}).items():
+        for group in sorted(query_terms):
+            frequencies = {}
+            for alias in group:
+                for index, frequency in self._postings.get(alias, {}).items():
+                    score = (frequency, self._idf[alias])
+                    if index not in frequencies or score > frequencies[index]:
+                        frequencies[index] = score
+            for index, (frequency, idf) in frequencies.items():
                 if domain is not None and self._records[index]["domain"] != domain:
                     continue
                 # Okapi BM25 with k1=1.5, b=0.75 and positive Robertson IDF.
                 length_ratio = self._lengths[index] / self._average_length
                 denominator = frequency + 1.5 * (0.25 + 0.75 * length_ratio)
-                scores[index] += self._idf[term] * frequency * 2.5 / denominator
+                scores[index] += idf * frequency * 2.5 / denominator
                 overlap[index] += 1
         ranked = sorted(
             (index for index, score in scores.items() if score > 0),

@@ -120,6 +120,19 @@ fall back to one claim over the complete input (`router_validation`
 `fallback_whole_input`). Shape problems never fail the request; only an unparseable
 or unavailable provider response does. Evidence, state and referral gates are unchanged.
 
+Default discovery runs MCP and hadith-topic HadeethEnc calls in parallel within a
+shared three-second budget (or the remaining request budget, if shorter). Verse
+and term routes skip both. Each adapter receives an isolated receipt scope; late
+or failed batches cannot enter composition. Text-free request summaries record
+`retrieval_mcp` and `retrieval_hadeethenc` timings, plus composer input scans,
+gatekeeper checks, separation, dependencies, published answers, card validation,
+and total post-provider time. These timings identify work after inference without
+logging user queries or source text.
+
+BM25 indexes and queries use the `ar-search-v1` prefix aliases from #92. Overlap
+counts each distinct query-word group once, even when several aliases match;
+aliases never change corpus checksums, displayed text, or quote authorization.
+
 Legacy `claims` requests remain accepted and are joined for the single router call;
 when `original_text` is present it is authoritative. Client levels and deterministic
 personal-case cues in client claims can only restrict the result. An entire request

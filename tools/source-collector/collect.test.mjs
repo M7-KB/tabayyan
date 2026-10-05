@@ -7,8 +7,9 @@ import { createHash } from 'node:crypto';
 import { allowedUrl, extract, Fetcher, collect } from './collect.mjs';
 
 // Synthetic non-religious content; Arabic strings are publisher section labels only.
-const bay = '<h1>Sample question</h1><h2>عبارات مشابهة للسؤال</h2><p>Alternate label</p>' +
-  '<h2>مختصر الجواب</h2><p>Short &amp; exact.</p><h2>الجواب المفصل</h2>' +
+const bay = '<h1>Sample question</h1><section><h2>عبارات مشابهة للسؤال</h2>' +
+  '<p>Alternate label</p></section><section id="short-answer">' +
+  '<p>Short &amp; exact.</p></section><h2>الجواب المفصل</h2>' +
   '<p>Detailed text must not enter the record.</p>';
 const glossary = '<h1>Sample term</h1><div id="definition_short">Brief &amp; exact.</div>' +
   '<table id="translations"><tr><th>Language</th><th>Text</th></tr>' +
@@ -49,6 +50,35 @@ test('global 1 request/s limit and manual redirects', async () => {
   assert.ok(options.every(opts => opts.redirect === 'manual'));
   const redirect = new Fetcher({ fetchFn: async () => new Response('', { status: 302 }) });
   await assert.rejects(redirect.get('https://bayenat.net/'), /http_302/);
+});
+test('ambiguous following siblings and nested detailed containers fail closed', () => {
+  for (const html of [
+    '<h1>Sample</h1><h2>مختصر الجواب</h2><p>Short.</p><div><p>Detailed text.</p></div>',
+    '<h1>Sample</h1><div id="short-answer"><p>Short.</p>' +
+      '<div><p>Detailed text.</p></div></div>',
+    '<h1>Sample</h1><div id="short-answer"><p>Short.</p><h2>Full answer</h2></div>',
+    '<h1>Sample</h1><div id="short-answer"><p class="detailed-answer">Detailed.</p></div>',
+  ]) assert.equal(extract(html, 'https://bayenat.net/question/1').record, undefined);
+});
+test('missing short content or title on a question prevents complete handoff', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'tabayyan-collector-'));
+  try {
+    const seeds = ['https://bayenat.net/question/1', 'https://bayenat.net/question/2',
+      'https://islamic-content.com/dictionary/word/1'];
+    for (const [index, broken] of ['<h1>Question</h1><p>Full text only</p>',
+      '<div id="short-answer">Short but missing title</div>'].entries()) {
+      const result = await collect({ output: path.join(directory, String(index)), seeds,
+        fetcher: { get: async url => url.endsWith('/question/2') ? broken :
+          url.includes('bayenat') ? bay : glossary } });
+      assert.equal(result.complete, false);
+    }
+    assert.equal(extract('<a href="/question/1">Sample</a>',
+      'https://bayenat.net/').reason, 'bayyinat_listing');
+  } finally {
+    assert.equal(path.dirname(path.resolve(directory)), path.resolve(os.tmpdir()));
+    assert.ok(path.basename(directory).startsWith('tabayyan-collector-'));
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 test('non HTML and oversized bodies fail closed', async () => {
   for (const response of [new Response('{}', { headers: { 'Content-Type': 'application/json' } }),

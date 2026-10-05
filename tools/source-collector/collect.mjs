@@ -24,11 +24,13 @@ const label = value => clean(value).replace(/[：:]$/, '').trim();
 
 export function allowedUrl(value, base) {
   let url;
-  try { url = new URL(value, base); } catch { return null; }
+  let decodedPath;
+  try { url = new URL(value, base); decodedPath = decodeURIComponent(url.pathname); }
+  catch { return null; }
   if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
   if (!['bayenat.net', 'islamic-content.com'].includes(url.hostname)) return null;
   if (url.hostname === 'bayenat.net' && !/^(?:\/(?:[a-z]{2}\/)?)?(?:questions?|answers?|doubts?|shubuhat|categories?|topics?)(?:\/|$)|^\/(?:[a-z]{2}\/?|)?$/i
-    .test(decodeURIComponent(url.pathname))) return null;
+    .test(decodedPath)) return null;
   if (url.hostname === 'islamic-content.com' &&
       !/^\/dictionary(?:\/|$)/.test(url.pathname)) return null;
   if (/\.(pdf|zip|png|jpe?g|mp[34]|docx?|xlsx?|css|js)$/i.test(url.pathname)) return null;
@@ -45,18 +47,22 @@ export function allowedUrl(value, base) {
 /** Extract an explicitly named short section, never a whole answer/body fallback. */
 function section(document, names, ids = []) {
   const nodes = walk(document);
-  const byId = nodes.find(n => ids.includes(attr(n, 'id')));
-  if (byId) return clean(text(byId));
-  const heading = nodes.find(n => /^h[1-6]$/.test(n.tagName ?? '') &&
-    names.includes(label(text(n))));
-  if (!heading) return '';
-  const siblings = children(heading.parentNode);
-  const output = [];
-  for (const sibling of siblings.slice(siblings.indexOf(heading) + 1)) {
-    if (walk(sibling).some(n => /^h[1-6]$/.test(n.tagName ?? ''))) break;
-    output.push(text(sibling));
-  }
-  return clean(output.join(''));
+  const candidates = nodes.filter(n => ids.includes(attr(n, 'id')) ||
+    (n.tagName === 'section' && children(n).some(child =>
+      /^h[1-6]$/.test(child.tagName ?? '') && names.includes(label(text(child))))));
+  // No following-sibling heuristic: only an explicit structural short container.
+  if (candidates.length !== 1) return '';
+  const container = candidates[0];
+  const descendants = walk(container).slice(1);
+  const permitted = new Set(['p', 'br', 'ul', 'ol', 'li', 'span', 'strong', 'em',
+    'b', 'i', 'a', 'small', 'sup', 'sub']);
+  if (descendants.some(n => n.tagName && !permitted.has(n.tagName) &&
+    !(/^h[1-6]$/.test(n.tagName) && n.parentNode === container &&
+      names.includes(label(text(n)))))) return '';
+  if (descendants.some(n => /detailed|full[-_]?answer|long[-_]?answer/i
+    .test(`${attr(n, 'id')} ${attr(n, 'class')}`))) return '';
+  return clean(children(container).filter(n => !/^h[1-6]$/.test(n.tagName ?? ''))
+    .map(text).join(''));
 }
 
 export function extract(html, url) {
@@ -66,6 +72,14 @@ export function extract(html, url) {
   const links = [...new Set(nodes.filter(n => n.tagName === 'a').map(n =>
     allowedUrl(attr(n, 'href'), url)).filter(Boolean))];
   const source = new URL(url).hostname;
+  const pathname = new URL(url).pathname;
+  if (source === 'bayenat.net' &&
+    /^\/(?:[a-z]{2}\/)?(?:(?:questions|answers|doubts|shubuhat|categories|topics)\/?)?$/i
+      .test(pathname)) return { links, reason: 'bayyinat_listing' };
+  if (source === 'islamic-content.com' &&
+    !/^\/dictionary\/word\/[^/]+\/?$/.test(pathname)) {
+    return { links, reason: 'dictionary_listing' };
+  }
   if (!title) return { links, reason: 'missing_h1' };
   if (source === 'bayenat.net') {
     const short = section(document, ['مختصر الجواب', 'الجواب المختصر'],
@@ -79,9 +93,6 @@ export function extract(html, url) {
       keywords: section(document, ['الكلمات المفتاحية']).split('\n').filter(Boolean),
       category: section(document, ['التصنيف', 'تصنيف السؤال']),
     } };
-  }
-  if (!/^\/dictionary\/word\/[^/]+\/?$/.test(new URL(url).pathname)) {
-    return { links, reason: 'dictionary_listing' };
   }
   const definition = section(document,
     ['التعريف المختصر', 'تعريف مختصر', 'المعنى المختصر'],
@@ -177,9 +188,9 @@ export async function collect({ output, maxPages = 10000, seeds = ROOTS,
     files.push({ file: name, source_host: host, records: records[host].length,
       bytes: bytes.length, sha256: sha(bytes) });
   }
-  const complete = queue.length === 0 && report.every(row => row.status !== 'failed') &&
-    files.every(file => file.records > 0) && !report.some(row =>
-      row.reason === 'missing_explicit_short_definition');
+  const complete = queue.length === 0 && files.every(file => file.records > 0) &&
+    report.every(row => row.status === 'collected' ||
+      ['bayyinat_listing', 'dictionary_listing'].includes(row.reason));
   const manifest = { format_version: 1, authority_event: AUTHORITY,
     generated_at: new Date().toISOString(), complete, visited: visited.size,
     remaining_pages: queue.length, files, snapshots,

@@ -22,7 +22,8 @@ Write-Host "Output: $collectionOutput; exit: $collectionExit"
 Get-Content -LiteralPath (Join-Path $collectionOutput 'manifest.json')
 ```
 
-Exit 0: traversal ended, both sources produced records, no request failed.
+Exit 0: traversal ended, both sources produced records, no request or recognized
+content-page extraction failed. Only recognized listing pages may be skipped.
 Exit 2: partial output; keep for inspection, do not deploy as a complete index.
 Exit 1: startup/output failure. Existing directories are never overwritten.
 Output stays under ignored `data/private/`; never force-add it to Git.
@@ -59,7 +60,9 @@ evidence, embedded scripture, hadith gradings or level-D answers.
 
 No source HTML was supplied in data/raw/ when R1 was built. Tests use synthetic
 non-religious content. The extractor requires an h1 title and an explicit short
-section heading/container. It never substitutes a detailed answer or the whole
+bounded section container. Bare headings with following sibling paragraphs are
+ambiguous and refused. Containers with nested blocks or detailed headings are
+refused too. It never substitutes a detailed answer or the whole
 page. Dictionary entries must use `/dictionary/word/<id>`; supplied translations
 must be two-column publisher rows inside an explicit translations container.
 Different markup or client-rendered pages may yield no records. Exit 0 does

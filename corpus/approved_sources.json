@@ -70,25 +70,33 @@
         "glossary"
       ],
       "entry_url": "https://islamic-content.com/dictionary",
-      "license_status": "pending",
+      "license_status": "confirmed",
       "redistribution_allowed": false,
-      "ingestion_allowed": false,
+      "ingestion_allowed": true,
       "approved_by": "pending",
       "selection_status": "candidate",
-      "public_display_allowed": false
+      "public_display_allowed": true,
+      "owner_authority_event": "d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f",
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution",
+      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/feat/private-short-index-loaders/SOURCES.md#owner-short-index-decision-2026-10-05",
+      "license_url": "https://islamic-content.com/page/copyright"
     },
     {
       "source_id": "bayyinat",
       "domains": [
         "faq"
       ],
-      "entry_url": "https://dawa.center/file/7937",
-      "license_status": "pending",
+      "entry_url": "https://bayenat.net/",
+      "license_status": "confirmed",
       "redistribution_allowed": false,
-      "ingestion_allowed": false,
+      "ingestion_allowed": true,
       "approved_by": "pending",
       "selection_status": "candidate",
-      "public_display_allowed": false
+      "public_display_allowed": true,
+      "owner_authority_event": "d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f",
+      "license_scope": "Owner-authorized challenge-app use only; no redistribution",
+      "license_evidence_url": "https://github.com/M7-KB/tabayyan/blob/feat/private-short-index-loaders/SOURCES.md#owner-short-index-decision-2026-10-05",
+      "license_url": "pending"
     },
     {
       "source_id": "approved-quran-translation",

@@ -1,5 +1,28 @@
 # Source and licence register
 
+## Owner short-index decision (2026-10-05)
+
+Written authority: owner M7md's planning event
+`d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f`
+(2026-10-05 18:09:12 UTC). O1 confirms bayenat.net as the Osul Center web
+edition of the approved Bayyinat; O2 permits short glossary definitions and
+publisher translations verbatim, attributed with a link, overriding link-only.
+Basis reported by the owner: organizers' 2026-10-03 reply. Correspondence remains
+with the owner; no independent rights-holder grant was inspected by this agent.
+The linked [handoff record](docs/PRIVATE_SHORT_INDEX_HANDOFF.md) records the
+signed-event authority and scope. The confirmed machine-readable status means
+**owner-authorized challenge-app use only**, consistent with the earlier scoped
+owner decisions below. It never means unrestricted redistribution rights.
+
+Recorded hosts: `bayenat.net` (private Bayyinat collection/index) and
+`islamic-content.com` under `/dictionary` (private glossary collection/index).
+No agent request, latency result or verified live response shape is claimed.
+Private owner collection, short verbatim attributed display and OpenAI embeddings
+of published index text (O5) are authorized. Whole answers/pages, bulk display,
+downloads and public-repository files remain prohibited. Curated-record review
+stays pending until the owner records it. Older pending/link-only passages for
+these two sources are superseded only within this limited scope.
+
 ## Terminology discovery evidence (2026-10-05)
 
 The owner's five-call probe identified icadb collection metadata (`id=5`,
@@ -191,8 +214,8 @@ the applicable publisher document. Pending entries cannot satisfy ingestion clea
 | sahih-bukhari | hadith | Sultaniyya / Dar Tawq al-Najah reproduction, Shamela 1681 | https://shamela.ws/book/1681 | Owner-authorized challenge-app use only; no redistribution | pending | https://shamela.ws/book/1681 | Owner-reported challenge-app permission, dated 2026-10-03; correspondence retained by owner. Not an independently inspected rights-holder grant. | Challenge-app ingestion allowed; redistribution prohibited; private artifact only; specialist review pending. | https://github.com/M7-KB/tabayyan/blob/f82ba58058c8194bdd47ad02402ca7b4a3c4fbe9/SOURCES.md#owner-licence-decision-2026-10-03-night |
 | sahih-muslim | hadith | Abd al-Baqi, 1955 edition, Shamela 1727 | https://shamela.ws/book/1727 | pending | pending | https://shamela.ws/book/1727 | No edition-specific redistribution grant established from the book card. | Pending; local only; do not ingest | pending |
 | dorar-hadith | hadith | exact grading, grader and reference per item | https://dorar.net/hadith | Owner-authorized challenge-app use only; matched verse, hadith, grading or short excerpt with visible source and link; no bulk display, download or file redistribution | pending | https://dorar.net/hadith | Owner-reported challenge-app display scope, 2026-10-05; underlying publisher terms are not independently cleared. | Ingestion and matched public display allowed; file redistribution prohibited; private artifact or same-request live result only. | https://github.com/M7-KB/tabayyan/blob/docs/display-20261005/SOURCES.md#owner-public-display-decision-2026-10-05 |
-| jamhara-glossary | glossary | Arabic definition and supplied English equivalent | https://islamic-content.com/dictionary | pending | https://islamic-content.com/page/copyright | https://islamic-content.com/page/copyright | Policy describes personal noncommercial scholarly use; public redistribution/application use not established. | Pending; local only; do not ingest | pending |
-| bayyinat | faq | doubts and dialogue, Usul Center 2024 / 1445 AH | https://dawa.center/file/7937 | pending | pending | https://dawa.center/file/7937 | Catalogue has rights-reserved footer. PDF-specific terms not inspected. | Pending; local only; do not ingest | pending |
+| jamhara-glossary | glossary | Arabic short definition and publisher-supplied translation | https://islamic-content.com/dictionary | Owner-authorized challenge-app use only; no redistribution | https://islamic-content.com/page/copyright | https://islamic-content.com/page/copyright | Owner O2 overrides link-only; organizer correspondence retained by owner, not independently inspected. | Private index; short verbatim attributed definition/translation with link only; review pending | https://github.com/M7-KB/tabayyan/blob/feat/private-short-index-loaders/SOURCES.md#owner-short-index-decision-2026-10-05 |
+| bayyinat | faq | Osul Center web edition of approved Bayyinat | https://bayenat.net/ | Owner-authorized challenge-app use only; no redistribution | pending | https://dawa.center/file/7937 | Owner O1 confirms same approved edition; organizer correspondence retained by owner, not independently inspected. | Private index; short verbatim attributed answer with link only; review pending | https://github.com/M7-KB/tabayyan/blob/feat/private-short-index-loaders/SOURCES.md#owner-short-index-decision-2026-10-05 |
 | approved-quran-translation | quran_translation | English, linked to Arabic verse | https://quranpedia.net/translations/languages | pending | pending | https://quranpedia.net/translations/languages | Translator, edition, exact file and its licence all pending selection. KFC-approved translation is also permitted by the brief. | Pending; local only; do not ingest | pending |
 | dorar-tafsir | tafsir | separate commentary from scripture | https://dorar.net/tafseer | pending | pending | https://dorar.net/tafseer | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest | pending |
 | dorar-aqeeda | aqeeda | approved creed material | https://dorar.net/aqeeda | pending | pending | https://dorar.net/aqeeda | Rights-reserved footer; public redistribution permission not established. | Pending; local only; do not ingest | pending |

@@ -1190,6 +1190,11 @@ only; until a HadeethEnc result returns, hadith claims abstain with referral.
 
 ## Bounded connector spike (2026-10-05)
 
+R2's [private short-index handoff](docs/PRIVATE_SHORT_INDEX_HANDOFF.md) describes
+loading owner-collected Bayyinat/glossary files with trusted SHA-256 values and
+source permission gates. No public source data is added. Loaders do not enable
+the API automatically; actual coverage awaits owner collection and inspection.
+
 The [measured source/API spike](docs/CONNECTOR_SPIKE_20261005.md) records two OpenAI
 calls and bounded direct probes, endpoint shapes, one-sample local latency and terms
 links. [TOOLS.md](TOOLS.md#bounded-connector-spike-and-quran-handoff-2026-10-05)

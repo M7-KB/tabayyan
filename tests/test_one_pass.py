@@ -356,3 +356,28 @@ def test_binding_deadline_retains_claims_without_composition_dispatch():
         assert not model.calls
     finally:
         release.set()
+
+
+def test_first_request_service_setup_is_inside_http_deadline(monkeypatch):
+    import asyncio
+    from time import sleep
+
+    from api.provider import ProviderUnavailable
+
+    actual_wait = asyncio.wait_for
+
+    async def short_wait(awaitable, *, timeout):
+        return await actual_wait(awaitable, timeout=0.05)
+
+    class SlowSetup:
+        def __init__(self, **kwargs):
+            sleep(0.2)
+            raise ProviderUnavailable("configuration")
+
+    monkeypatch.setattr("api.main.asyncio.wait_for", short_wait)
+    monkeypatch.setattr("api.main.OpenAIStructuredModel", SlowSetup)
+    app = create_app(Settings(openai_api_key="inert", openai_schema_warmup=False))
+    with TestClient(app) as client:
+        result = client.post("/api/v1/check", json={"original_text": TEXT})
+    assert result.status_code == 503
+    assert result.json()["error"]["code"] == "CHECK_INCOMPLETE"

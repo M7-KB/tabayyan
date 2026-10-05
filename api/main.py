@@ -9,11 +9,13 @@ from uuid import uuid4
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from api.check import CheckRequest
 from api.classifier import LevelClassifier, LevelProposal
 from api.composer import Composer, DecisionProposal
 from api.config import load_config
+from api.deadline import RequestProgress, request_deadline, request_progress
 from api.diagnostics import (
     Summary,
     configure_logging,
@@ -138,16 +140,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         token = request_id.set(uuid4().hex)
         summary_token = summary.set(Summary())
         started = monotonic()
+        deadline_token = request_deadline.set(started + 35 if stage == "check" else None)
+        progress = RequestProgress()
+        progress_token = request_progress.set(progress if stage == "check" else None)
         outcome = "unhandled_failure"
         try:
-            result = await call_next(request)
+            try:
+                result = (
+                    await asyncio.wait_for(call_next(request), timeout=35)
+                    if stage == "check"
+                    else await call_next(request)
+                )
+            except TimeoutError:
+                record("check_deadline", "CHECK_INCOMPLETE", started)
+                partial = progress.snapshot()
+                if partial is not None:
+                    final_states(partial["cards"])
+                    result = JSONResponse(partial)
+                else:
+                    result = response(
+                        503,
+                        "CHECK_INCOMPLETE",
+                        "Check unfinished; please retry",
+                        "لم يكتمل التحقق، حاول مرة أخرى",
+                    )
             outcome = "completed" if result.status_code < 400 else "http_failure"
             result.headers["X-Request-ID"] = request_id.get()
             return result
         finally:
+            progress.snapshot()
             record(stage, outcome, started)
             finish(outcome, started)
             summary.reset(summary_token)
+            request_deadline.reset(deadline_token)
+            request_progress.reset(progress_token)
             request_id.reset(token)
 
     if not settings.health_only:
@@ -202,6 +228,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 final_states(result["cards"])
                 return result
             except ExtractionError as exc:
+                if exc.code == "CHECK_INCOMPLETE":
+                    return response(
+                        503,
+                        exc.code,
+                        "Check unfinished; please retry",
+                        "لم يكتمل التحقق، حاول مرة أخرى",
+                    )
                 return response(
                     exc.status, exc.code, "Check could not be completed", "تعذر إتمام التحقق"
                 )

@@ -217,3 +217,243 @@ def test_router_topic_mapping_drops_complete_claim_overlap():
         )
         is None
     )
+
+
+def test_deadline_preserves_completed_cards_and_marks_unfinished_claims():
+    from time import monotonic
+
+    original = f"{TEXT}\n{TEXT}"
+    value = route_proposal(original)
+    value["claims"] = [
+        {
+            "text_ar": TEXT,
+            "source_text": TEXT,
+            "span": {"start": start, "end": start + len(TEXT)},
+            "origin": "stated",
+        }
+        for start in (0, len(TEXT) + 1)
+    ]
+    checker, _, _ = service(value)
+    checker.deadline_seconds = 0.1
+    release = threading.Event()
+    composer = checker.composer
+    bound = composer.for_request
+
+    def for_request(request):
+        current = bound(request)
+        compose = current.compose
+
+        def delayed(claim, **kwargs):
+            if claim.id == "c2":
+                release.wait(timeout=2)
+            return compose(claim, **kwargs)
+
+        current.compose = delayed
+        return current
+
+    composer.for_request = for_request
+    started = monotonic()
+    try:
+        result = checker.check(CheckRequest(original_text=original))
+        assert monotonic() - started < 0.5
+        assert [c["claim"]["id"] for c in result["cards"]] == ["c1"]
+        assert result["retryable_results"][0]["claim_id"] == "c2"
+        assert result["retryable_results"][0]["retryable"] is True
+        assert "state" not in result["retryable_results"][0]
+    finally:
+        release.set()
+
+
+def test_router_deadline_is_retryable_http_failure():
+    checker, _, _ = service()
+    release = threading.Event()
+    route = checker.router.route
+    checker.deadline_seconds = 0.05
+    checker.router.route = lambda text: (release.wait(timeout=2), route(text))[1]
+    app = create_app(Settings(openai_api_key="inert", openai_schema_warmup=False))
+    app.state.checker = checker
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/v1/check", json={"original_text": TEXT})
+        assert response.status_code == 503
+        assert response.json()["error"]["code"] == "CHECK_INCOMPLETE"
+    finally:
+        release.set()
+
+
+def test_composer_provider_timeout_is_unfinished_not_abstention():
+    from api.provider import ProviderUnavailable
+
+    checker, _, _ = service()
+
+    class Timeout:
+        def complete_json(self, **kwargs):
+            raise ProviderUnavailable("timeout")
+
+    checker.composer.model = Timeout()
+    result = checker.check(CheckRequest(original_text=TEXT))
+    assert result["cards"] == []
+    assert result["retryable_results"][0]["code"] == "CHECK_INCOMPLETE"
+
+
+def test_retrieval_deadline_keeps_known_claim_retryable():
+    checker, _, _ = service()
+    checker.deadline_seconds = 0.05
+    release = threading.Event()
+
+    class Slow:
+        def discover(self, query, source_request):
+            release.wait(timeout=2)
+
+    checker.connector = Slow()
+    try:
+        result = checker.check(CheckRequest(original_text=TEXT))
+        assert result["cards"] == []
+        assert result["retryable_results"][0]["claim_id"] == "c1"
+    finally:
+        release.set()
+
+
+def test_provider_budget_is_capped_by_request_deadline():
+    import json
+    from time import monotonic
+
+    import httpx
+
+    from api.deadline import request_deadline
+    from api.provider import OpenAIStructuredModel
+    from tests.test_provider import body, run
+
+    def handler(request):
+        assert request.extensions["timeout"]["read"] <= 1
+        assert json.loads(request.content)["store"] is False
+        return httpx.Response(200, json=body())
+
+    token = request_deadline.set(monotonic() + 1)
+    try:
+        model = OpenAIStructuredModel(
+            api_key="inert", model="configured", transport=httpx.MockTransport(handler)
+        )
+        assert run(model)["level"] == "B"
+    finally:
+        request_deadline.reset(token)
+
+
+def test_binding_deadline_retains_claims_without_composition_dispatch():
+    from time import monotonic
+
+    checker, _, model = service()
+    checker.deadline_seconds = 0.05
+    release = threading.Event()
+    bound = checker.composer.for_request
+    checker.composer.for_request = lambda request: (release.wait(timeout=2), bound(request))[1]
+    started = monotonic()
+    try:
+        result = checker.check(CheckRequest(original_text=TEXT))
+        assert monotonic() - started < 0.5
+        assert result["cards"] == []
+        assert result["retryable_results"][0]["claim_id"] == "c1"
+        assert not model.calls
+    finally:
+        release.set()
+
+
+def test_first_request_service_setup_is_inside_http_deadline(monkeypatch):
+    import asyncio
+    from time import sleep
+
+    from api.provider import ProviderUnavailable
+
+    actual_wait = asyncio.wait_for
+
+    async def short_wait(awaitable, *, timeout):
+        return await actual_wait(awaitable, timeout=0.05)
+
+    class SlowSetup:
+        def __init__(self, **kwargs):
+            sleep(0.2)
+            raise ProviderUnavailable("configuration")
+
+    monkeypatch.setattr("api.main.asyncio.wait_for", short_wait)
+    monkeypatch.setattr("api.main.OpenAIStructuredModel", SlowSetup)
+    app = create_app(Settings(openai_api_key="inert", openai_schema_warmup=False))
+    with TestClient(app) as client:
+        result = client.post("/api/v1/check", json={"original_text": TEXT})
+    assert result.status_code == 503
+    assert result.json()["error"]["code"] == "CHECK_INCOMPLETE"
+
+
+@pytest.mark.parametrize("attempt", range(3))
+def test_outer_http_deadline_retains_completed_cards(attempt, monkeypatch):
+    import asyncio
+    from time import monotonic
+
+    from api.deadline import request_deadline, request_progress
+
+    original = f"{TEXT}\n{TEXT}"
+    value = route_proposal(original)
+    value["claims"] = [
+        {
+            "text_ar": TEXT,
+            "source_text": TEXT,
+            "span": {"start": start, "end": start + len(TEXT)},
+            "origin": "stated",
+        }
+        for start in (0, len(TEXT) + 1)
+    ]
+    checker, _, _ = service(value)
+    checker.deadline_seconds = 0.1
+    release = threading.Event()
+    bound = checker.composer.for_request
+
+    def for_request(request):
+        current = bound(request)
+        compose = current.compose
+
+        def delayed(claim, **kwargs):
+            if claim.id == "c2":
+                release.wait(timeout=1)
+            return compose(claim, **kwargs)
+
+        current.compose = delayed
+        return current
+
+    checker.composer.for_request = for_request
+    actual_wait = asyncio.wait_for
+
+    async def shared_deadline(awaitable, *, timeout):
+        request_deadline.set(monotonic() + 0.1)
+        return await actual_wait(awaitable, timeout=0.1)
+
+    monkeypatch.setattr("api.main.asyncio.wait_for", shared_deadline)
+    app = create_app(Settings(openai_api_key="inert", openai_schema_warmup=False))
+    app.state.checker = checker
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/v1/check", json={"original_text": original})
+        assert response.status_code == 200
+        result = response.json()
+        assert [card["claim"]["id"] for card in result["cards"]] == ["c1"]
+        assert result["cards"][0]["state"] == "SUPPORTED"
+        assert [item["claim_id"] for item in result["retryable_results"]] == ["c2"]
+        assert request_progress.get() is None
+    finally:
+        release.set()
+
+
+def test_sealed_http_snapshot_ignores_late_results():
+    from time import monotonic
+
+    from api.deadline import RequestProgress, request_deadline
+
+    progress = RequestProgress()
+    progress.register({"cards": []}, [{"claim_id": "c1", "retryable": True}])
+    token = request_deadline.set(monotonic() + 1)
+    try:
+        progress.complete("c1", {"state": "SUPPORTED"})
+        snapshot = progress.snapshot()
+        progress.complete("c1", {"state": "CANNOT_CONFIRM"})
+        assert snapshot["cards"] == [{"state": "SUPPORTED"}]
+        assert progress.snapshot() == snapshot
+    finally:
+        request_deadline.reset(token)

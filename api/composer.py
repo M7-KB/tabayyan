@@ -14,6 +14,7 @@ from api.config import load_config
 from api.extract import ExtractedClaim, StrictObject
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.model import StructuredModel
+from api.provider import ProviderUnavailable
 from api.retrieval import BM25Retriever, RetrievalResult, Retriever
 from api.span_detector import SpanDetector, words
 from corpus.normalize import normalize_arabic
@@ -348,6 +349,10 @@ class Composer:
                     schema=proposal_type.model_json_schema(),
                 )
             )
+        except ProviderUnavailable as exc:
+            if propose_state and exc.category in {"timeout", "retry_budget"}:
+                raise
+            return finish("LOW_CONFIDENCE")
         except Exception:
             return finish("LOW_CONFIDENCE")
         card["confidence"] = proposal.confidence

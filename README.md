@@ -23,7 +23,8 @@ propagates to parallel claim workers. No input, source text, model identifier, k
 provider body or exception text appears in these events. Validation failures use
 fixed categories. Client-supplied request IDs are ignored and context resets after
 each request. A route's elapsed time is observational, not an enforced deadline:
-O4 remains an owner decision. Historical 503s remain unattributed without deployment
+O4 is a 35-second server deadline (owner event
+`d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f`). Historical 503s remain unattributed without deployment
 logs; these diagnostics must deploy before they can classify new live failures.
 
 `POST /api/v1/extract` accepts `{"text":"...","max_claims":10}`. Text is limited
@@ -1176,3 +1177,23 @@ records verified provider model use. Dorar returned 403 from the local machine a
 icadb collection metadata but no verified term response; cases 7, 8 and 12 retain
 the owner's abstention with a glossary link. MCP language access worked, terminology coverage
 is unverified, and web-search citations alone do not provide raw verbatim evidence.
+
+
+### Check deadline and unfinished results
+
+`/check` has a 35-second orchestration deadline. Provider retries share its remaining
+budget. Completed evidence cards stay in `cards`; unfinished claims are returned in
+`retryable_results` as `{claim_id, text_ar, code: "CHECK_INCOMPLETE", retryable: true,
+message_ar}`. They have no evidence state and are never converted to CANNOT_CONFIRM.
+A routing timeout, before claims are known, returns HTTP 503 with error code
+CHECK_INCOMPLETE. The client deadline is about 40 seconds.
+Running synchronous operations cannot be forcibly interrupted; the response stops
+waiting at the deadline and cancels queued work. Provider calls inherit the absolute
+deadline, and late worker results are discarded without persistence.
+
+The HTTP deadline owner shares request-local progress with claim workers. Each
+validated card is registered immediately on completion. If the outer timer wins
+before the orchestration response is serialized, it snapshots those cards and
+returns known unfinished claims in retryable_results. A generic 503 is used only
+before claims are known. The snapshot is sealed, ignores late results, and exists
+only in request memory; it is never cached or logged.

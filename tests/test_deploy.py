@@ -71,17 +71,52 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
     assert service["branch"] == "main"
     assert service["autoDeployTrigger"] == "off"
     assert service["healthCheckPath"] == "/health"
-    assert service["buildCommand"] == "python -m pip install ."
+    build_command = " ".join(service["buildCommand"].split())
+    assert build_command.startswith(
+        "python -m pip install . && mkdir -p corpus/private && curl -fsSL "
+    )
+    assert "Authorization: Bearer $PRIVATE_DATA_TOKEN" in build_command
+    assert build_command.endswith(
+        "https://api.github.com/repos/M7-KB/tabayyan-private-data/contents/"
+        "quran-kfc-v30-20261005.jsonl.xz"
+    )
     assert service["startCommand"] == (
         "uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log"
     )
     assert {variable["key"] for variable in service["envVars"]} == {
         "HEALTH_ONLY",
         "CORS_ORIGINS",
-        "BUILD_SHA",
         "PYTHON_VERSION",
+        "PRIVATE_DATA_TOKEN",
+        "PRIVATE_CORPUS_PATH",
+        "ALLOW_PENDING_REVIEW",
+        "OPENAI_API_KEY",
+        "OPENAI_MODEL_EXTRACT",
+        "OPENAI_MODEL_REASON",
     }
     assert all(
         set(variable) == {"key", "sync"} and variable["sync"] is False
         for variable in service["envVars"]
     )
+
+
+def test_build_sha_falls_back_to_render_commit(monkeypatch):
+    monkeypatch.delenv("BUILD_SHA", raising=False)
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "0123456789abcdef")
+    assert Settings().build_sha == "0123456"
+    monkeypatch.setenv("BUILD_SHA", "manual-override")
+    assert Settings().build_sha == "manual-override"
+
+
+def test_build_sha_is_unknown_without_render_or_manual_value(monkeypatch):
+    monkeypatch.delenv("BUILD_SHA", raising=False)
+    monkeypatch.delenv("RENDER_GIT_COMMIT", raising=False)
+    assert Settings().build_sha == "unknown"
+
+
+def test_health_reports_render_commit(monkeypatch):
+    monkeypatch.delenv("BUILD_SHA", raising=False)
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "fedcba9876543210")
+    monkeypatch.setenv("HEALTH_ONLY", "true")
+    with TestClient(create_app(Settings())) as client:
+        assert client.get("/health").json()["build"] == "fedcba9"

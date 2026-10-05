@@ -1,4 +1,5 @@
 import { AiNotice } from './components/AiNotice.jsx'
+import { ArchMark } from './components/ArchMark.jsx'
 import { InputScreen } from './components/InputScreen.jsx'
 import { ThemeToggle } from './components/ThemeToggle.jsx'
 import { CardPreview } from './dev/CardPreview.jsx'
@@ -28,15 +29,20 @@ export default function App() {
       </a>
       <p className="preview-banner">{strings.previewBanner}</p>
       <header className="app-header">
-        <div className="theme-bar">
+        <div className="top-row">
+          <span className="brand-small">{strings.appName}</span>
           <ThemeToggle />
         </div>
-        <h1>{strings.appName}</h1>
-        <p>{strings.tagline}</p>
-        <AiNotice />
+        <div className="hero">
+          <ArchMark />
+          <h1>{strings.appName}</h1>
+          <p>{strings.tagline}</p>
+          <AiNotice />
+        </div>
       </header>
       <main id="main" tabIndex={-1}>
         <InputScreen onSubmitText={handleSubmitText} onSubmitMedia={handleSubmitMedia} />
+        <p className="footer-note">{strings.quoteSourceNote}</p>
       </main>
     </>
   )

@@ -392,8 +392,12 @@ npm run build
 ```
 
 The page shows a temporary development-preview banner (remove it when T-504 wires the check endpoint),
-the input screen has the AI-not-a-fatwa notice (always visible), the privacy notice before submit, and
-the upload consent checkbox that gates the upload button. The privacy notice covers text input only
+the input screen has the AI-not-a-fatwa notice as a pill under the tagline (always visible), a composer with
+an icon-only send button, a collapsed privacy row under the composer (its short line is always visible), and
+the source footer. The example chips render only when `strings.exampleChips` holds owner-approved entries; it is empty for now.
+The upload consent checkbox gates the upload button. The upload form is hidden in this text-first build:
+it sits behind `features.mediaUpload` in `web/src/config/features.js`, which is `false` by default. The audio
+task sets it to `true`. The privacy notice covers text input only
 (text first; audio/video and image input are not live yet, image input is P2). It says the text goes to
 the AI provider, only the extracted search phrases go to approved sources (SPEC §0.6), we do not store
 the text, and the provider may keep data briefly under its own policy. No API calls yet: submit
@@ -449,6 +453,10 @@ previous palette. `:root[data-theme='dark']` holds the dark values from the owne
 The four state badges have their own dark pairs. `web/src/__tests__/palette.test.js` reads the tokens from the CSS
 and checks each text pair at 4.5:1 and each control or focus pair at 3:1 in both themes. Dark-theme borders
 (`--c-border`, `#2A3170`) are decorative only: inputs and buttons use `--c-border-strong` for their edge.
+
+Input-screen and card tokens: `--c-control-border` (borders, chip edges, icons, at least 3:1 in both themes),
+`--c-gold` (arch line-art), `--c-send` with `--c-on-send` (send button), and `--radius-card` / `--radius-pill`.
+Cards use `--c-control-border` and `--radius-card`; their layout is unchanged.
 
 ## Check client and results (T-504, part 1)
 

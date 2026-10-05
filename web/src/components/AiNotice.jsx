@@ -1,9 +1,11 @@
 import { strings } from '../strings.js'
+import { InfoIcon } from './Icons.jsx'
 
 export function AiNotice() {
   return (
     <p className="ai-notice" role="note">
-      {strings.aiNotice}
+      <InfoIcon />
+      <span>{strings.aiNotice}</span>
     </p>
   )
 }

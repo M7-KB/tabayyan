@@ -62,6 +62,7 @@ const textPairs = [
   ['c-state-no-text', 'c-surface'],
   ['c-state-dis-text', 'c-surface'],
   ['c-state-cc-text', 'c-surface'],
+  ['c-on-send', 'c-send'],
 ]
 
 const nonTextPairs = [
@@ -70,6 +71,13 @@ const nonTextPairs = [
   ['c-primary', 'c-bg'],
   ['c-border-strong', 'c-surface'],
   ['c-rule', 'c-bg'],
+  // Input screen (SPEC.md §6.4 and the owner brief, 2026-10-05): borders, chips and icons need 3:1.
+  ['c-control-border', 'c-bg'],
+  ['c-control-border', 'c-surface'],
+  ['c-control-border', 'c-chip-bg'],
+  ['c-gold', 'c-bg'],
+  ['c-gold', 'c-surface'],
+  ['c-send', 'c-bg'],
 ]
 
 describe.each([

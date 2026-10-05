@@ -1,8 +1,8 @@
 .claim-card {
   margin-top: 1.5rem;
   padding: 1rem;
-  border: 1px solid var(--c-border);
-  border-radius: 0.75rem;
+  border: 1px solid var(--c-control-border);
+  border-radius: var(--radius-card);
   background: var(--c-surface);
 }
 

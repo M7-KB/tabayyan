@@ -17,6 +17,7 @@ from api.model import StructuredModel
 from api.retrieval import BM25Retriever, RetrievalResult, Retriever
 from api.span_detector import SpanDetector, words
 from corpus.normalize import normalize_arabic
+from corpus.quran_binding import display_text, matching_text
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "contracts/card.schema.json").read_text("utf-8"))
@@ -48,6 +49,9 @@ Return only the schema. Select corpus_ids that actually address the claim/questi
 Do not invent evidence, quotes, translations, hadith gradings, rulings or source IDs.
 Explain briefly using the supplied evidence; never reproduce or quote source text in
 explanations or position summaries. Arabic explanation required; English only for en.
+Adapt explanation wording and detail to the asker's question and explicitly stated
+knowledge/background in asker_context; do not infer religious or personal traits.
+This adapts explanation only. Selected source text and grading remain unchanged.
 For level B hedge where disagreement is possible. Do not rank positions or claim
 unproven consensus. Each distinct position cites a different supplied record.
 recorded_disagreement reports disagreement in the evidence, not the user's tone.
@@ -69,7 +73,7 @@ def evidence_from(result: RetrievalResult) -> dict:
         "source_id": r["source_id"],
         "source_name_ar": r["source_name_ar"],
         "source_url": r["source_url"],
-        "quote_ar": r["text_ar"],
+        "quote_ar": display_text(r),
         "translation": None,
         "ref": copy.deepcopy(r["ref"]),
         "grading": (
@@ -85,8 +89,8 @@ def evidence_from(result: RetrievalResult) -> dict:
         item["source_ref"] = copy.deepcopy(r["source_ref"])
     # A copied quote must also retain the validated indexing key.
     if (
-        not normalize_arabic(item["quote_ar"])
-        or normalize_arabic(item["quote_ar"]) != r["text_normalized"]
+        not normalize_arabic(matching_text(r))
+        or normalize_arabic(matching_text(r)) != r["text_normalized"]
     ):
         raise ValueError("Invalid quote key")
     VALIDATOR.evolve(schema={"$ref": "#/$defs/evidence", "$defs": SCHEMA["$defs"]}).validate(item)
@@ -307,6 +311,7 @@ class Composer:
                     instructions=INSTRUCTIONS,
                     data={
                         "claim": claim.text_ar,
+                        "asker_context": original,
                         "level": claim.level,
                         "lang": lang,
                         "records": json.dumps([r.record for r in candidates], ensure_ascii=False),

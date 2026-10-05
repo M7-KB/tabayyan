@@ -12,6 +12,7 @@ from typing import Protocol
 from api.config import TuningMetadata
 from corpus.loader import load_corpus
 from corpus.normalize import normalize_arabic
+from corpus.quran_binding import matching_text
 from corpus.validate import ROOT
 
 
@@ -60,7 +61,7 @@ class BM25Retriever:
         self._postings: dict[str, dict[int, int]] = defaultdict(dict)
         self._lengths = []
         for index, record in enumerate(self._records):
-            if record["text_normalized"] != normalize_arabic(record["text_ar"]):
+            if record["text_normalized"] != normalize_arabic(matching_text(record)):
                 raise ValueError("retrieval key differs from ar-v1")
             terms = tokens(record["text_normalized"])
             self._lengths.append(len(terms))

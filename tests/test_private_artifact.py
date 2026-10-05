@@ -1,7 +1,9 @@
 """Synthetic engineering fixtures only; no private data, source excerpts or keys."""
 
+import gzip
 import hashlib
 import json
+import lzma
 import subprocess
 from pathlib import Path
 
@@ -75,6 +77,75 @@ def test_private_use_preserves_pending_text_and_file_bytes(private_files):
     assert version == "test-v1"
     assert records[0]["approved_by"] == "pending"
     assert corpus.read_bytes() == before
+
+
+def test_gzip_binds_decompressed_bytes_without_rewriting(private_files):
+    item, _, corpus, _, _, _, _ = private_files
+    compressed = gzip.compress(corpus.read_bytes(), mtime=0)
+    corpus.write_bytes(compressed)  # No suffix dependency.
+    assert load(private_files, allow_pending_review=True) == ([item], "test-v1")
+    assert corpus.read_bytes() == compressed
+
+
+@pytest.mark.parametrize("failure", ["truncated", "corrupt", "compressed_hash", "size", "bomb"])
+def test_gzip_failures_are_safe_and_atomic(private_files, monkeypatch, failure):
+    _, _, corpus, manifest, _, _, _ = private_files
+    original = corpus.read_bytes()
+    compressed = gzip.compress(original, mtime=0)
+    if failure == "truncated":
+        compressed = compressed[:-4]
+    elif failure == "corrupt":
+        compressed = b"\x1f\x8b" + b"private-source-text"
+    elif failure == "compressed_hash":
+        data = json.loads(manifest.read_text("utf-8"))
+        data["sha256"] = hashlib.sha256(compressed).hexdigest()
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+    elif failure == "size":
+        monkeypatch.setattr("corpus.private_artifact.MAX_COMPRESSED_BYTES", len(compressed))
+    elif failure == "bomb":
+        monkeypatch.setattr("corpus.private_artifact.MAX_ARTIFACT_BYTES", len(compressed) + 1)
+    corpus.write_bytes(compressed)
+    with pytest.raises(CorpusValidationError) as caught:
+        load(private_files, allow_pending_review=True)
+    assert "private-source-text" not in str(caught.value)
+    assert "private-name" not in str(caught.value)
+
+
+def test_gzip_does_not_bypass_row_permissions(private_files):
+    _, sources, corpus, _, source_path, _, _ = private_files
+    sources["dorar-hadith"]["public_display_allowed"] = False
+    source_path.write_text(json.dumps({"sources": list(sources.values())}), encoding="utf-8")
+    corpus.write_bytes(gzip.compress(corpus.read_bytes(), mtime=0))
+    with pytest.raises(CorpusValidationError, match="public_display_allowed"):
+        load(private_files, allow_pending_review=True)
+
+
+def test_xz_binds_original_bytes(private_files):
+    item, _, corpus, _, _, _, _ = private_files
+    compressed = lzma.compress(corpus.read_bytes(), preset=9)
+    corpus.write_bytes(compressed)
+    assert load(private_files, allow_pending_review=True) == ([item], "test-v1")
+    assert corpus.read_bytes() == compressed
+
+
+@pytest.mark.parametrize("failure", ["truncated", "corrupt", "trailing", "size", "bomb"])
+def test_xz_fails_closed(private_files, monkeypatch, failure):
+    _, _, corpus, _, _, _, _ = private_files
+    compressed = lzma.compress(corpus.read_bytes())
+    if failure == "truncated":
+        compressed = compressed[:-4]
+    elif failure == "corrupt":
+        compressed = b"\xfd7zXZ\x00private-source-text"
+    elif failure == "trailing":
+        compressed += b"trailing"
+    elif failure == "size":
+        monkeypatch.setattr("corpus.private_artifact.MAX_COMPRESSED_BYTES", len(compressed))
+    elif failure == "bomb":
+        monkeypatch.setattr("corpus.private_artifact.MAX_ARTIFACT_BYTES", len(compressed) + 1)
+    corpus.write_bytes(compressed)
+    with pytest.raises(CorpusValidationError) as caught:
+        load(private_files, allow_pending_review=True)
+    assert "private-source-text" not in str(caught.value)
 
 
 def test_public_distribution_still_rejects_private_collection_and_grader(private_files):

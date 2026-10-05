@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from corpus.normalize import normalize_arabic
+from corpus.quran_binding import validate_pair
 
 DOMAINS = frozenset(
     {
@@ -278,6 +279,10 @@ def validate_records(
             record.get("text_normalized") == normalize_arabic(original),
             f"{prefix}: text_normalized mismatch (rule 4)",
         )
+        try:
+            validate_pair(record)
+        except (ValueError, UnicodeError):
+            raise CorpusValidationError(f"{prefix}: invalid Quran field binding") from None
         licence = record.get("license")
         _require(
             _text(licence)

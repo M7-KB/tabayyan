@@ -56,6 +56,9 @@ premise restates the question as a checkable claim, without supplying its answer
 For question_subject, retain the complete question, including interrogatives,
 permission/validity intent, negation, conditions and timing. Never turn a request
 asking whether an act is permitted into a statement that the act occurred.
+Include context before AND after the question mark. For multiple questions, source
+spans must cover all input context, with no omitted non-whitespace gaps; use complete
+questions, never subject-only spans. Do not invent boundaries when context is ambiguous.
 For questions use presupposition or question_subject; assertions retain stated origin.
 For term requests use term_lookup. search_queries contains up to three Topic IDs
 from its closed schema vocabulary, never free text. safe_to_search is false if
@@ -118,6 +121,23 @@ class Router:
                     schema=RouterProposal.model_json_schema(),
                 )
             )
+            questions = [c for c in proposal.claims if c.origin == "question_subject"]
+            if len(questions) > 1:
+                # Punctuation cannot establish which question owns trailing
+                # conditions. Accept separate spans only when none of the user's
+                # context was omitted; reject ambiguous narrowed multi-question output.
+                cursor = 0
+                for question in sorted(questions, key=lambda c: c.span.start):
+                    start, end = question.span.start, question.span.end
+                    if (
+                        start < cursor
+                        or text[cursor:start].strip()
+                        or not any(mark in question.source_text for mark in ("?", "؟"))
+                    ):
+                        raise ValueError("Incomplete question context")
+                    cursor = end
+                if text[cursor:].strip():
+                    raise ValueError("Omitted trailing question context")
             seen = set()
             for claim in proposal.claims:
                 start, end = claim.span.start, claim.span.end
@@ -130,18 +150,13 @@ class Router:
                 if claim.origin == "stated" and claim.text_ar != claim.source_text:
                     raise ValueError("Invalid stated claim")
                 if claim.origin == "question_subject":
-                    # A literal subject-only substring can still lose permission,
-                    # negation or conditions. Restore its complete question/context.
-                    left = max(text.rfind(mark, 0, start) for mark in ("?", "؟")) + 1
-                    endings = [text.find(mark, max(start, end - 1)) for mark in ("?", "؟")]
-                    right = min((i + 1 for i in endings if i >= 0), default=len(text))
-                    while left < right and text[left].isspace():
-                        left += 1
-                    while right > left and text[right - 1].isspace():
-                        right -= 1
-                    claim.span = Span(start=left, end=right)
-                    claim.source_text = claim.text_ar = text[left:right]
-                    start, end = left, right
+                    if len(questions) == 1:
+                        # Preserve all original context, including conditions AFTER
+                        # the question mark. Never shorten a valid complete span.
+                        start, end = 0, len(text)
+                        claim.span = Span(start=start, end=end)
+                        claim.source_text = text
+                    claim.text_ar = claim.source_text
                 identity = (start, end, claim.text_ar)
                 if identity in seen:
                     raise ValueError("Duplicate claim")

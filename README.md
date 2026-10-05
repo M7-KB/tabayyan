@@ -1205,10 +1205,11 @@ local KFC records and added to each claim's candidates, even without BM25 overla
 Nominations without lexical overlap have retrieval score zero and never authorize a quote or state: normal
 candidate-ID, source-binding, span, confidence and alignment gates still run.
 Missing or wrong-source nominations are ignored. Level D skips this retrieval.
-For question_subject claims, code expands a narrowed subject span to its complete
-question and preceding context, bounded by question marks. Permission intent,
-conditions across line breaks, timing and negation are retained verbatim. Multiple
-questions retain their own spans. Presuppositions
+For a single question_subject, code retains the full original input, including
+context before and after the question mark. Valid complete spans are never shortened.
+Multiple questions retain complete supplied spans only when those spans cover all
+non-whitespace input context; ambiguous subject-only spans or omitted conditions
+fail closed before retrieval. Punctuation is not used to guess context boundaries. Presuppositions
 still follow the misconception path. Referral ready_to_ask_question_ar includes the
 user's original question, without a generated answer or generic substitute.
 

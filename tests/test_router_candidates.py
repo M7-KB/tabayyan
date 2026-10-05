@@ -5,6 +5,7 @@ import json
 import pytest
 
 from api.check import CheckRequest
+from api.extract import ExtractionError
 from api.router import QuranRef
 from tests.test_composer import TEXT, claim, engine, proposal
 from tests.test_one_pass import route_proposal, service
@@ -142,22 +143,81 @@ def test_narrow_subject_span_restores_permission_negation_and_conditions(questio
     assert question[claim.span.start : claim.span.end] == question
 
 
-def test_multiple_narrowed_questions_retain_their_own_complete_context():
-    questions = ["If not ripe, is eating fruit allowed?", "If not fresh, is storing fruit allowed?"]
+def test_multiple_complete_questions_retain_their_own_context():
+    questions = [
+        "If not ripe, is eating fruit allowed? Only when stored safely.",
+        "If not fresh, is storing fruit allowed? Only when sealed.",
+    ]
     text = " ".join(questions)
     routed = route_proposal(text)
     routed["claims"] = []
-    for subject in ("eating fruit", "storing fruit"):
-        start = text.index(subject)
+    for question in questions:
+        start = text.index(question)
         routed["claims"].append(
             {
-                "text_ar": subject,
-                "source_text": subject,
+                "text_ar": "narrow interpretation",
+                "source_text": question,
                 "origin": "question_subject",
-                "span": {"start": start, "end": start + len(subject)},
+                "span": {"start": start, "end": start + len(question)},
             }
         )
     checker, _, _ = service(routed)
     claims = checker.router.route(text).extracted.claims
     assert [claim.text_ar for claim in claims] == questions
     assert [text[c.span.start : c.span.end] for c in claims] == questions
+
+
+@pytest.mark.parametrize("complete", [False, True])
+@pytest.mark.parametrize(
+    "question,subject",
+    [
+        ("Is storing fruit allowed? Only if it is not fresh.", "storing fruit"),
+        ("هل يجوز الصلاة متأخراً؟ أقصد إذا كان هناك عذر.", "الصلاة متأخراً"),
+        ("Is storing fruit allowed?\nOnly if it is not fresh.", "storing fruit"),
+    ],
+)
+def test_trailing_conditions_survive_narrow_and_complete_spans(question, subject, complete):
+    source = question if complete else subject
+    start = question.index(source)
+    routed = route_proposal(question)
+    routed["claims"][0].update(
+        origin="question_subject",
+        text_ar=subject,
+        source_text=source,
+        span={"start": start, "end": start + len(source)},
+    )
+    checker, _, _ = service(routed)
+    claim = checker.router.route(question).extracted.claims[0]
+    assert claim.text_ar == question
+    assert question[claim.span.start : claim.span.end] == question
+
+
+@pytest.mark.parametrize("subjects_only", [False, True])
+def test_multiple_questions_fail_closed_when_context_is_omitted(subjects_only):
+    questions = [
+        "Is eating fruit allowed? Only when stored safely.",
+        "Is storing fruit allowed? Only when sealed.",
+    ]
+    text = " ".join(questions)
+    sources = (
+        ["eating fruit", "storing fruit"]
+        if subjects_only
+        else [q.split("?")[0] + "?" for q in questions]
+    )
+    routed = route_proposal(text)
+    routed["claims"] = []
+    for source in sources:
+        start = text.index(source)
+        routed["claims"].append(
+            {
+                "text_ar": source,
+                "source_text": source,
+                "origin": "question_subject",
+                "span": {"start": start, "end": start + len(source)},
+            }
+        )
+    checker, _, composer = service(routed)
+    with pytest.raises(ExtractionError) as error:
+        checker.check(CheckRequest(original_text=text))
+    assert error.value.code == "PIPELINE_DEGRADED"
+    assert not composer.calls

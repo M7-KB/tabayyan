@@ -759,7 +759,7 @@ Validator rules (`corpus/validate.py`, runs in CI):
    (`docs/challenge-brief.md`, approved references by domain), so it has to be registered and cleared
    like any other source, not hard-coded as a string. The hadith *collection* `source_id` being approved
    never by itself establishes grading provenance — grading is attested by a separate, separately
-   registered source. (Non-negotiable 1; @Nami, PR #22 blocker 1.) HadeethEnc results satisfy this rule only as set in §0.4 rule 3 (owner decision 12.7): HadeethEnc is registered as a grading source with its own host, and its grading is copied verbatim from the same response.
+   registered source. (Non-negotiable 1; Nami, PR #22 blocker 1.) HadeethEnc results satisfy this rule only as set in §0.4 rule 3 (owner decision 12.7): HadeethEnc is registered as a grading source with its own host, and its grading is copied verbatim from the same response. Every future grading adapter must also set `grading.grading_source_id` on each item. Host membership in the runtime registry alone is not enough (Nami, PR #70 review, 2026-10-05). The same-response HadeethEnc adapter of §12.7 is the one exception the owner decided on, and it is not a template for other adapters.
 3. `text_ar` non-empty, and `checksum_sha256` matches `text_ar`. Guards silent edits.
 4. `text_normalized` must be reproducible from `text_ar` by the shared normalizer. Guards hand-edited index drift.
 5. `license` and `license_url` required, and must appear in `SOURCES.md`. (Non-negotiable 5.)

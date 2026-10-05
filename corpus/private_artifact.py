@@ -1,9 +1,14 @@
 """Load an owner-mounted file, bound to a public checksum-only manifest."""
 
+import gzip
 import hashlib
+import io
+import lzma
 import re
+import zlib
 from pathlib import Path
 
+from corpus.quran_binding import PAIR_FIELDS
 from corpus.validate import (
     ROOT,
     CorpusValidationError,
@@ -16,6 +21,7 @@ from corpus.validate import (
 
 MAX_ARTIFACT_BYTES = 64 * 1024 * 1024
 MAX_MANIFEST_BYTES = 4096
+MAX_COMPRESSED_BYTES = 1_000_000
 
 
 def _read_bounded(path: Path, limit: int) -> bytes:
@@ -56,10 +62,34 @@ def load_private_corpus(
             r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", version
         ):
             raise CorpusValidationError("Invalid private corpus manifest")
+        # Detect by magic bytes, not the owner-controlled filename. Read and
+        # decompress once; the manifest always binds the original JSONL bytes.
         data = _read_bounded(path, MAX_ARTIFACT_BYTES)
+        if data.startswith((b"\x1f\x8b", b"\xfd7zXZ\x00")):
+            if len(data) >= MAX_COMPRESSED_BYTES:
+                raise CorpusValidationError("Compressed private corpus exceeds size limit")
+            try:
+                if data.startswith(b"\xfd7zXZ\x00"):
+                    decoder = lzma.LZMADecompressor(
+                        format=lzma.FORMAT_XZ, memlimit=128 * 1024 * 1024
+                    )
+                    data = decoder.decompress(data, max_length=MAX_ARTIFACT_BYTES + 1)
+                    if len(data) <= MAX_ARTIFACT_BYTES and (not decoder.eof or decoder.unused_data):
+                        raise lzma.LZMAError("Incomplete or trailing stream")
+                else:
+                    with gzip.GzipFile(fileobj=io.BytesIO(data)) as stream:
+                        data = stream.read(MAX_ARTIFACT_BYTES + 1)
+            except (OSError, EOFError, zlib.error, lzma.LZMAError):
+                raise CorpusValidationError("Invalid compressed private corpus") from None
+            if len(data) > MAX_ARTIFACT_BYTES:
+                raise CorpusValidationError("Private corpus file exceeds size limit")
         if hashlib.sha256(data).hexdigest() != digest:
             raise CorpusValidationError("Private corpus checksum mismatch")
         records = parse_records(data)
+        for number, record in enumerate(records, 1):
+            if (record.get("domain"), record.get("source_id")) == ("quran", "kfc-mushaf"):
+                if not PAIR_FIELDS <= record.keys():
+                    raise CorpusValidationError(f"row {number}: Quran field pair required")
         validate_records(
             records,
             read_sources(sources_path),

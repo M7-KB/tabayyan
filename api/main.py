@@ -18,6 +18,7 @@ from api.retrieval import BM25Retriever
 from api.settings import Settings
 from api.span_detector import DetectorConfig, Record, SpanDetector
 from corpus.private_artifact import load_private_corpus
+from corpus.quran_binding import matching_text
 from corpus.validate import CorpusValidationError
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                     detector = SpanDetector(
                         [
-                            Record(r["corpus_id"], r["domain"], r["text_ar"])
+                            Record(r["corpus_id"], r["domain"], matching_text(r))
                             for r in app.state.corpus
                         ],
                         DetectorConfig.from_files(

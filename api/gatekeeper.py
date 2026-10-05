@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 from api.span_detector import DetectorConfig, Record, SpanDetector
 from corpus.normalize import normalize_arabic
+from corpus.quran_binding import display_text, matching_text
 
 _SCHEMA = json.loads(
     (Path(__file__).resolve().parents[1] / "contracts/card.schema.json").read_text("utf-8")
@@ -115,7 +116,12 @@ class QuoteGatekeeper:
             if r.get("domain") == "quran":
                 self._local_available = True
             self._records[r["corpus_id"]] = r
-            embedded_comparison.append(Record(r["corpus_id"], r["domain"], r["text_ar"]))
+            embedded_comparison.append(Record(r["corpus_id"], r["domain"], matching_text(r)))
+            if display_text(r) != matching_text(r):
+                # Display spelling is safety knowledge, never a second matching key.
+                embedded_comparison.append(
+                    Record("display:" + r["corpus_id"], r["domain"], display_text(r))
+                )
         blocked = set()
         for item in request._received if received is None else received:
             if item.request_token is not request._token:
@@ -163,7 +169,7 @@ class QuoteGatekeeper:
         # Apply the same reference/grading authorization before it can veto a
         # near match. Keep every authorized local/current-request scripture row.
         comparison = [
-            Record(k, r["domain"], r["text_ar"])
+            Record(k, r["domain"], matching_text(r))
             for k, r in self._records.items()
             if r["domain"] in {"quran", "hadith"} and self._base_quote(k, r["text_ar"]) is not None
         ]
@@ -185,7 +191,12 @@ class QuoteGatekeeper:
         r = self._records.get(key)
         if r is None or not isinstance(candidate, str) or not candidate.strip():
             return None
-        if normalize_arabic(candidate) != normalize_arabic(r["text_ar"]):
+        try:
+            matching = matching_text(r)
+            display = display_text(r)
+        except (ValueError, UnicodeError):
+            return None
+        if candidate != display and normalize_arabic(candidate) != normalize_arabic(matching):
             return None
         if not all(
             isinstance(r.get(k), str) and r[k].strip() for k in ("source_name_ar", "source_url")
@@ -217,7 +228,7 @@ class QuoteGatekeeper:
                 "source_id": r["source_id"],
                 "source_name_ar": r["source_name_ar"],
                 "source_url": r["source_url"],
-                "quote_ar": r["text_ar"],
+                "quote_ar": display_text(r),
                 "translation": None,
                 "ref": r["ref"],
                 "grading": {
@@ -254,6 +265,8 @@ class QuoteGatekeeper:
             if finding.match.classification != "VERBATIM":
                 return None
             key = finding.match.record.corpus_id
+            if key.startswith("display:"):
+                key = key.removeprefix("display:")
             if key.startswith("unsafe:"):
                 key = key.split(":", 2)[2]
             r = self._base_quote(key, text[finding.start : finding.end])

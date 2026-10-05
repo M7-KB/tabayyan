@@ -17,6 +17,7 @@ from api.model import StructuredModel
 from api.retrieval import BM25Retriever, RetrievalResult, Retriever
 from api.span_detector import SpanDetector, words
 from corpus.normalize import normalize_arabic
+from corpus.quran_binding import display_text, matching_text
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "contracts/card.schema.json").read_text("utf-8"))
@@ -69,7 +70,7 @@ def evidence_from(result: RetrievalResult) -> dict:
         "source_id": r["source_id"],
         "source_name_ar": r["source_name_ar"],
         "source_url": r["source_url"],
-        "quote_ar": r["text_ar"],
+        "quote_ar": display_text(r),
         "translation": None,
         "ref": copy.deepcopy(r["ref"]),
         "grading": (
@@ -85,8 +86,8 @@ def evidence_from(result: RetrievalResult) -> dict:
         item["source_ref"] = copy.deepcopy(r["source_ref"])
     # A copied quote must also retain the validated indexing key.
     if (
-        not normalize_arabic(item["quote_ar"])
-        or normalize_arabic(item["quote_ar"]) != r["text_normalized"]
+        not normalize_arabic(matching_text(r))
+        or normalize_arabic(matching_text(r)) != r["text_normalized"]
     ):
         raise ValueError("Invalid quote key")
     VALIDATOR.evolve(schema={"$ref": "#/$defs/evidence", "$defs": SCHEMA["$defs"]}).validate(item)

@@ -766,23 +766,39 @@ arm.
 
 ## Private corpus file and pending review
 
-The owner uploads Robin's built JSONL artifact as a Render Secret File and sets
+The owner uploads Robin's built JSONL artifact, XZ-compressed below 1,000,000 bytes
+(Render's 1 MB cap, owner decision 29), as a Render Secret File and sets
 `PRIVATE_CORPUS_PATH` to its mounted path in the service environment. Commit only
 `corpus/manifest.json` with exactly `{"sha256": "<64 lowercase hex digits>", "corpus_version": "v1"}`;
-the SHA-256 is over the complete file bytes, including line endings. `CORPUS_MANIFEST_PATH`
-can override that public manifest path. No URL/read token is needed. No actual manifest is supplied
-until the private artifact exists. Keep real artifacts under `corpus/private/` locally; built JSONL,
+the SHA-256 is over the complete **decompressed JSONL bytes**, including line endings,
+not the compressed bytes. XZ and gzip are recognized by magic bytes; plain JSONL remains
+supported for local use. The v30 handoff compresses to **975,592 bytes** with stdlib
+LZMA preset 9 (9,576,033 decompressed bytes; manifest SHA-256 unchanged).
+`CORPUS_MANIFEST_PATH`
+can override that public manifest path. No URL/read token is needed.
+The v30 checksum-only manifest is committed. Keep real artifacts under `corpus/private/` locally; built JSONL,
 raw files and indexes are ignored and checked for accidental tracked files in CI.
 The guard covers alternate JSONL names and backups, corpus build directories, data JSONL,
 and index/embedding/database extensions even when force-added. Public corpus code/docs,
 `approved_sources.json` and the checksum-only `manifest.json` are allowed.
 
-Startup reads at most 64 MiB and validates the same bytes it hashed. All rows must pass before any
+Startup bounds file reads and decompression to 64 MiB, rejects compressed artifacts at or above
+1,000,000 bytes, and caps the XZ decoder's memory at 128 MiB. It validates the same
+decompressed bytes it hashed. Malformed/truncated streams, XZ trailing data, expansion
+beyond the limit, and hashes of compressed bytes fail closed. All rows must pass before any
 records reach app state. Missing files, hash mismatch or an invalid row leave `corpus_items: 0` and
 `corpus_version: null`. `/health` distinguishes `corpus_status: not_configured`, `loaded`,
 `unavailable` and `disabled` (health-only); `corpus_error` is a safe row/field reason on failure,
 null otherwise. That reason is logged once at startup. `HEALTH_ONLY=true` skips all artifact/config
 reads. The application logs no private path, parser exception or source text. `/health` stays degraded until the pipeline is integrated.
+
+KFC rows require both `aya_text_emlaey` and `aya_text_unicode`, with their separate
+UTF-8 checksums and matching `corpus_id`, `ref`, `sura_no` and `aya_no`. Retrieval
+and claim matching use the standard spelling; evidence and corrections copy the
+same row's Uthmani display bytes, including its end-of-ayah mark. Display spelling
+also enters the safety scan so generated explanations cannot reproduce it.
+Pair checks bind the manifest-authorized row; they do not independently verify the
+publisher's original file or establish permission beyond the source register.
 
 `ALLOW_PENDING_REVIEW=false` is the default. Only the owner-managed judging service may set it true.
 `/health` always reports `allow_pending_review` and `pending_review_items` (the loaded count).

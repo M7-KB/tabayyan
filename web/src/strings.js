@@ -5,6 +5,8 @@ export const strings = {
   tagline: 'تحقّق من الادعاءات الدينية في النص أو الرابط أو المقطع الصوتي',
   skipToContent: 'تخطَّ إلى المحتوى',
   aiNotice: 'هذه أداة ذكاء اصطناعي، وليست فتوى.',
+  themeToDark: 'تفعيل الوضع الداكن',
+  themeToLight: 'تفعيل الوضع الفاتح',
   // Temporary: remove when the check endpoint is wired (T-504).
   previewBanner: 'نسخة تجريبية للتطوير. التحقق من الادعاءات غير مفعّل بعد.',
 

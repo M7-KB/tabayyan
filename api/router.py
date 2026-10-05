@@ -8,7 +8,7 @@ from pydantic import Field
 
 from api.classifier import INSTRUCTIONS as LEVEL_INSTRUCTIONS
 from api.classifier import LevelClassifier, rule_level
-from api.diagnostics import record
+from api.diagnostics import count, record
 from api.extract import (
     INSTRUCTIONS as EXTRACTION_INSTRUCTIONS,
 )
@@ -164,6 +164,8 @@ class Router:
         return self._route(text, proposal, floor)
 
     def _route(self, text, proposal, floor):
+        # Count the model's raw nominations, before any restriction can clear them.
+        count("proposed_refs", len(proposal.proposed_quran_refs))
         if proposal.level_d or proposal.level == "D":
             floor = "D"
         classification = self.classifier.resolve(

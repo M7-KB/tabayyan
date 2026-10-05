@@ -23,12 +23,13 @@ class Adapter:
 
 
 @pytest.mark.parametrize(
-    "query,hadith", [("public topic", False), ("حديث موضوع عام", True), ("hadith topic", True)]
+    "query,hadith",
+    [("public topic", False), ("حديث موضوع عام", False), ("hadith topic", True)],
 )
-def test_only_hadith_topics_use_hadeethenc(query, hadith):
+def test_only_hadith_kind_uses_hadeethenc(query, hadith):
     mcp, hadeethenc = Adapter(), Adapter()
     scope = SourceRequest()
-    DefaultDiscovery(mcp=mcp, hadeethenc=hadeethenc).discover(query, scope)
+    DefaultDiscovery(mcp=mcp, hadeethenc=hadeethenc).discover(query, scope, hadith=hadith)
     assert [q for q, _ in mcp.calls] == [query]
     assert [q for q, _ in hadeethenc.calls] == ([query] if hadith else [])
     assert all(s is not scope and s._used for _, s in mcp.calls + hadeethenc.calls)
@@ -37,10 +38,13 @@ def test_only_hadith_topics_use_hadeethenc(query, hadith):
 def test_source_outage_and_consumed_scope():
     mcp, hadeethenc = Adapter(error=True), Adapter()
     scope = SourceRequest()
-    assert DefaultDiscovery(mcp=mcp, hadeethenc=hadeethenc).discover("حديث عام", scope) == []
+    assert (
+        DefaultDiscovery(mcp=mcp, hadeethenc=hadeethenc).discover("حديث عام", scope, hadith=True)
+        == []
+    )
     assert len(hadeethenc.calls) == 1
     scope._used = True
-    DefaultDiscovery(mcp=mcp, hadeethenc=hadeethenc).discover("حديث عام", scope)
+    DefaultDiscovery(mcp=mcp, hadeethenc=hadeethenc).discover("حديث عام", scope, hadith=True)
     assert len(mcp.calls) == len(hadeethenc.calls) == 1
 
 
@@ -144,7 +148,7 @@ def test_default_adapters_share_receipts_and_verbatim_gate():
     receipts = DefaultDiscovery(
         mcp=IslamicContentConnector(transport),
         hadeethenc=HadeethEncDiscovery(http),
-    ).discover("الحديث", scope)
+    ).discover("الحديث", scope, hadith=True)
     assert len(receipts) == 2
     verifier = gate(request=scope)
     assert verifier.verify("live:islamhouse:42", TEXT)["text_ar"] == TEXT

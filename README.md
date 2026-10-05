@@ -120,14 +120,18 @@ fall back to one claim over the complete input (`router_validation`
 `fallback_whole_input`). Shape problems never fail the request; only an unparseable
 or unavailable provider response does. Evidence, state and referral gates are unchanged.
 
-Default discovery runs MCP and hadith-topic HadeethEnc calls in parallel within a
-shared three-second budget (or the remaining request budget, if shorter). Verse
-and term routes skip both. Each adapter receives an isolated receipt scope; late
-or failed batches cannot enter composition. Text-free request summaries record
+Default discovery runs MCP calls, and HadeethEnc only when the router's input kind is
+`hadith`, in parallel within a shared three-second budget (or the remaining request
+budget, if shorter). Verse and term routes skip both. The HadeethEnc gate is the router
+kind alone, not keywords in the query. Each adapter receives an isolated receipt scope;
+late or failed batches cannot enter composition. Text-free request summaries record
 `retrieval_mcp` and `retrieval_hadeethenc` timings, plus composer input scans,
-gatekeeper checks, separation, dependencies, published answers, card validation,
-and total post-provider time. These timings identify work after inference without
-logging user queries or source text.
+gatekeeper checks, separation, dependencies, published answers, card validation, and
+total post-provider time. The summary also carries text-free integer totals
+(`proposed_refs` as the router's raw nominations, `resolved_refs`, `lexical_hits_capped`
+capped at 50, `compose_candidates`) and enum codes (`classifier:<status>` per claim,
+then each card's abstain reason or state). These timings and counts identify work after
+inference without logging user queries or source text.
 
 BM25 indexes and queries use the `ar-search-v1` prefix aliases from #92. Overlap
 counts each distinct query-word group once, even when several aliases match;
@@ -1261,6 +1265,8 @@ only in request memory; it is never cached or logged.
 
 The router's proposed_quran_refs are resolved only by verse key in loader-validated
 local KFC records and added to each claim's candidates, even without BM25 overlap.
+Each claim sends its nominations plus the top `COMPOSE_POOL` (three) lexical hits to
+compose; the top fifty hits are counted for diagnostics only.
 Nominations without lexical overlap have retrieval score zero and never authorize a quote or state: normal
 candidate-ID, source-binding, span, confidence and alignment gates still run.
 Missing or wrong-source nominations are ignored. Level D skips this retrieval.

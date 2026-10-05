@@ -34,7 +34,9 @@ def test_sources_run_in_parallel_with_inherited_correlation():
     metrics = Summary()
     token = summary.set(metrics)
     try:
-        received = DefaultDiscovery(mcp=Parallel(), hadeethenc=Parallel()).discover("hadith", scope)
+        received = DefaultDiscovery(mcp=Parallel(), hadeethenc=Parallel()).discover(
+            "hadith", scope, hadith=True
+        )
     finally:
         summary.reset(token)
     assert len(received) == len(scope._received) == 2
@@ -105,7 +107,9 @@ def test_successful_batch_survives_other_source_timeout(monkeypatch):
     scope, metrics = SourceRequest(), Summary()
     token = summary.set(metrics)
     try:
-        receipts = DefaultDiscovery(mcp=Fast(), hadeethenc=Slow()).discover("hadith", scope)
+        receipts = DefaultDiscovery(mcp=Fast(), hadeethenc=Slow()).discover(
+            "hadith", scope, hadith=True
+        )
     finally:
         release.set()
         summary.reset(token)

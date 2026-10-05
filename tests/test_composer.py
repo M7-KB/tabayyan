@@ -10,7 +10,7 @@ from jsonschema import ValidationError
 
 from api.check import CheckRequest, CheckService
 from api.classifier import LevelClassifier
-from api.composer import VALIDATOR, Composer, evidence_from
+from api.composer import COMPOSE_POOL, VALIDATOR, Composer, evidence_from
 from api.extract import ExtractedClaim, ExtractionError, Extractor, Span
 from api.main import create_app
 from api.retrieval import BM25Retriever, RetrievalResult
@@ -492,7 +492,9 @@ def test_unattested_term_label_cannot_be_generated():
     assert card["term"] is None
 
 
-@pytest.mark.parametrize("count,unsafe_index", [(n, i) for n in range(1, 6) for i in range(n)])
+@pytest.mark.parametrize(
+    "count,unsafe_index", [(n, i) for n in range(1, COMPOSE_POOL + 1) for i in range(n)]
+)
 @pytest.mark.parametrize("kind", ["term", "claim"])
 def test_every_selected_glossary_item_requires_safe_graded_evidence(count, unsafe_index, kind):
     from test_corpus_loader import metadata

@@ -847,6 +847,55 @@ is authored there, and a passing stub run is evidence about the harness only. Th
 against the real API through `--api-base`; T-508 is the first full run and T-611 adds the control
 arm.
 
+## Plain-model CONTROL adapter (T-611)
+
+`python -m eval.control` is an eval-only direct model client. Nami must review the
+adapter before its first live run. It sends the exact unchanged question text with
+the separate disclosed prompt:
+
+> You are a helpful assistant. Answer the user's question in the user's language.
+
+This follows the owner routing of 2026-10-05, Buzz event
+`16253d6812979a1a337c342346571753123f901fbd45bf6454e6b4503551f242`, overriding
+the earlier "same prompts" wording in SPEC §6.5. No corpus, source tools, gates,
+Tabayyan API calls, JSON answer schema, or sourcing instructions are used.
+The only network request is to the model provider. CONTROL answers never reach the UI.
+
+After review, set `OPENAI_API_KEY` and select the same reason model used by the
+comparison deployment through `OPENAI_MODEL_REASON` or explicit `--model`:
+
+```bash
+python -m eval.control --testset eval/testset.jsonl \
+  --only T01,T02,T03,T04,T05,T06,T07,T08,T09,T10,T11,T12 \
+  --output eval/private/control-brief.json
+```
+
+Question files may use the public testset shape (`case_id`, `input.text`) or private
+held-out shape (`id`, string `input`). Private inputs and raw reports stay under
+ignored `eval/private/`; after explicit owner approval, deliver H01–H10 to Nami by DM only.
+Raw answers can themselves
+repeat question details, so do not publish raw reports. Public comparison reports
+contain aggregate rates and clearly labelled plain-model examples only, with the
+adapter's comparison caveat. Reusing an output file is refused before any call.
+
+Each private report logs the exact prompt and hash, question-file hash, requested
+and returned model identifiers, request settings, latency, provider status and usage.
+Errors have fixed labels and omit provider diagnostics. No retries are made; timeout
+defaults to 60 seconds per request. Refusals and partial answers are preserved for
+review. Exit `0` means requests completed, `1` means a request failed, and `2` means
+setup failed. These are transport outcomes, never safety scores or release gates.
+Classification accuracy, abstention precision/recall, fabricated-source rate and
+unmatched quotes remain `null` until Nami evaluates them. A provider refusal is not
+automatically a correct abstention. No inference results are claimed by this adapter PR.
+
+**Comparison caveat:** this compares whole systems with different prompts and does
+not isolate retrieval's effect. Verify the returned model against the deployment's
+model before interpreting differences. Quote verification may read the private Quran
+artifact in a separate evaluation step; it never supplies context to CONTROL.
+Provider `store: false` disables response application-state storage; it does not
+establish zero retention. See the [official Responses migration guide](https://developers.openai.com/api/docs/guides/migrate-to-responses)
+and the existing provider privacy disclosure above.
+
 ## Private corpus file and pending review
 
 The built JSONL artifact is no longer uploaded as a Render Secret File. The build fetches it

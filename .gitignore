@@ -43,3 +43,6 @@ dist/
 *.npz
 *.sqlite
 *.db
+
+# Private evaluation questions and unverified plain-model answers.
+/eval/private/

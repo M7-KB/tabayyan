@@ -109,7 +109,15 @@ class BoundedSourceHTTP:
     TIMEOUT = 10
 
     def get(self, host: str, path: str, params: dict[str, str]) -> object:
-        if host not in self.HOSTS or path not in {"/api/v1/hadeeths/one/", "/dorar_api.json"}:
+        paths = {
+            "hadeethenc.com": {
+                "/api/v1/hadeeths/one/",
+                "/api/v1/categories/list/",
+                "/api/v1/hadeeths/list/",
+            },
+            "dorar.net": {"/dorar_api.json"},
+        }
+        if host not in self.HOSTS or path not in paths[host]:
             raise SourceUnavailable()
         connection = None
         response = None

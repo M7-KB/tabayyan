@@ -470,8 +470,24 @@ button:disabled {
   margin-top: 0.75rem;
 }
 
-.claim-edit {
-  margin-top: 0.75rem;
+.understood-edit textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Staged progress for one check (U1). The stages are indicative; a done stage is marked by text, not color alone. */
+.check-stages {
+  margin: 0.75rem 0 0;
+  padding-inline-start: 1.25rem;
+}
+
+.check-stages li.done::before {
+  content: "✓ ";
+}
+
+.check-stages li.active {
+  font-weight: 600;
 }
 
 /* Breakpoints. The rules above are the 375px mobile baseline; these widen the reading column on desktop. */

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AiNotice } from './components/AiNotice.jsx'
 import { ArchMark } from './components/ArchMark.jsx'
-import { ClaimReview } from './components/ClaimReview.jsx'
 import { InputScreen } from './components/InputScreen.jsx'
 import { MediaStatus } from './components/MediaStatus.jsx'
 import { Results } from './components/Results.jsx'
@@ -9,11 +8,10 @@ import { ThemeToggle } from './components/ThemeToggle.jsx'
 import { TranscriptReview } from './components/TranscriptReview.jsx'
 import { CardPreview } from './dev/CardPreview.jsx'
 import { buildCheckRequest, postCheck } from './api/check.js'
-import { postExtract } from './api/extract.js'
 import { checkApiHealth } from './api/health.js'
 import { ApiError } from './api/http.js'
 import { MediaError, transcribeStub } from './api/transcribe.js'
-import { API_BASE_URL, CHECK_DEADLINE_MS, EXTRACT_DEADLINE_MS } from './config/api.js'
+import { API_BASE_URL, CHECK_DEADLINE_MS } from './config/api.js'
 import { strings } from './strings.js'
 
 // Synthetic card preview for development only. Dead-code-eliminated from production builds.
@@ -23,13 +21,23 @@ function errorCodeOf(error) {
   return error instanceof ApiError ? error.code : 'UNKNOWN'
 }
 
+// Replaces one card with the cards the server returned for its re-check. The rest of the list is untouched.
+function replaceCard(cards, index, replacement) {
+  return [...cards.slice(0, index), ...replacement, ...cards.slice(index + 1)]
+}
+
 export default function App() {
   // idle: input screen. transcribing / error / review: the clip flow behind features.mediaUpload.
   const [media, setMedia] = useState({ status: 'idle' })
-  // Text flow (SPEC.md §6.2): input → extracting → confirm claims → checking → results.
-  const [flow, setFlow] = useState({ step: 'input' })
+  // One-page flow (U1): the input stays on top and the results sit below it. `check` is null until the first
+  // submit. `recheck` names the one card being re-checked in place, and its state.
+  const [check, setCheck] = useState(null)
+  const [recheck, setRecheck] = useState(null)
   // The preview banner stays up until GET /health answers.
   const [apiLive, setApiLive] = useState(false)
+  // One request is in flight at a time. Each has a client deadline and a cancel that aborts it. Only the latest
+  // attempt may update the screen, so a cancelled, timed-out or superseded response is dropped.
+  const attemptRef = useRef(null)
 
   useEffect(() => {
     let active = true
@@ -48,10 +56,6 @@ export default function App() {
       </main>
     )
   }
-
-  // One extract or check request is in flight at a time. Each has a client deadline, and a cancel that aborts
-  // it. Only the latest attempt may update the flow, so a cancelled, timed-out or superseded response is dropped.
-  const attemptRef = useRef(null)
 
   function beginAttempt(deadlineMs) {
     attemptRef.current?.cancel()
@@ -81,65 +85,61 @@ export default function App() {
     return attempt.timedOut ? 'TIMEOUT' : errorCodeOf(error)
   }
 
-  async function handleSubmitText(inputText) {
-    setFlow({ step: 'extracting', inputText })
-    const attempt = beginAttempt(EXTRACT_DEADLINE_MS)
-    try {
-      const extraction = await postExtract(inputText, { baseUrl: API_BASE_URL, signal: attempt.signal })
-      if (attemptRef.current === attempt) {
-        setFlow({
-          step: 'confirm',
-          inputText,
-          inputKind: extraction.input_kind,
-          claims: extraction.claims,
-          edits: {},
-        })
-      }
-    } catch (error) {
-      if (attemptRef.current === attempt) {
-        setFlow({ step: 'extract-error', inputText, errorCode: failureCodeOf(attempt, error) })
-      }
-    } finally {
-      clearTimeout(attempt.timer)
-    }
-  }
-
-  async function runCheck(state, checked) {
-    setFlow({ ...state, step: 'checking', checked })
+  // Sends the text as the user wrote it. The server extracts the claims and answers with one card per claim.
+  async function runCheck(originalText) {
+    cancelPending()
+    setRecheck(null)
+    setCheck({ status: 'loading', submittedText: originalText })
     const attempt = beginAttempt(CHECK_DEADLINE_MS)
     try {
-      const request = buildCheckRequest({ claims: checked, inputKind: state.inputKind })
+      const request = buildCheckRequest({ originalText })
       const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
       if (attemptRef.current === attempt) {
-        setFlow({ ...state, step: 'results', checked, cards: result.cards })
+        setCheck({ status: 'done', submittedText: originalText, cards: result.cards })
       }
     } catch (error) {
       if (attemptRef.current === attempt) {
-        setFlow({ ...state, step: 'check-error', checked, errorCode: failureCodeOf(attempt, error) })
+        setCheck({ status: 'error', submittedText: originalText, errorCode: failureCodeOf(attempt, error) })
       }
     } finally {
       clearTimeout(attempt.timer)
     }
   }
 
-  function handleEditClaim(id, value) {
-    setFlow((prev) => ({ ...prev, edits: { ...prev.edits, [id]: value } }))
-  }
-
-  // Claims are sent only after the user confirms them. Emptied claims are dropped here.
-  function handleConfirmClaims(kept) {
-    runCheck(flow, kept)
-  }
-
-  // Going back cancels any pending request. The input text, claims and edits stay in the flow state.
-  function backToInput() {
+  // Re-checks one card with the text the user edited on it. Resolves to true only when the card was replaced, so
+  // the card's edit form closes on success and keeps the draft on error. A card is never blanked by a re-check.
+  async function recheckCard(index, text) {
+    if (check?.status !== 'done' || text.trim().length === 0) return false
     cancelPending()
-    setFlow({ step: 'input', inputText: flow.inputText })
+    setRecheck({ index, status: 'loading' })
+    const attempt = beginAttempt(CHECK_DEADLINE_MS)
+    try {
+      const request = buildCheckRequest({ originalText: text })
+      const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
+      if (result.cards.length === 0) throw new ApiError('PIPELINE_DEGRADED')
+      if (attemptRef.current !== attempt) return false
+      setCheck((prev) => ({ ...prev, cards: replaceCard(prev.cards, index, result.cards) }))
+      setRecheck(null)
+      return true
+    } catch (error) {
+      if (attemptRef.current === attempt) {
+        setRecheck({ index, status: 'error', errorCode: failureCodeOf(attempt, error) })
+      }
+      return false
+    } finally {
+      clearTimeout(attempt.timer)
+    }
   }
 
-  function backToClaims() {
+  // Cancel keeps the input text, since the input stays on the page. The check is dropped.
+  function cancelCheck() {
     cancelPending()
-    setFlow((prev) => ({ ...prev, step: 'confirm' }))
+    setRecheck(null)
+    setCheck(null)
+  }
+
+  function focusInput() {
+    document.getElementById('text-input')?.focus()
   }
 
   async function handleSubmitMedia(file) {
@@ -155,6 +155,12 @@ export default function App() {
     } catch (error) {
       setMedia({ status: 'error', errorCode: error instanceof MediaError ? error.code : 'UNKNOWN' })
     }
+  }
+
+  // A confirmed transcript is checked like typed text. The clip flow stays behind features.mediaUpload.
+  function handleConfirmTranscript(transcript) {
+    setMedia({ status: 'idle' })
+    runCheck(transcript)
   }
 
   return (
@@ -176,13 +182,7 @@ export default function App() {
         </div>
       </header>
       <main id="main" tabIndex={-1}>
-        {media.status === 'idle' && flow.step === 'input' && (
-          <InputScreen
-            onSubmitText={handleSubmitText}
-            onSubmitMedia={handleSubmitMedia}
-            initialText={flow.inputText}
-          />
-        )}
+        {media.status === 'idle' && <InputScreen onSubmitText={runCheck} onSubmitMedia={handleSubmitMedia} />}
         {(media.status === 'transcribing' || media.status === 'error') && (
           <MediaStatus
             status={media.status}
@@ -195,37 +195,20 @@ export default function App() {
             transcript={media.transcript}
             notice={media.notice}
             stub={media.stub}
-            onConfirm={handleSubmitText}
+            onConfirm={handleConfirmTranscript}
             onCancel={() => setMedia({ status: 'idle' })}
           />
         )}
-        {flow.step === 'extracting' && <ClaimReview status="loading" onCancel={backToInput} />}
-        {flow.step === 'extract-error' && (
-          <ClaimReview
-            status="error"
-            errorCode={flow.errorCode}
-            onRetry={() => handleSubmitText(flow.inputText)}
-            onBack={backToInput}
-          />
-        )}
-        {flow.step === 'confirm' && (
-          <ClaimReview
-            status="confirm"
-            claims={flow.claims}
-            edits={flow.edits}
-            onEdit={handleEditClaim}
-            onConfirm={handleConfirmClaims}
-            onBack={backToInput}
-          />
-        )}
-        {flow.step === 'checking' && <Results status="loading" onCancel={backToClaims} />}
-        {flow.step === 'results' && <Results status="done" cards={flow.cards} onEdit={backToClaims} />}
-        {flow.step === 'check-error' && (
+        {check && (
           <Results
-            status="error"
-            errorCode={flow.errorCode}
-            onRetry={() => runCheck(flow, flow.checked)}
-            onEdit={backToClaims}
+            status={check.status}
+            cards={check.cards}
+            errorCode={check.errorCode}
+            recheck={recheck}
+            onRecheck={recheckCard}
+            onRetry={() => runCheck(check.submittedText)}
+            onEdit={focusInput}
+            onCancel={cancelCheck}
           />
         )}
         <p className="footer-note">{strings.quoteSourceNote}</p>

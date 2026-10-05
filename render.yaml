@@ -1,4 +1,5 @@
 # All environment values are entered in Render. Health-only mode needs no provider key.
+# The build fetches the private Qur'an artifact with a read-only token (PRIVATE_DATA_TOKEN). The loader fails closed on checksum mismatch.
 services:
   - type: web
     name: tabayyan-api-v0
@@ -6,7 +7,13 @@ services:
     repo: https://github.com/M7-KB/tabayyan
     branch: main
     autoDeployTrigger: "off"
-    buildCommand: python -m pip install .
+    buildCommand: >-
+      python -m pip install . &&
+      mkdir -p corpus/private &&
+      curl -fsSL -H "Authorization: Bearer $PRIVATE_DATA_TOKEN"
+      -H "Accept: application/vnd.github.raw"
+      -o corpus/private/quran-kfc-v30-20261005.jsonl.xz
+      https://api.github.com/repos/M7-KB/tabayyan-private-data/contents/quran-kfc-v30-20261005.jsonl.xz
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log
     healthCheckPath: /health
     envVars:
@@ -14,7 +21,17 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
-      - key: BUILD_SHA
-        sync: false
       - key: PYTHON_VERSION
+        sync: false
+      - key: PRIVATE_DATA_TOKEN
+        sync: false
+      - key: PRIVATE_CORPUS_PATH
+        sync: false
+      - key: ALLOW_PENDING_REVIEW
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL_EXTRACT
+        sync: false
+      - key: OPENAI_MODEL_REASON
         sync: false

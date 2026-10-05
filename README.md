@@ -593,9 +593,19 @@ transcription and ingestion routes are not implemented by this PR. Errors use th
   The blueprint omits `plan` so it does not pin the service to Free. Confirm the paid
   instance in Render before applying the blueprint; this repository change does not upgrade it.
 - Branch: `main`.
-- Dashboard env vars: `HEALTH_ONLY=true` (no `OPENAI_API_KEY` required),
-  `CORS_ORIGINS=[]` until the web origin exists, `BUILD_SHA` (deployed commit),
-  `PYTHON_VERSION=3.11.9`. Enter values only in Render.
+- Build command: `python -m pip install .`, then `curl --fail` fetches the private Qur'an artifact
+  `quran-kfc-v30-20261005.jsonl.xz` from `M7-KB/tabayyan-private-data` into `corpus/private/`,
+  sending the read-only `PRIVATE_DATA_TOKEN` as a bearer token. An HTTP error stops the build.
+  The build does not decompress or hash the file. A bad download can still finish the build; at startup
+  the loader checks the manifest SHA-256 over the decompressed bytes and fails closed, leaving the runtime degraded.
+- Dashboard env vars: `PRIVATE_DATA_TOKEN` (read-only; enter only in Render),
+  `PRIVATE_CORPUS_PATH=corpus/private/quran-kfc-v30-20261005.jsonl.xz` (the path the build writes, relative to the repo root),
+  `ALLOW_PENDING_REVIEW=true` (owner decision 30), `CORS_ORIGINS=[]` until the web origin exists,
+  `PYTHON_VERSION=3.11.9`. `BUILD_SHA` is optional: when unset, `/health` reports the first seven
+  characters of `RENDER_GIT_COMMIT`. Enter values only in Render.
+- Corpus prerequisite: `HEALTH_ONLY=false`. `HEALTH_ONLY=true` skips all artifact reads, so the
+  corpus does not load under it. The first deploy used `HEALTH_ONLY=true`. Health-only mode needs no
+  `OPENAI_API_KEY`; the full API needs the provider keys.
 - Health path: `/health`.
 - Live health-only API: <https://tabayyan-api.onrender.com> (degraded, `corpus_items: 0`, build `f696a50`).
 - Live web preview: <https://tabayyan.pages.dev> (development preview; verification is not active yet).
@@ -610,7 +620,9 @@ curl --silent --show-error --write-out '\n%{http_code}\n' -X POST https://YOUR-S
 
 Expect health HTTP 200 with `status: degraded`, `corpus_items: 0`,
 `policy_approved_by: pending`, null version fields and the deployed `build` SHA;
-`POST /verify` must return HTTP 404.
+`POST /verify` must return HTTP 404. These are the health-only expectations.
+With `HEALTH_ONLY=false`, `corpus_status: loaded` is the success state; any other
+`corpus_status` means the corpus did not load, and `corpus_error` gives the safe reason.
 
 ## Source register (P-03)
 
@@ -802,16 +814,18 @@ arm.
 
 ## Private corpus file and pending review
 
-The owner uploads Robin's built JSONL artifact, XZ-compressed below 1,000,000 bytes
-(Render's 1 MB cap, owner decision 29), as a Render Secret File and sets
-`PRIVATE_CORPUS_PATH` to its mounted path in the service environment. Commit only
+The built JSONL artifact is no longer uploaded as a Render Secret File. The build fetches it
+from the private repository (see First Render API deployment) with the read-only `PRIVATE_DATA_TOKEN`,
+and `PRIVATE_CORPUS_PATH` points at the path the build writes. The file stays XZ-compressed below
+1,000,000 bytes (Render's 1 MB cap, owner decision 29). Commit only
 `corpus/manifest.json` with exactly `{"sha256": "<64 lowercase hex digits>", "corpus_version": "v1"}`;
 the SHA-256 is over the complete **decompressed JSONL bytes**, including line endings,
 not the compressed bytes. XZ and gzip are recognized by magic bytes; plain JSONL remains
 supported for local use. The v30 handoff compresses to **975,592 bytes** with stdlib
 LZMA preset 9 (9,576,033 decompressed bytes; manifest SHA-256 unchanged).
 `CORPUS_MANIFEST_PATH`
-can override that public manifest path. No URL/read token is needed.
+can override that public manifest path. The read token is the only credential for this path;
+it is entered in Render and never committed.
 The v30 checksum-only manifest is committed. Keep real artifacts under `corpus/private/` locally; built JSONL,
 raw files and indexes are ignored and checked for accidental tracked files in CI.
 The guard covers alternate JSONL names and backups, corpus build directories, data JSONL,
@@ -930,15 +944,17 @@ the non-user search key `test`, and prints only environment, attempt status,
 HTTP status and whether an object-shaped JSON response was returned. It stores
 no response text. A successful JSON probe does not establish usable hadith or
 grade parsing, retrieval quality, or end-to-end card correctness. This command
-has not yet run from Render; the earlier workstation 403 is not Render evidence.
+ran once from Render on 2026-10-05 (owner decision 31): `dorar.net` returned HTTP 403 with no
+JSON (`attempted: true`, `json_response: false`). Dorar is disabled. Hadith comes from HadeethEnc
+only; until a HadeethEnc result returns, hadith claims abstain with referral.
 
 ## Bounded connector spike (2026-10-05)
 
 The [measured source/API spike](docs/CONNECTOR_SPIKE_20261005.md) records two OpenAI
 calls and bounded direct probes, endpoint shapes, one-sample local latency and terms
 links. [TOOLS.md](TOOLS.md#bounded-connector-spike-and-quran-handoff-2026-10-05)
-records verified provider model use. Dorar returned 403 from the local machine;
-Render reachability remains untested. The five-call terminology follow-up identifies
+records verified provider model use. Dorar returned 403 from the local machine and from Render
+(2026-10-05), so Dorar is disabled. The five-call terminology follow-up identifies
 icadb collection metadata but no verified term response; cases 7, 8 and 12 retain
 the owner's abstention with a glossary link. MCP language access worked, terminology coverage
 is unverified, and web-search citations alone do not provide raw verbatim evidence.

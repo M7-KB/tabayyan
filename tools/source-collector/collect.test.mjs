@@ -55,6 +55,21 @@ test('a declared Arabic page still needs Arabic title and short text per record'
   assert.equal(englishTerm.record, undefined);
   assert.equal(englishTerm.reason, 'not_arabic_record');
 });
+test('record check is a letter majority: one Arabic letter or word is not enough', () => {
+  const bayenat = (short, title = 'سؤال عينة') => arPage(`<h1>${title}</h1><section id="short-answer">` +
+    `<p>${short}</p></section>`);
+  const url = 'https://bayenat.net/question/1';
+  for (const short of ['English answer with one ب letter.', 'English answer with one word عينة.']) {
+    const result = extract(bayenat(short, 'Sample question'), url);
+    assert.equal(result.record, undefined, short);
+    assert.equal(result.reason, 'not_arabic_record');
+  }
+  const majority = extract(bayenat('جواب قصير وواضح مع كلمة Sample.'), url);
+  assert.equal(majority.record.short_answer, 'جواب قصير وواضح مع كلمة Sample.');
+  const englishTerm = extract(arPage('<h1>مصطلح عينة</h1><div id="definition_short">' +
+    'A definition with a single ع letter.</div>'), 'https://islamic-content.com/dictionary/word/1');
+  assert.equal(englishTerm.reason, 'not_arabic_record');
+});
 test('extract short source fields only, preserving decoded text', () => {
   const result = extract(bay, 'https://bayenat.net/question/1');
   assert.equal(result.record.short_answer, 'جواب قصير & دقيق.');

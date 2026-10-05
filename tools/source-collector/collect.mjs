@@ -90,8 +90,10 @@ export function extract(html, url) {
     return { links, reason: 'dictionary_listing' };
   }
   if (!title) return { links, reason: 'missing_h1' };
-  // Record-level Arabic check: a declared lang attribute alone is not enough.
-  const arabic = value => /[ء-ي]/.test(value);
+  // Record-level Arabic check: a declared lang attribute alone is not enough. Majority rule
+  // on letters: a record needs more Arabic letters than Latin letters in each text field.
+  const arabic = value => (value.match(/[ء-ي]/g) ?? []).length >
+    (value.match(/[A-Za-z]/g) ?? []).length;
   if (source === 'bayenat.net') {
     const short = section(document, ['مختصر الجواب', 'الجواب المختصر'],
       ['short-answer', 'short_answer']);

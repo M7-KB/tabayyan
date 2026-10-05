@@ -36,7 +36,7 @@ are followed for discovery. Bayyinat routes are restricted to question/answer,
 doubt, category/topic paths, plus the Arabic home root (`/` or `/ar/`). Only Arabic
 pages are collected: each page must declare an Arabic document language
 (`<html lang="ar…">`) whatever its URL. Undeclared or non-Arabic pages are not
-followed and yield no record. Language prefixes other than `/ar` are refused. Each record also needs Arabic letters in its title and short text (glossary: term and short definition); a declared `lang` alone is not enough. Unknown route shapes
+followed and yield no record. Language prefixes other than `/ar` are refused. Each record also needs a letter majority: more Arabic than Latin letters in its title and short text (glossary: term and short definition). A declared `lang` alone is not enough. Unknown route shapes
 are refused and require a parser/route update from owner-supplied HTML.
 Assets, unrelated dictionary paths, authentication
 pages, arbitrary query parameters and redirects are refused. No retries or

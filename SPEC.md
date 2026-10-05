@@ -119,7 +119,7 @@ Where an older section says "Sharia specialist" or "specialist" as the approver,
 
 ### 0.9 Build scope and cut line
 
-- **Text input only** until link and audio work. Link and audio keep their lower priority and their conditional acceptance (§6.2).
+- **Text input only, frozen for submission** (AGENTS.md scope, owner update 2026-10-06). Link and audio are out of scope for submission: §1 rows 2–3, the §6.2 link and audio bullets, and TASKS.md T-507, T-508b and T-603 are not acceptance items for this window.
 - **Example chips** ship behind the `features.exampleChips` flag, off by default. They show only the four texts the owner approves (owner direction, 2026-10-05), each with a short label, and a tap fills the input. The row stays hidden until the approved list has entries.
 - **Cut line: Monday 2026-10-05 22:00, Riyadh.** Anything not stable by then is switched off by config, and we submit what works. The final update is still due 2026-10-06 21:00 (§7).
 

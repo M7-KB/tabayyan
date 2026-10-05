@@ -397,11 +397,18 @@ an icon-only send button, a collapsed privacy row under the composer (its short 
 the source footer. The example chips render only when `strings.exampleChips` holds owner-approved entries; it is empty for now.
 The upload consent checkbox gates the upload button. The upload form is hidden in this text-first build:
 it sits behind `features.mediaUpload` in `web/src/config/features.js`, which is `false` by default. The audio
-task sets it to `true`. The privacy notice covers text input only
+task sets it to `true`. With the flag off, the privacy notice covers text input only
 (text first; audio/video and image input are not live yet, image input is P2). It says the text goes to
 the AI provider, only the extracted search phrases go to approved sources (SPEC §0.6), we do not store
 the text, and the provider may keep data briefly under its own policy. No API calls yet: submit
-handlers are empty until T-504, and the UI does not read `VITE_API_URL` yet. Fonts are self-hosted (`@fontsource/ibm-plex-sans-arabic`), so the page does not load
+handlers are empty until T-504, and the UI does not read `VITE_API_URL` yet.
+
+With `features.mediaUpload` on, a chosen clip is checked on the device (audio or video type, at most 25 MB)
+and then handed to `transcribeStub` in `web/src/api/transcribe.js`. The stub returns labelled sample text and
+never reads the file; it is replaced by the real `POST /api/v1/transcribe` call when Vegapunk's transcription
+contract lands. The transcript opens on a review screen, where the user edits it, and nothing runs after it
+until the user confirms. The privacy row then uses the clip wording (`strings.privacyLinesMedia`). Each
+refusal or failure has its own Arabic message and a way back to the input screen. Fonts are self-hosted (`@fontsource/ibm-plex-sans-arabic`), so the page does not load
 third-party font CDNs.
 
 ## Card UI (T-505)

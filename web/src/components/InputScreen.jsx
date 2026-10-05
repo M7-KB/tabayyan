@@ -5,8 +5,8 @@ import { ExampleChips } from './ExampleChips.jsx'
 import { PrivacyNotice } from './PrivacyNotice.jsx'
 import { SendIcon } from './Icons.jsx'
 
-export function InputScreen({ onSubmitText, onSubmitMedia }) {
-  const [text, setText] = useState('')
+export function InputScreen({ onSubmitText, onSubmitMedia, initialText = '' }) {
+  const [text, setText] = useState(initialText)
   const [file, setFile] = useState(null)
   const [consent, setConsent] = useState(false)
   const textareaRef = useRef(null)

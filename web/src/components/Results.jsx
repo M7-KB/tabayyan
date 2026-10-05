@@ -49,6 +49,13 @@ export function Results({ status, cards = [], errorCode, onRetry, onEdit }) {
       {cards.map((card) => (
         <ClaimCard key={card.card_id ?? card.claim.id} card={card} />
       ))}
+      {onEdit && (
+        <div className="results-actions">
+          <button type="button" onClick={onEdit}>
+            {strings.resultsEditClaims}
+          </button>
+        </div>
+      )}
     </section>
   )
 }

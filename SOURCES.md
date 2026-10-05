@@ -207,3 +207,13 @@ link, under the scope above. The official API documentation establishes the API
 shape; it is not treated as an underlying-text redistribution licence. No bulk
 fetch, download, dataset publication or response persistence is permitted.
 The item adapter does not create a local HadeethEnc corpus or change P-03 flags.
+
+Discovery routing authority: build event
+`74955bb4a1b90316e3a47f4f39bd1e785f28b286b8ba27415bdd66f65b2b910d` (2026-10-05).
+The same official API documents `/api/v1/categories/list/` and
+`/api/v1/hadeeths/list/` (`language`, `category_id`, `page`, `per_page`). The adapter
+uses one category metadata response and one bounded page for ID discovery only;
+neither titles nor metadata authorize a quote. Full Arabic item responses remain
+request-scoped, with `grading_source_id: hadeethenc`. Display permission is the
+same owner-authorized scope above; underlying-text redistribution terms remain
+uncleared. No responses are retained or added to the local corpus.

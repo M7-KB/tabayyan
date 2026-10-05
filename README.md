@@ -878,9 +878,24 @@ and unchanged grade to that request's quote gate. Missing grading means drop.
 received Dorar evidence is supplied in the same request, each evidence item keeps
 its own grading and source; the adapter never replaces or ranks them.
 
-This is the item adapter, not semantic search or default HTTP-route wiring. A
-source-backed discovery adapter must supply IDs; model guesses are not evidence.
-The existing endpoint therefore does not yet call HadeethEnc automatically.
+`api.hadeethenc_discovery.HadeethEncDiscovery.discover(query, source_request)`
+adds bounded discovery through the [official category and item-list API](https://github.com/islamhouse-dev/hadith-api).
+It reads Arabic category metadata, selects one category by normalized title-word
+overlap, reads only its first page (20 items), and fetches at most two matching
+items through the existing adapter. Only IDs returned by that page are used.
+Titles and category metadata never become evidence; only full item responses
+enter the request's gatekeeper. Every accepted item carries internal
+`grading.grading_source_id: hadeethenc`, alongside the unchanged grade and link.
+The public card retains its existing three grading fields.
+
+This is lexical category browsing, not semantic search. It may miss relevant
+items in another category or page; missing, malformed, duplicate, ungraded or
+unavailable results provide no evidence and must abstain. At most four calls
+occur per discovery invocation, each with the existing transport deadline and
+byte cap, with no retry or automatic pagination. The host/path pairs are fixed.
+Call only for non-personal hadith retrieval before the source request is consumed.
+Default HTTP-route wiring remains separate backend integration work; the current
+endpoint does not yet call discovery automatically.
 No HadeethEnc response or user query is saved. Explanations remain model prose
 under the existing separation gate; quoted source bytes never adapt to the asker.
 

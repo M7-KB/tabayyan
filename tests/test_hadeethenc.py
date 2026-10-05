@@ -57,8 +57,12 @@ def test_hadeethenc_copies_same_response_bytes_and_source_label():
     }
     assert item["source_ref"]["record_ref"] == "42"
     assert "explanation" not in receipt.record
+    assert receipt.record["grading"]["grading_source_id"] == "hadeethenc"
     data["grade"] = "changed after reception"
-    assert g.verify("live:hadeethenc:42", item["quote_ar"])["grading"] == item["grading"]
+    assert g.verify("live:hadeethenc:42", item["quote_ar"])["grading"] == {
+        **item["grading"],
+        "grading_source_id": "hadeethenc",
+    }
 
 
 @pytest.mark.parametrize(

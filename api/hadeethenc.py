@@ -49,6 +49,7 @@ class HadeethEncConnector:
                     "reference": raw["reference"],
                 },
                 "grading": {
+                    "grading_source_id": "hadeethenc",
                     "grade_ar": raw["grade"],
                     "grader_ar": SOURCE_NAME_AR,
                     "grading_source_url": url,

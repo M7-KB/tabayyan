@@ -862,8 +862,11 @@ under the existing separation gate; quoted source bytes never adapt to the asker
 
 Transport uses exact fixed hosts and paths, public-only DNS results pinned to the
 connection IP with source-host TLS verification, no redirects/proxies/retries,
-a 256 KiB response limit, and a 10-second socket timeout. Slow streaming is also
-checked against elapsed time; DNS resolution uses the system resolver.
+a 256 KiB response limit, and a shared 10-second deadline. The remaining budget
+is applied at TCP connect, TLS handshake, request send, and every socket receive,
+including receives inside header parsing and buffered body reads. Slow drips do
+not renew the budget. DNS resolution uses the system resolver and cannot be
+interrupted by this transport; exhausted DNS time prevents a connection.
 
 After the reviewed owner Render switch, run **once in the Render Shell**:
 

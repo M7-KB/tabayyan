@@ -185,12 +185,15 @@ class FakeResponse:
     def read(self, size):
         return self.body.read(size)
 
+    def close(self):
+        self.body.close()
+
 
 def install_transport(monkeypatch, response, addresses=("8.8.8.8",)):
     calls = []
 
     class Connection:
-        def __init__(self, host, address, timeout):
+        def __init__(self, host, address, timeout, *, deadline):
             calls.append((host, address, timeout))
 
         def request(self, method, target, headers):
@@ -215,7 +218,8 @@ def test_transport_pins_resolved_public_address_and_encodes_params(monkeypatch):
     assert BoundedSourceHTTP().get(
         "hadeethenc.com", "/api/v1/hadeeths/one/", {"id": "42 &x=1"}
     ) == {"ok": True}
-    assert calls[0] == ("hadeethenc.com", "8.8.8.8", 10)
+    assert calls[0][:2] == ("hadeethenc.com", "8.8.8.8")
+    assert 0 < calls[0][2] <= 10
     assert "42+%26x%3D1" in calls[1][1]
     assert calls[-1] == "closed"
 

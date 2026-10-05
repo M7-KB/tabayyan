@@ -844,3 +844,36 @@ so unmarked hadith outside those results may go undetected. Until the live Dorar
 connector lands, hadith claims abstain with referral. The binding implementation and
 Render switch remain separate reviewed work. Records keep `approved_by: pending`,
 with `ALLOW_PENDING_REVIEW=true`; owner review is recorded in handoff metadata.
+
+### HadeethEnc item connector and Render Dorar smoke
+
+`api.hadeethenc.HadeethEncConnector.receive(item_id, source_request)` fetches one
+Arabic item from the official API and adds its raw text, source link, reference,
+and unchanged grade to that request's quote gate. Missing grading means drop.
+`grader_ar` identifies HadeethEnc; it never impersonates Dorar. If separately
+received Dorar evidence is supplied in the same request, each evidence item keeps
+its own grading and source; the adapter never replaces or ranks them.
+
+This is the item adapter, not semantic search or default HTTP-route wiring. A
+source-backed discovery adapter must supply IDs; model guesses are not evidence.
+The existing endpoint therefore does not yet call HadeethEnc automatically.
+No HadeethEnc response or user query is saved. Explanations remain model prose
+under the existing separation gate; quoted source bytes never adapt to the asker.
+
+Transport uses exact fixed hosts and paths, public-only DNS results pinned to the
+connection IP with source-host TLS verification, no redirects/proxies/retries,
+a 256 KiB response limit, and a 10-second socket timeout. Slow streaming is also
+checked against elapsed time; DNS resolution uses the system resolver.
+
+After the reviewed owner Render switch, run **once in the Render Shell**:
+
+```sh
+python -m api.dorar_smoke
+```
+
+It refuses to call outside Render (`RENDER=true`), makes one Dorar request with
+the non-user search key `test`, and prints only environment, attempt status,
+HTTP status and whether an object-shaped JSON response was returned. It stores
+no response text. A successful JSON probe does not establish usable hadith or
+grade parsing, retrieval quality, or end-to-end card correctness. This command
+has not yet run from Render; the earlier workstation 403 is not Render evidence.

@@ -49,6 +49,9 @@ Return only the schema. Select corpus_ids that actually address the claim/questi
 Do not invent evidence, quotes, translations, hadith gradings, rulings or source IDs.
 Explain briefly using the supplied evidence; never reproduce or quote source text in
 explanations or position summaries. Arabic explanation required; English only for en.
+Adapt explanation wording and detail to the asker's question and explicitly stated
+knowledge/background in asker_context; do not infer religious or personal traits.
+This adapts explanation only. Selected source text and grading remain unchanged.
 For level B hedge where disagreement is possible. Do not rank positions or claim
 unproven consensus. Each distinct position cites a different supplied record.
 recorded_disagreement reports disagreement in the evidence, not the user's tone.
@@ -308,6 +311,7 @@ class Composer:
                     instructions=INSTRUCTIONS,
                     data={
                         "claim": claim.text_ar,
+                        "asker_context": original,
                         "level": claim.level,
                         "lang": lang,
                         "records": json.dumps([r.record for r in candidates], ensure_ascii=False),

@@ -191,3 +191,19 @@ the applicable publisher document. Pending entries cannot satisfy ingestion clea
 The brief also permits early tafsir/creed/history sources, approved books of the four schools, and other authenticity-checked hadith editions on Shamela. These are **pending exact title/edition selection**, not permission to ingest arbitrary pages from those domains. Register each selection and licence before adding it to the allowlist.
 
 Publisher copyright pages and book cards above are the evidence for the pending decisions, not affirmative licence grants. Unknown permission does not mean permanently prohibited. The owner can supply package terms or rights-holder permission for review; this register then records the permitted scope explicitly.
+
+## HadeethEnc runtime item adapter (2026-10-05)
+
+Owner authority: planning event
+`0f6d019222f73b47c0b897a50d377c9372d315569be21ba05a07cb20f96aed9c`,
+including the section 12.7 grading decision. The item connector uses the
+[official HadeethEnc API](https://github.com/islamhouse-dev/hadith-api) on
+`hadeethenc.com`, with canonical item links on the same exact host.
+It copies the hadith and grade from one Arabic item response, labels the grade
+as HadeethEnc's, and drops records without grade, attribution or reference.
+
+Licence: owner-authorized matched challenge-app display with visible source and
+link, under the scope above. The official API documentation establishes the API
+shape; it is not treated as an underlying-text redistribution licence. No bulk
+fetch, download, dataset publication or response persistence is permitted.
+The item adapter does not create a local HadeethEnc corpus or change P-03 flags.

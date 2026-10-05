@@ -31,7 +31,7 @@ SOURCES = {
     "binbaz": ("binbaz.org.sa", {"faq", "fiqh"}, "موقع الشيخ ابن باز"),
     "binothaimeen": ("binothaimeen.net", {"faq", "fiqh"}, "موقع الشيخ ابن عثيمين"),
     "terminologyenc": ("mcp.islamiccontent.org", {"glossary"}, "الموسوعة الإسلامية للمصطلحات"),
-    "hadeethenc": ("mcp.islamiccontent.org", {"hadith"}, "موسوعة الأحاديث النبوية"),
+    "hadeethenc": ("hadeethenc.com", {"hadith"}, "موسوعة الأحاديث النبوية"),
     "quranenc": ("mcp.islamiccontent.org", {"quran_translation"}, "موسوعة القرآن الكريم"),
     "byenah": ("mcp.islamiccontent.org", {"faq"}, "بينات"),
     "islamhouse": ("mcp.islamiccontent.org", {"faq"}, "الإسلام هاوس"),
@@ -286,8 +286,26 @@ class QuoteGatekeeper:
 
     def dependencies(self, key: str, candidate: str) -> list[dict]:
         r = self.verify(key, candidate)
-        if r is None or r["domain"] in {"quran", "hadith"}:
+        if r is None or r["domain"] == "quran":
             return []
+        if r["domain"] == "hadith":
+            # Preserve both publishers' own grades when this request received
+            # the same narrated text. Neither result fills the other's fields.
+            pair = {"hadeethenc", "dorar-hadith"}
+            if key not in self._live or r["source_id"] not in pair:
+                return []
+            peers = []
+            for peer_key, peer in self._records.items():
+                if (
+                    peer_key in self._live
+                    and peer["domain"] == "hadith"
+                    and peer["source_id"] in pair - {r["source_id"]}
+                    and normalize_arabic(peer["text_ar"]) == normalize_arabic(r["text_ar"])
+                ):
+                    authorized = self._base_quote(peer_key, peer["text_ar"])
+                    if authorized is not None:
+                        peers.append(authorized)
+            return peers
         return self._embedded(r["text_ar"]) or []
 
     def published_answer(self, key: str, candidate: str, *, proposed_title: str | None = None):

@@ -65,7 +65,13 @@ def sanitize_fields(value, schema, root=None):
     if "anyOf" in schema:
         for option in schema["anyOf"]:
             if option.get("type") == "string" and isinstance(value, str):
-                return sanitize_fields(value, option, root)
+                bounded = sanitize_fields(value, option, root)
+                if any(branch.get("type") == "null" for branch in schema["anyOf"]) and (
+                    len(bounded.strip()) < option.get("minLength", 0)
+                    or ("pattern" in option and not re.search(option["pattern"], bounded))
+                ):
+                    return None
+                return bounded
     if isinstance(value, dict):
         return {
             k: sanitize_fields(v, schema.get("properties", {}).get(k, {}), root)

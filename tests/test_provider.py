@@ -342,3 +342,30 @@ def test_sent_schema_constraints_are_local_field_limits():
 
     result = adapter(handler).complete_json(instructions="fixed", data={}, schema=schema)
     assert result == {"label": "abc", "ids": ["a"]}
+
+
+@pytest.mark.parametrize("label", ["", "   "])
+@pytest.mark.parametrize("explanation", ["", "   ", "Review the source."])
+def test_empty_optional_label_does_not_discard_bound_evidence(label, explanation):
+    from tests.test_composer import TEXT, claim, engine, proposal
+
+    value = proposal(
+        state="SUPPORTED", term_label_ar=label, explanation_ar=explanation, explanation_en=""
+    )
+    model = adapter(
+        lambda _: httpx.Response(
+            200, json=body(content=[{"type": "output_text", "text": json.dumps(value)}])
+        )
+    )
+    composer = engine()
+    composer.model = model
+    card = composer.compose(
+        claim(),
+        original=TEXT,
+        lang="ar",
+        input_kind="claim",
+        no_checkable_claim=False,
+        propose_state=True,
+    )
+    assert card["state"] == "SUPPORTED"
+    assert card["evidence"][0]["quote_ar"] == TEXT

@@ -1,10 +1,12 @@
 """Claim extraction proposals with exact source spans and rule-first routing."""
 
+from time import monotonic
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from api.classifier import Classification, LevelClassifier
+from api.diagnostics import record
 from api.model import StructuredModel
 from api.span_detector import SpanDetector
 
@@ -99,6 +101,8 @@ class Extractor:
     def extract(self, request: ExtractRequest) -> ExtractResponse:
         if not request.text.strip():
             raise ExtractionError(400, "NO_CLAIMS")
+        started = monotonic()
+        outcome = "provider_or_schema_failure"
         try:
             proposal = ExtractionProposal.model_validate(
                 self.model.complete_json(
@@ -109,14 +113,18 @@ class Extractor:
             )
             seen = set()
             for claim in proposal.claims:
+                outcome = "invalid_span"
                 start, end = claim.span.start, claim.span.end
                 if not 0 <= start < end <= len(request.text):
                     raise ValueError("Invalid span")
                 if request.text[start:end] != claim.source_text or not claim.text_ar.strip():
+                    outcome = "source_substring_mismatch"
                     raise ValueError("Invalid source substring")
                 if claim.origin == "stated" and claim.text_ar != claim.source_text:
+                    outcome = "stated_wording_changed"
                     raise ValueError("Stated claim must retain original wording")
                 if (start, end, claim.text_ar) in seen:
+                    outcome = "duplicate_claim"
                     raise ValueError("Duplicate claim")
                 seen.add((start, end, claim.text_ar))
                 allowed = {
@@ -125,17 +133,23 @@ class Extractor:
                     "term": {"term_lookup"},
                 }
                 if claim.origin not in allowed[proposal.input_kind]:
+                    outcome = "inconsistent_origin"
                     raise ValueError("Inconsistent origin")
                 if claim.origin == "term_lookup" and not proposal.no_checkable_claim:
+                    outcome = "inconsistent_no_claim_flag"
                     raise ValueError("Term lookup requires no-checkable-claim flag")
             if proposal.no_checkable_claim and (
                 len(proposal.claims) != 1 or proposal.claims[0].origin != "term_lookup"
             ):
+                outcome = "invalid_no_claim_proposal"
                 raise ValueError("Invalid no-checkable-claim proposal")
             if proposal.input_kind == "term" and not proposal.no_checkable_claim:
+                outcome = "inconsistent_term_flag"
                 raise ValueError("Term must be a no-checkable-claim proposal")
         except Exception:
+            record("extraction_validation", outcome, started)
             raise ExtractionError(503, "PIPELINE_DEGRADED") from None
+        record("extraction_validation", "completed", started)
         if proposal.detected_lang == "unsupported":
             raise ExtractionError(422, "TEXT_NOT_SUPPORTED_LANG")
         if not proposal.claims:

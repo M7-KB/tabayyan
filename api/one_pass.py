@@ -1,6 +1,7 @@
 """Router once, request-local retrieval, then parallel claim composition."""
 
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 
 from api.check import CheckRequest, CheckService
 from api.classifier import rule_level
@@ -60,5 +61,6 @@ class OnePassCheckService(CheckService):
             # when the router split a personal case into some apparent public claims.
             claims = [c.model_copy(update={"level": "D"}) for c in claims]
         with ThreadPoolExecutor(max_workers=min(8, len(claims))) as pool:
-            cards = list(pool.map(compose, claims))
+            context = copy_context()
+            cards = list(pool.map(lambda claim: context.copy().run(compose, claim), claims))
         return self._response(cards)

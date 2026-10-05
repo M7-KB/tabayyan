@@ -43,6 +43,7 @@ def test_health_reports_config_and_unavailable_artifacts(settings):
     assert result.status_code == 200
     assert result.json() == {
         "status": "degraded",
+        "review_mode": "pending_review",
         "corpus_version": None,
         "corpus_items": 0,
         "corpus_status": "not_configured",

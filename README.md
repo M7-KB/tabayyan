@@ -101,8 +101,17 @@ regardless of input kind or position in the selected records. Known hadith in
 any selected glossary definition abstains because glossary records lack a
 loader-verified hadith grading; comparison-record grades cannot authorize that quote.
 
-`/health` reports card schema version 1 in verification mode. Logs contain card
-counts/states only; no input, claims, source text or provider diagnostics. Services
+`/health` reports card schema version 1 in verification mode.
+Health returns `status: "ok"` when the nonempty corpus, policy, tuning and
+required model configuration are available and any pending review is explicitly
+accepted through `ALLOW_PENDING_REVIEW=true`. `review_mode` discloses
+`owner_accepted_pending_review`, `pending_review`, `reviewed`, or `disabled`.
+Pending item counts and policy reviewer fields remain visible. This configuration
+check makes no provider/source calls and does not certify model performance,
+source reachability or release approval. Missing models/corpus and health-only
+mode stay degraded even when pending review is accepted.
+
+Logs contain card counts/states only; no input, claims, source text or provider diagnostics. Services
 and the local index are reused, while requests/results are not cached or stored.
 Run the full Python suite and Node data-contract checks. Synthetic composer tests
 exercise state rows, thresholds, whole-index twins, grading, isolation, errors and

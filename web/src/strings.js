@@ -36,6 +36,39 @@ export const strings = {
   uploadSubmit: 'رفع المقطع',
   consent: 'أؤكد أن لدي حق مشاركة هذا المقطع لغرض التحقق',
 
+  // Audio and video clip (behind features.mediaUpload). The privacy copy for clips is the owner-approved
+  // disclosure of SPEC.md §6.6 and §12; it is shown only when the flag is on.
+  privacySummaryMedia: 'يُرسَل نصك أو مقطعك إلى مزوّد ذكاء اصطناعي، ولا نحفظه في خوادمنا.',
+  privacyLinesMedia: [
+    'تُرسل النصوص والمقاطع الصوتية والمرئية التي تُدخلها إلى مزوّد خدمة ذكاء اصطناعي لمعالجتها، ولا نحفظها في خوادمنا.',
+    'تُحذف المقاطع بعد المعالجة مباشرة، ولا تُكتب على القرص ولا تُسجَّل في السجلات.',
+    'لا نحدد هوية المتحدث ولا نتعرف على الأصوات، والبطاقات تحكم على الأقوال لا على الأشخاص.',
+    'قد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته. لا تحتاج إلى حساب.',
+  ],
+  transcribingHeading: 'جارٍ تفريغ المقطع',
+  transcribing: 'جارٍ تحويل المقطع إلى نص… قد يستغرق ذلك دقيقة.',
+  transcriptHeading: 'راجع النص قبل التحقق',
+  transcriptHint: 'صحّح النص إن لزم. لن يبدأ التحقق قبل أن تؤكد النص.',
+  // Default for the transcribe response's notice_ar (SPEC.md §3); the screen shows the server's text when present.
+  transcriptNotice: 'راجع النص وصحّحه قبل المتابعة',
+  transcriptStubNote: 'هذا نص تجريبي للعرض، ولم يُستخرج من المقطع.',
+  transcriptStubText: 'نص تجريبي للمراجعة.',
+  transcriptLabel: 'النص المستخرج من المقطع',
+  transcriptEmpty: 'النص فارغ. أضف نصاً، أو ارجع واختر مقطعاً آخر.',
+  transcriptConfirm: 'تأكيد النص والتحقق',
+  transcriptDiscard: 'إلغاء والعودة',
+  mediaErrorHeading: 'تعذّر تفريغ المقطع',
+  mediaErrorBack: 'العودة لاختيار ملف',
+  transcribeErrors: {
+    CONSENT_REQUIRED: 'ضع علامة على خانة الموافقة قبل رفع المقطع.',
+    MEDIA_TOO_LONG: 'المقطع أطول من ٣ دقائق. اختر مقطعاً أقصر.',
+    MEDIA_TOO_LARGE: 'حجم الملف أكبر من ٢٥ ميغابايت. اختر مقطعاً أصغر.',
+    UNSUPPORTED_MEDIA: 'نوع الملف غير مدعوم. اختر ملف صوت أو فيديو.',
+    TRANSCRIBE_UNAVAILABLE: 'خدمة التفريغ غير متاحة الآن. حاول بعد قليل، أو اكتب النص مباشرة.',
+    NETWORK: 'تعذّر الاتصال بالخدمة. تحقق من اتصالك ثم حاول مرة أخرى.',
+    UNKNOWN: 'حدث خطأ غير متوقع أثناء التفريغ. حاول مرة أخرى.',
+  },
+
   // Card UI (T-505). stateLabels and sourceTextIntro follow the SPEC.md §12 item 1 table. Only
   // supported_contradicts and sourceTextIntro are owner-given; the other three labels are PROVISIONAL
   // and need owner review before release (SPEC.md §0.7).

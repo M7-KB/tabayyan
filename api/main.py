@@ -13,6 +13,7 @@ from api.config import load_config
 from api.errors import install_handlers, response
 from api.extract import ExtractionError, Extractor, ExtractRequest, ExtractResponse
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
+from api.islamic_mcp import IslamicContentConnector
 from api.provider import OpenAIStructuredModel
 from api.retrieval import BM25Retriever
 from api.settings import Settings
@@ -116,6 +117,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             gatekeeper=gatekeeper,
                         ),
                         corpus_version=app.state.corpus_version,
+                        connector=IslamicContentConnector()
+                        if settings.islamic_content_mcp_url
+                        else None,
                     )
                     # Store only services/indexes, never request data or result cards.
                     app.state.checker = service

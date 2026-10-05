@@ -38,6 +38,13 @@ SOURCES = {
     "islamenc": ("mcp.islamiccontent.org", {"faq"}, "الموسوعة الإسلامية"),
 }
 
+# The transport reaches only the MCP host. Its item links point to the original
+# publisher, never to a model-selected fetch target.
+MCP_PUBLISHER_HOSTS = {
+    "islamhouse": {"islamcontent.com", "islamhouse.com"},
+    "quranenc": {"islamenc.com", "quranenc.com"},
+}
+
 
 def allowed_url(url: object, host: str) -> bool:
     if not isinstance(url, str) or any(c.isspace() for c in url):
@@ -130,7 +137,10 @@ class QuoteGatekeeper:
             source = SOURCES.get(r.get("source_id"))
             if source is None or r.get("domain") not in source[1]:
                 continue
-            if not allowed_url(r.get("source_url"), source[0]):
+            if not any(
+                allowed_url(r.get("source_url"), host)
+                for host in {source[0]} | MCP_PUBLISHER_HOSTS.get(r.get("source_id"), set())
+            ):
                 continue
             if not all(
                 isinstance(r.get(k), str) and r[k].strip() for k in ("record_ref", "text_ar")

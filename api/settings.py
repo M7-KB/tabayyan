@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     allow_pending_review: bool = False
     private_corpus_path: Path | None = None
     corpus_manifest_path: Path = ROOT / "corpus/manifest.json"
+    islamic_content_mcp_url: str = ""
+
+    @field_validator("islamic_content_mcp_url")
+    @classmethod
+    def fixed_mcp_endpoint(cls, value: str) -> str:
+        if value not in {"", "https://mcp.islamiccontent.org/mcp"}:
+            raise ValueError("ISLAMIC_CONTENT_MCP_URL must be the approved endpoint")
+        return value
 
     @model_validator(mode="after")
     def default_build_sha(self) -> "Settings":

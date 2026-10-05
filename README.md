@@ -930,6 +930,53 @@ connector lands, hadith claims abstain with referral. The binding implementation
 Render switch remain separate reviewed work. Records keep `approved_by: pending`,
 with `ALLOW_PENDING_REVIEW=true`; owner review is recorded in handoff metadata.
 
+### Direct Islamic Content MCP connector
+
+Set `ISLAMIC_CONTENT_MCP_URL=https://mcp.islamiccontent.org/mcp` to enable
+request-local Arabic library discovery on `/api/v1/check`. An empty value disables
+it. Other URLs are refused. The application calls MCP directly; no model-side MCP
+or generated search summary supplies evidence. Server classification runs first;
+personal cases, unavailable classification and term lookups skip discovery.
+An additional structured-model step selects at most three topic IDs from a
+closed vocabulary in `api/search_phrases.py`, derived from the challenge brief's
+generic domains and glossary. An independent code mapping supplies each fixed
+Arabic search phrase; no model-provided phrase or user substring is transmitted.
+Unknown IDs, names, private-context tokens, invalid/unavailable proposals and
+queries containing a complete claim skip discovery. The model's safety flag
+cannot bypass the closed mapping. Full input/claims never serve as fallback
+queries. Queries remain request-local. This conservative vocabulary limits
+retrieval coverage: unlisted topics abstain through existing evidence gates;
+additions require code review. Topic selection quality still requires live eval.
+
+One search selects at most two Arabic library item IDs. Each selected item is
+read in the same request. Only the publisher's bounded `[COMMENTARY]` section,
+with the exact same canonical item URL, can enter `SourceRequest`. Search titles,
+wrapper instructions, attribution blocks, attachment URLs and model prose are
+never quotes. The gatekeeper checks source identity, verbatim text and embedded
+scripture against the local Quran and current-request evidence. The local Quran
+comparison set is retained. No response or user query is cached or written.
+
+`IslamicContentConnector.verse(surah, ayah, request)` also reads one QuranEnc
+verse/translation through the hosted `get_quran_verses` tool. It copies the raw
+Arabic and English lines from the source's `[EXACT]` section as source evidence,
+outside generated explanations. This explicit-reference method is not yet
+automatically selected by `/check`. It never replaces the local KFC Quran.
+
+The fixed-host TLS transport pins a public DNS address, refuses redirects,
+compression, oversized responses, mismatched RPC IDs, duplicate JSON keys and
+MCP errors. Search and item reads share a ten-second deadline, including DNS,
+connect, TLS, headers and body. Failed batches contribute no partial evidence.
+Missing source text falls back to the existing abstention/referral path; valid
+local Quran evidence can still be checked.
+
+Coverage limitation verified against the hosted tool list: dedicated Byenah and
+IslamEnc general-content tools are absent. The hosted Quran tool links to
+IslamEnc, and its library tool links to IslamContent/IslamHouse. These are not
+evidence of Byenah or general IslamEnc question coverage. Those paths remain
+unavailable and must abstain; no guessed endpoints or scraped pages are used.
+Term definitions remain unavailable. Provider outages and production quality
+metrics still require live evaluation; synthetic tests do not establish them.
+
 ### HadeethEnc item connector and Render Dorar smoke
 
 `api.hadeethenc.HadeethEncConnector.receive(item_id, source_request)` fetches one

@@ -99,3 +99,163 @@ def test_timeout_safe():
 
     with pytest.raises(ProviderUnavailable, match="Structured provider unavailable"):
         run(adapter(timeout))
+
+
+@pytest.mark.parametrize("effort,budget", [("none", 15), ("low", 25)])
+def test_effort_timeout_and_shared_client(effort, budget):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        assert json.loads(request.content)["reasoning"] == {"effort": effort}
+        assert request.extensions["timeout"]["connect"] == 5
+        assert 0 < request.extensions["timeout"]["read"] <= budget
+        return httpx.Response(200, json=body())
+
+    with httpx.Client(transport=httpx.MockTransport(handler), trust_env=False) as client:
+        model = OpenAIStructuredModel(
+            api_key="inert", model="configured", effort=effort, timeout=budget, client=client
+        )
+        run(model)
+        run(model)
+        model.close()
+        assert not client.is_closed
+    assert client.is_closed
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("status", [408, 429, 500, 502, 503, 504])
+def test_single_retry_honors_delay(status, monkeypatch):
+    calls, sleeps = [], []
+    monkeypatch.setattr("api.provider.time.sleep", sleeps.append)
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(status, headers={"Retry-After": "2"})
+        return httpx.Response(200, json=body())
+
+    assert run(adapter(handler))["level"] == "B"
+    assert len(calls) == 2 and sleeps == [2]
+
+
+def test_retry_after_date_and_invalid_values():
+    from datetime import datetime, timedelta, timezone
+    from email.utils import format_datetime
+
+    from api.provider import retry_delay
+
+    date = format_datetime(datetime.now(timezone.utc) + timedelta(seconds=10), usegmt=True)
+    assert 8 < retry_delay(date) <= 10
+    assert retry_delay("invalid") == 0.5
+    assert retry_delay("NaN") == float("inf")
+
+
+def test_retry_delay_outside_budget_never_sleeps_or_retries(monkeypatch):
+    calls = []
+    monkeypatch.setattr("api.provider.time.sleep", lambda _: pytest.fail("must not sleep"))
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(429, headers={"Retry-After": "120"})
+
+    with pytest.raises(ProviderUnavailable) as caught:
+        run(adapter(handler))
+    assert caught.value.category == "retry_budget"
+    assert len(calls) == 1
+
+
+def test_second_transient_error_is_not_retried(monkeypatch):
+    calls = []
+    monkeypatch.setattr("api.provider.time.sleep", lambda _: None)
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(503, text="private input inert-secret")
+
+    with pytest.raises(ProviderUnavailable):
+        run(adapter(handler))
+    assert len(calls) == 2
+
+
+def test_elapsed_budget_rejects_late_response(monkeypatch):
+    clock = iter([0, 0, 26])
+    monkeypatch.setattr("api.provider.time.monotonic", lambda: next(clock))
+    with pytest.raises(ProviderUnavailable) as caught:
+        run(adapter(lambda _: httpx.Response(200, json=body())))
+    assert caught.value.category == "timeout"
+
+
+def test_incomplete_and_refusal_not_retried_and_logs_text_free(caplog):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json=body(status="incomplete"))
+
+    with pytest.raises(ProviderUnavailable) as caught:
+        run(adapter(handler))
+    assert caught.value.category == "incomplete"
+    assert len(calls) == 1
+    assert "category=incomplete" in caplog.text
+    assert "inert-secret" not in caplog.text and "ignore rules" not in caplog.text
+
+
+def test_warmup_uses_exact_strict_schema_and_empty_data():
+    from api.composer import CardProposal
+
+    calls = []
+
+    def handler(request):
+        value = json.loads(request.content)
+        calls.append(value)
+        return httpx.Response(
+            200,
+            json={"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}},
+        )
+
+    model = adapter(handler)
+    schema = CardProposal.model_json_schema()
+    model.warm_schema(schema)
+    value = calls[0]
+    assert value["max_output_tokens"] == 1 and value["store"] is False
+    assert json.loads(value["input"][1]["content"]) == {"untrusted_data": {}}
+    strict_schema = value["text"]["format"]["schema"]
+    assert set(strict_schema["required"]) == set(strict_schema["properties"])
+    assert "default" not in strict_schema["properties"]["term_label_ar"]
+    # Caller schema is unchanged; real requests use the same transformed schema.
+    assert "default" in schema["properties"]["term_label_ar"]
+
+
+def test_application_warms_in_parallel_and_closes_shared_pool(monkeypatch):
+    import threading
+
+    from fastapi.testclient import TestClient
+
+    from api.main import create_app
+    from api.settings import Settings
+
+    calls = []
+    barrier = threading.Barrier(3)
+
+    class Model:
+        def __init__(self, **kwargs):
+            self.config = kwargs
+
+        def warm_schema(self, schema):
+            calls.append((self.config, schema))
+            barrier.wait(timeout=5)
+
+    monkeypatch.setattr("api.main.OpenAIStructuredModel", Model)
+    app = create_app(
+        Settings(
+            openai_api_key="inert", openai_model_extract="router", openai_model_reason="composer"
+        )
+    )
+    with TestClient(app) as client:
+        assert len(calls) == 3
+        assert len({id(config["client"]) for config, _ in calls}) == 1
+        assert {config["effort"] for config, _ in calls} == {"none", "low"}
+        assert client.get("/health").status_code == 200
+        assert not app.state.provider_client.is_closed
+    assert app.state.provider_client.is_closed

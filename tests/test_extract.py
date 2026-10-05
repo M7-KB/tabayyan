@@ -284,11 +284,13 @@ def test_http_uses_real_adapter_and_separate_extraction_reason_models(monkeypatc
         )
 
     def factory(**kwargs):
+        kwargs.pop("client", None)
         return OpenAIStructuredModel(**kwargs, transport=httpx.MockTransport(handler))
 
     monkeypatch.setattr("api.main.OpenAIStructuredModel", factory)
     app = create_app(
         Settings(
+            openai_schema_warmup=False,
             openai_api_key="inert",
             openai_model_extract="extract-model",
             openai_model_reason="reason-model",

@@ -1,22 +1,30 @@
 """Application scaffold. Verification endpoints arrive in later tasks."""
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.check import CheckRequest, CheckService
-from api.classifier import LevelClassifier
-from api.composer import Composer
+from api.classifier import LevelClassifier, LevelProposal
+from api.composer import CardProposal, Composer
 from api.config import load_config
 from api.discovery import DefaultDiscovery
 from api.errors import install_handlers, response
-from api.extract import ExtractionError, Extractor, ExtractRequest, ExtractResponse
+from api.extract import (
+    ExtractionError,
+    ExtractionProposal,
+    Extractor,
+    ExtractRequest,
+    ExtractResponse,
+)
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.hadeethenc_discovery import HadeethEncDiscovery
 from api.islamic_mcp import IslamicContentConnector
-from api.provider import OpenAIStructuredModel
+from api.provider import OpenAIStructuredModel, ProviderUnavailable
 from api.retrieval import BM25Retriever
 from api.settings import Settings
 from api.span_detector import DetectorConfig, Record, SpanDetector
@@ -29,6 +37,21 @@ logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings if settings is not None else Settings()
+
+    def model_adapter(app, *, router=False):
+        return OpenAIStructuredModel(
+            api_key=settings.openai_api_key.get_secret_value(),
+            model=settings.openai_model_extract if router else settings.openai_model_reason,
+            effort=settings.openai_router_effort if router else settings.openai_composer_effort,
+            timeout=15 if router else 25,
+            client=app.state.provider_client,
+        )
+
+    def warm(app, router, schema):
+        try:
+            model_adapter(app, router=router).warm_schema(schema)
+        except ProviderUnavailable as exc:
+            logger.warning("Provider warm-up failure: category=%s", exc.category)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -58,7 +81,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.corpus_version = corpus_version
         app.state.corpus_status = corpus_status
         app.state.corpus_error = corpus_error
-        yield
+        # One connection pool shared across models and requests; never stores request data.
+        with httpx.Client(trust_env=False) as provider_client:
+            app.state.provider_client = provider_client
+            if (
+                not settings.health_only
+                and settings.openai_schema_warmup
+                and settings.openai_model_extract
+                and settings.openai_model_reason
+            ):
+                await asyncio.gather(
+                    asyncio.to_thread(warm, app, True, ExtractionProposal.model_json_schema()),
+                    asyncio.to_thread(warm, app, False, LevelProposal.model_json_schema()),
+                    asyncio.to_thread(warm, app, False, CardProposal.model_json_schema()),
+                )
+            yield
 
     app = FastAPI(
         title="Tabayyan API",
@@ -86,8 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     raise ExtractionError(400, "NO_CLAIMS")
                 service = getattr(app.state, "checker", None)
                 if service is None:
-                    key = settings.openai_api_key.get_secret_value()
-                    reason = OpenAIStructuredModel(api_key=key, model=settings.openai_model_reason)
+                    reason = model_adapter(app)
                     gatekeeper = QuoteGatekeeper(
                         local_records=app.state.corpus,
                         request=SourceRequest(),
@@ -97,9 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
                     detector = gatekeeper.detector
                     extractor = Extractor(
-                        model=OpenAIStructuredModel(
-                            api_key=key, model=settings.openai_model_extract
-                        ),
+                        model=model_adapter(app, router=True),
                         classifier=LevelClassifier(
                             model=reason,
                             policy_path=settings.content_policy_path,
@@ -151,12 +185,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 # Tests can inject the same swappable service through app.state.
                 service = getattr(app.state, "extractor", None)
                 if service is None:
-                    key = settings.openai_api_key.get_secret_value()
-                    model = OpenAIStructuredModel(api_key=key, model=settings.openai_model_extract)
+                    model = model_adapter(app, router=True)
                     classifier = LevelClassifier(
-                        model=OpenAIStructuredModel(
-                            api_key=key, model=settings.openai_model_reason
-                        ),
+                        model=model_adapter(app),
                         policy_path=settings.content_policy_path,
                         tuning_path=settings.tuning_path,
                     )

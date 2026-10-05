@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     openai_model_transcribe: str = ""
     openai_model_image: str = ""
     openai_model_embed: str = ""
+    openai_router_effort: str = "none"
+    openai_composer_effort: str = "low"
+    openai_schema_warmup: bool = True
     cors_origins: list[str] = []
     content_policy_path: Path = ROOT / "api/policy/content_policy.yaml"
     tuning_path: Path = ROOT / "api/tuning.yaml"

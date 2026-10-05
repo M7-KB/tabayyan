@@ -288,3 +288,21 @@ This requirement applies to T-503's verbatim gate and its callers; PR #8 does no
 
 Development started Oct 2 with organizer permission. API scaffold and tests are on
 feat/api-scaffold (PR #7); the policy and tuning artifacts remain P-08 work.
+
+## Oct 5 evening — private doubt and term indexes (owner, 2026-10-05; SPEC.md §0.11)
+
+Reply only if blocked. Each task is one branch and one PR, to @Nami. Acceptance is the live list in SPEC.md §0.11.
+
+| ID | Owner | Branch (suggested) | Task | Depends on |
+|---|---|---|---|---|
+| R1 | Robin | `feat/index-collection-script` | Read-only collection script for the owner (1 req/s; bayenat.net question pages and icadb terminology endpoints only); JSONL, SHA-256 manifest, README with exact command. Post in #build before the owner runs it. | — |
+| R2 | Robin | `feat/index-loaders` | Loaders and validators for the two private files; `approved_sources` and SOURCES.md entries (Bayyinat as bayenat.net, glossary); organizer evidence linked. | R1 |
+| R3 | Robin | `feat/arabic-normalizer-clitics` | Arabic normalizer with proclitic stripping for BM25; own MIT code, no `pyarabic`. | — |
+| R4 | Robin | `feat/index-matchers` | Bayyinat and glossary matchers (text-embedding-3-large, 1024 dimensions, computed at startup in memory, fused with BM25); one module each. | R2, R3 |
+| V1 | Vegapunk | `feat/provider-timeouts` | Provider: explicit effort per model; timeouts (connect 5 s, router ~15 s, composer ~25 s); one retry honouring `Retry-After`; incomplete-status check; shared client; schema warm-up; text-free failure category. | — |
+| V2 | Vegapunk | `feat/check-one-pass` | One-pass `/check`: router, then per-claim parallel compose citing by ID. Remove duplicate preflight and second extraction. | V1 |
+| V3 | Vegapunk | `feat/router-kinds` | Wire R4 matchers and MCP open queries (model-written, max 6 words, scrubbed, never level D) into router kinds; published-answer cards reuse the #58 UI. Rebase #79. | V2, R4 |
+| U1 | Usopp | `feat/one-page-check` | One-page flow; `/check` with `original_text`; «فهمنا سؤالك هكذا» with edit and re-check in place; staged progress; published-answer and term cards. | V2 for live data; scaffold before then |
+| N1 | Nami | — | Review in arrival order (V1 first). After V2 and R4 deploy: 18 live cases, then H01–H10 and CONTROL. | — |
+
+Owner-run step: the one-time collection output (owner's machine, private store). Build blocked on it for R4 live data, not on code.

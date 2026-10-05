@@ -253,6 +253,6 @@ def test_nominated_ref_survives_compose_pool_and_counts_stay_text_free():
     assert "quran:33:40" in sent
     assert len(sent) <= COMPOSE_POOL + 1
     assert metrics.counts["resolved_refs"] == 1
-    assert metrics.counts["lexical_candidates"] >= COMPOSE_POOL
+    assert metrics.counts["lexical_hits_capped"] >= COMPOSE_POOL
     assert metrics.counts["compose_candidates"] == len(sent)
     assert result["state"] in {"SUPPORTED", "DISPUTED", "CANNOT_CONFIRM"}

@@ -122,16 +122,16 @@ or unavailable provider response does. Evidence, state and referral gates are un
 
 Default discovery runs MCP calls, and HadeethEnc only when the router's input kind is
 `hadith`, in parallel within a shared three-second budget (or the remaining request
-budget, if shorter). Verse and term routes skip both. The HadeethEnc gate is the
-router kind alone, not keywords in the query. Each adapter receives an isolated receipt scope; late
-or failed batches cannot enter composition. Text-free request summaries record
+budget, if shorter). Verse and term routes skip both. The HadeethEnc gate is the router
+kind alone, not keywords in the query. Each adapter receives an isolated receipt scope;
+late or failed batches cannot enter composition. Text-free request summaries record
 `retrieval_mcp` and `retrieval_hadeethenc` timings, plus composer input scans,
-gatekeeper checks, separation, dependencies, published answers, card validation,
-and total post-provider time. The summary also carries text-free integer totals
-(`proposed_refs`, `resolved_refs`, `lexical_candidates`, `compose_candidates`) and enum
-codes (`classifier:<status>` per claim, then each card's abstain reason or state). These
-timings and counts identify work after inference without logging user queries or
-source text.
+gatekeeper checks, separation, dependencies, published answers, card validation, and
+total post-provider time. The summary also carries text-free integer totals
+(`proposed_refs` as the router's raw nominations, `resolved_refs`, `lexical_hits_capped`
+capped at 50, `compose_candidates`) and enum codes (`classifier:<status>` per claim,
+then each card's abstain reason or state). These timings and counts identify work after
+inference without logging user queries or source text.
 
 BM25 indexes and queries use the `ar-search-v1` prefix aliases from #92. Overlap
 counts each distinct query-word group once, even when several aliases match;

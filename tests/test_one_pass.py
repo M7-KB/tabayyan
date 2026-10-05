@@ -503,3 +503,36 @@ def test_hadeethenc_flag_follows_router_kind_only(kind, hadith):
     checker.connector = Connector()
     checker.check(CheckRequest(original_text=TEXT))
     assert seen == [hadith]
+
+
+def test_low_classifier_confidence_pins_level_d_and_drops_nominated_ref():
+    """Pins the current policy: a low router level confidence forces level D.
+
+    The Quran nomination is still counted as proposed, but restriction clears it
+    before compose, so no model call and no resolved reference. Changing this rule
+    is an owner decision; this test makes the current behaviour visible.
+    """
+    from api.diagnostics import Summary, summary
+
+    question = "من هو خاتم الأنبياء؟"
+    value = route_proposal(
+        question,
+        input_kind="verse",
+        level_confidence=0.2,
+        proposed_quran_refs=[{"surah": 33, "ayah": 40}],
+    )
+    value["claims"][0]["origin"] = "question_subject"
+    checker, _, compose_model = service(value)
+    metrics = Summary()
+    token = summary.set(metrics)
+    try:
+        result = checker.check(CheckRequest(original_text=question))
+    finally:
+        summary.reset(token)
+    card = result["cards"][0]
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["abstained_reason"] == "LEVEL_D_PERSONAL_CASE"
+    assert compose_model.calls == []
+    assert metrics.counts["proposed_refs"] == 1
+    assert "resolved_refs" not in metrics.counts
+    assert "classifier:low_confidence" in metrics.codes

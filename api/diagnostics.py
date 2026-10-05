@@ -47,7 +47,11 @@ def count(name: str, value: int) -> None:
 
 
 def code(value: str) -> None:
-    """Record a text-free enum code, such as a classifier status or abstain reason."""
+    """Record a text-free enum code, such as a classifier status or abstain reason.
+
+    Codes grow by one per claim and one per card in a request. Requests are bounded
+    by the router's claim cap (50), so the list stays small.
+    """
     current = summary.get()
     if current is not None:
         with current.lock:

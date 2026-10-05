@@ -25,7 +25,7 @@ from corpus.quran_binding import display_text, matching_text
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "contracts/card.schema.json").read_text("utf-8"))
 VALIDATOR = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
-# Lexical hits are counted for diagnostics; only the top COMPOSE_POOL reach the model.
+# Lexical hits are capped at LEXICAL_HITS for counting; only the top COMPOSE_POOL reach the model.
 # Nominated Quran refs are added ahead of this pool, so they never compete with it.
 LEXICAL_HITS = 50
 COMPOSE_POOL = 3
@@ -340,7 +340,7 @@ class Composer:
             top_k=LEXICAL_HITS,
             domain="glossary" if input_kind == "term" else None,
         )
-        count("lexical_candidates", len(hits))
+        count("lexical_hits_capped", len(hits))
         candidates = hits[:COMPOSE_POOL]
         # Model nominations are lookup keys only, never evidence or confidence.
         # Resolve solely in already loader-validated local KFC records.

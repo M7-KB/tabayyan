@@ -7,7 +7,7 @@ from time import monotonic
 from api.check import CheckRequest, CheckService
 from api.classifier import rule_level
 from api.deadline import request_deadline, request_progress
-from api.diagnostics import code, count, record
+from api.diagnostics import code, record
 from api.extract import ExtractionError
 from api.gatekeeper import SourceRequest
 from api.provider import ProviderUnavailable
@@ -68,7 +68,6 @@ class OnePassCheckService(CheckService):
         started = monotonic()
         route = self._stage(lambda: self.router.route(text))
         record("routing", "completed", started)
-        count("proposed_refs", len(route.quran_refs))
         for routed in route.extracted.claims:
             code(f"classifier:{routed.classifier_status}")
         client_floor = max((c.level for c in request.claims), key="ABCD".index, default="A")

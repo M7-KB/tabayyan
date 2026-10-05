@@ -124,8 +124,20 @@ def test_restrictive_routes_skip_retrieval_and_composition(mode):
     assert len(router_model.calls) == (0 if mode == "rule" else 1)
 
 
-@pytest.mark.parametrize("mutation", ["span", "source", "duplicate", "nan", "term"])
-def test_invalid_router_output_fails_before_compose(mutation):
+def test_unparseable_router_output_fails_before_compose():
+    value = route_proposal()
+    value["level_confidence"] = float("nan")
+    checker, _, compose_model = service(value)
+    with pytest.raises(ExtractionError) as caught:
+        checker.check(CheckRequest(original_text=TEXT))
+    assert caught.value.code == "PIPELINE_DEGRADED"
+    assert not compose_model.calls
+
+
+@pytest.mark.parametrize("mutation", ["span", "source", "duplicate", "term"])
+def test_router_shape_problems_fall_back_to_whole_input(mutation):
+    # Model character offsets are unreliable. Shape problems never fail the
+    # request: the input is kept whole as one claim and the gates still apply.
     value = route_proposal()
     if mutation == "span":
         value["claims"][0]["span"]["end"] += 1
@@ -133,15 +145,15 @@ def test_invalid_router_output_fails_before_compose(mutation):
         value["claims"][0]["source_text"] = "fabricated source"
     elif mutation == "duplicate":
         value["claims"].append(copy.deepcopy(value["claims"][0]))
-    elif mutation == "nan":
-        value["level_confidence"] = float("nan")
     elif mutation == "term":
         value["input_kind"] = "term"
-    checker, _, compose_model = service(value)
-    with pytest.raises(ExtractionError) as caught:
-        checker.check(CheckRequest(original_text=TEXT))
-    assert caught.value.code == "PIPELINE_DEGRADED"
-    assert not compose_model.calls
+    checker, router_model, _ = service(value)
+    result = checker.check(CheckRequest(original_text=TEXT))
+    assert len(result["cards"]) == 1
+    card = result["cards"][0]["claim"]
+    assert card["text_original"] == TEXT
+    assert "fabricated" not in card["text_ar"]
+    assert len(router_model.calls) <= 2
 
 
 @pytest.mark.parametrize(

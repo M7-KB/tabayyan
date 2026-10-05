@@ -33,13 +33,42 @@ class CheckRequest(StrictObject):
 
 
 class CheckService:
-    def __init__(self, *, extractor: Extractor, composer: Composer, corpus_version: str | None):
+    def __init__(
+        self,
+        *,
+        extractor: Extractor,
+        composer: Composer,
+        corpus_version: str | None,
+        connector=None,
+    ):
         self.extractor, self.composer = extractor, composer
         self.corpus_version = corpus_version
+        self.connector = connector
 
     def check(self, request: CheckRequest, *, source_request: SourceRequest | None = None) -> dict:
         if not request.claims:
             raise ExtractionError(400, "NO_CLAIMS")
+        if self.connector is not None and source_request is None:
+            # Classification precedes search. Personal cases and unverified term
+            # paths never trigger source calls. Re-extraction below uses the
+            # complete request-local scripture comparison set.
+            text = request.original_text or "\n".join(c.text_ar for c in request.claims)
+            preflight = self.extractor.extract(ExtractRequest(text=text, max_claims=50))
+            if preflight.dropped_count:
+                raise ExtractionError(503, "PIPELINE_DEGRADED")
+            source_request = SourceRequest()
+            if (
+                request.input_kind != "term"
+                and preflight.input_kind != "term"
+                and all(c.level != "D" for c in preflight.claims)
+                and all(c.level != "D" for c in request.claims)
+                and all(
+                    c.classifier_status in {"model_validated", "rule_forced"}
+                    for c in preflight.claims
+                )
+            ):
+                query = " ".join(c.text_ar for c in preflight.claims)[:12000]
+                self.connector.discover(query, source_request)
         cards = []
         composer = self.composer.for_request(source_request)
         extractor = copy.copy(self.extractor)

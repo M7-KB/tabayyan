@@ -230,3 +230,22 @@ neither titles nor metadata authorize a quote. Full Arabic item responses remain
 request-scoped, with `grading_source_id: hadeethenc`. Display permission is the
 same owner-authorized scope above; underlying-text redistribution terms remain
 uncleared. No responses are retained or added to the local corpus.
+
+## Direct hosted Islamic Content MCP (2026-10-05)
+
+Authority: build assignment `74955bb4a1b90316e3a47f4f39bd1e785f28b286b8ba27415bdd66f65b2b910d`.
+Endpoint: https://mcp.islamiccontent.org/mcp . Official service/tool coverage:
+https://mcp.islamiccontent.org/ . Terms: https://mcp.islamiccontent.org/terms.html .
+Licence: owner-authorized matched challenge-app display with visible source and
+link under the existing scoped public-display decision. Service access is not
+an underlying-text redistribution grant. No bulk download, dataset publication,
+cache or response persistence is implemented.
+
+Library evidence uses source id `islamhouse`, canonical Arabic item links on
+`islamcontent.com` and the publisher-owned commentary section of a same-request
+item response. QuranEnc evidence uses `quranenc` and canonical single-verse
+links on `islamenc.com`; Arabic text and English translation are copied from the
+same exact source block. Wrapper prose, search titles and attributions are not
+religious evidence. The gatekeeper retains every source's own identity.
+Dedicated Byenah and general IslamEnc tools were not in the hosted tool list;
+their content is not silently inferred from library metadata.

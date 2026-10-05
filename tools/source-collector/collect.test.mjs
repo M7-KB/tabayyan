@@ -8,11 +8,11 @@ import { allowedUrl, extract, Fetcher, collect } from './collect.mjs';
 
 // Synthetic non-religious content; Arabic strings are publisher section labels only.
 const arPage = body => `<!doctype html><html lang="ar"><body>${body}</body></html>`;
-const bay = arPage('<h1>Sample question</h1><section><h2>عبارات مشابهة للسؤال</h2>' +
+const bay = arPage('<h1>سؤال عينة</h1><section><h2>عبارات مشابهة للسؤال</h2>' +
   '<p>Alternate label</p></section><section id="short-answer">' +
-  '<p>Short &amp; exact.</p></section><h2>الجواب المفصل</h2>' +
+  '<p>جواب قصير &amp; دقيق.</p></section><h2>الجواب المفصل</h2>' +
   '<p>Detailed text must not enter the record.</p>');
-const glossary = arPage('<h1>Sample term</h1><div id="definition_short">Brief &amp; exact.</div>' +
+const glossary = arPage('<h1>مصطلح عينة</h1><div id="definition_short">تعريف قصير &amp; دقيق.</div>' +
   '<table id="translations"><tr><th>Language</th><th>Text</th></tr>' +
   '<tr><td>English</td><td>Sample translation</td></tr></table>');
 
@@ -44,17 +44,28 @@ test('pages must declare an Arabic document language, whatever the URL', () => {
   const listing = extract(arPage('<a href="/questions/1">Sample</a>'), 'https://bayenat.net/');
   assert.deepEqual(listing.links, ['https://bayenat.net/questions/1']);
 });
+test('a declared Arabic page still needs Arabic title and short text per record', () => {
+  const englishBay = arPage('<h1>Sample question</h1><section id="short-answer">' +
+    '<p>English short answer.</p></section>');
+  const result = extract(englishBay, 'https://bayenat.net/question/1');
+  assert.equal(result.record, undefined);
+  assert.equal(result.reason, 'not_arabic_record');
+  const englishTerm = extract(arPage('<h1>Sample term</h1><div id="definition_short">' +
+    'English definition.</div>'), 'https://islamic-content.com/dictionary/word/1');
+  assert.equal(englishTerm.record, undefined);
+  assert.equal(englishTerm.reason, 'not_arabic_record');
+});
 test('extract short source fields only, preserving decoded text', () => {
   const result = extract(bay, 'https://bayenat.net/question/1');
-  assert.equal(result.record.short_answer, 'Short & exact.');
+  assert.equal(result.record.short_answer, 'جواب قصير & دقيق.');
   assert.deepEqual(result.record.similar_phrasings, ['Alternate label']);
   assert.ok(!JSON.stringify(result.record).includes('Detailed text'));
   const term = extract(glossary, 'https://islamic-content.com/dictionary/word/1').record;
-  assert.equal(term.definition_short, 'Brief & exact.');
+  assert.equal(term.definition_short, 'تعريف قصير & دقيق.');
   assert.deepEqual(term.translations, { English: 'Sample translation' });
   for (const url of ['https://bayenat.net/question/1',
     'https://islamic-content.com/dictionary/word/1']) {
-    assert.equal(extract(arPage('<h1>Sample</h1><p>Full text</p>'), url).record, undefined);
+    assert.equal(extract(arPage('<h1>سؤال عينة</h1><p>Full text</p>'), url).record, undefined);
   }
 });
 test('global 1 request/s limit and manual redirects', async () => {
@@ -73,11 +84,11 @@ test('global 1 request/s limit and manual redirects', async () => {
 });
 test('ambiguous following siblings and nested detailed containers fail closed', () => {
   for (const html of [
-    '<h1>Sample</h1><h2>مختصر الجواب</h2><p>Short.</p><div><p>Detailed text.</p></div>',
-    '<h1>Sample</h1><div id="short-answer"><p>Short.</p>' +
+    '<h1>سؤال عينة</h1><h2>مختصر الجواب</h2><p>Short.</p><div><p>Detailed text.</p></div>',
+    '<h1>سؤال عينة</h1><div id="short-answer"><p>Short.</p>' +
       '<div><p>Detailed text.</p></div></div>',
-    '<h1>Sample</h1><div id="short-answer"><p>Short.</p><h2>Full answer</h2></div>',
-    '<h1>Sample</h1><div id="short-answer"><p class="detailed-answer">Detailed.</p></div>',
+    '<h1>سؤال عينة</h1><div id="short-answer"><p>Short.</p><h2>Full answer</h2></div>',
+    '<h1>سؤال عينة</h1><div id="short-answer"><p class="detailed-answer">Detailed.</p></div>',
   ]) assert.equal(extract(arPage(html), 'https://bayenat.net/question/1').record, undefined);
 });
 test('missing short content or title on a question prevents complete handoff', async () => {

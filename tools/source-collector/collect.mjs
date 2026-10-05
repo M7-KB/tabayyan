@@ -90,10 +90,13 @@ export function extract(html, url) {
     return { links, reason: 'dictionary_listing' };
   }
   if (!title) return { links, reason: 'missing_h1' };
+  // Record-level Arabic check: a declared lang attribute alone is not enough.
+  const arabic = value => /[ء-ي]/.test(value);
   if (source === 'bayenat.net') {
     const short = section(document, ['مختصر الجواب', 'الجواب المختصر'],
       ['short-answer', 'short_answer']);
     if (!short) return { links, reason: 'missing_explicit_short_answer' };
+    if (!arabic(title) || !arabic(short)) return { links, reason: 'not_arabic_record' };
     return { links, record: {
       id: new URL(url).pathname + new URL(url).search, url, title,
       similar_phrasings: section(document, ['عبارات مشابهة للسؤال'])
@@ -107,6 +110,7 @@ export function extract(html, url) {
     ['التعريف المختصر', 'تعريف مختصر', 'المعنى المختصر'],
     ['definition-short', 'definition_short']);
   if (!definition) return { links, reason: 'missing_explicit_short_definition' };
+  if (!arabic(title) || !arabic(definition)) return { links, reason: 'not_arabic_record' };
   // Only publisher-labelled translation rows inside an explicit translations section.
   const translations = {};
   const translationRoot = nodes.find(n => ['translations', 'term-translations']

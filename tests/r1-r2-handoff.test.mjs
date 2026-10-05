@@ -24,8 +24,8 @@ test('actual R1 collector to R2 loader: publisher language and page selectors',
         'https://islamic-content.com/dictionary': arPage(
           '<a href="/dictionary/word/1?lang=ar">Term</a>'),
       };
-      const bay = arPage('<h1>Sample</h1><section id="short-answer"><p>Short &amp; exact.</p></section>');
-      const term = arPage('<h1>Sample</h1><section id="definition_short"><p>Brief.</p></section>');
+      const bay = arPage('<h1>سؤال عينة</h1><section id="short-answer"><p>جواب قصير &amp; دقيق.</p></section>');
+      const term = arPage('<h1>سؤال عينة</h1><section id="definition_short"><p>تعريف.</p></section>');
       const manifest = await collect({ output, fetcher: { get: async url =>
         pages[url] ?? (url.includes('bayenat.net') ? bay : term) } });
       assert.equal(manifest.complete, true);
@@ -33,12 +33,12 @@ test('actual R1 collector to R2 loader: publisher language and page selectors',
       assert.ok(!bayyinat.includes('lang=en'), 'English selectors must not be collected');
       const script = `import json,sys\nfrom pathlib import Path\nsys.path.insert(0,'.')\n` +
         `from corpus.short_indexes import load_short_index\n` +
-        `directory=Path(sys.argv[1])\nmanifest=json.loads((directory/'manifest.json').read_text())\n` +
+        `directory=Path(sys.argv[1])\nmanifest=json.loads((directory/'manifest.json').read_text(encoding='utf-8'))\n` +
         `for source,name,count in [('bayyinat','bayyinat.jsonl',3),` +
         `('jamhara-glossary','glossary.jsonl',1)]:\n` +
         ` digest=next(row['sha256'] for row in manifest['files'] if row['file']==name)\n` +
         ` rows=load_short_index(directory,source,digest,allow_pending_review=True)\n` +
-        ` original=tuple(json.loads(line) for line in (directory/name).read_text().splitlines())\n` +
+        ` original=tuple(json.loads(line) for line in (directory/name).read_text(encoding='utf-8').splitlines())\n` +
         ` assert rows==original and len(rows)==count\n` +
         ` assert all('?' in row['url'] and '?' in row['id'] for row in rows)\n`;
       const result = spawnSync(process.env.R2_TEST_PYTHON ?? 'python', ['-c', script, output],

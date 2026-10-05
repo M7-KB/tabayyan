@@ -143,12 +143,12 @@ This block **supersedes §0.2 items 1–4, the Bayyinat and glossary rows of §0
 
 **(b) The owner runs the collection; agents do not crawl.** The owner runs the one-time collection script on his own machine. The output goes to the private store and is loaded from there at startup. It is not fetched at build, and the "private store" wording is the one that stands. No agent makes these requests. The collection script is read-only and polite: 1 request per second, only the `bayenat.net` question pages (after O1) and the glossary pages (after O2). It writes JSONL with a SHA-256 manifest and a README with the exact command.
 
-**(c) MCP open search uses model-written topic queries.** The fixed list of 20 topics is replaced by model-written queries. That list lives only in code (`api/search_phrases.py`, the `Topic` enum), not in SPEC. The rules for the queries are:
+**(c) MCP open search uses a closed topic vocabulary, not free text.** The router selects at most three `Topic` IDs. The vocabulary is a closed `Literal` in code (`api/search_phrases.py`, `Topic`, 20 values). Each ID maps to a fixed Arabic query string in `TOPIC_QUERIES`. The model never writes query text. The rules are:
 
-- at most 6 words per query;
-- **fail closed:** a query is dropped entirely if any pattern matches a name, number, place, email address or first-person marker. Regex-only scrubbing is not accepted as the check, since it fails open on Arabic names and places. Dropping is the default outcome;
-- never sent for level D (§0.5). The router's `search_queries` are discarded when `level` is D or `level_d` is true, before any MCP dispatch;
-- this matches the privacy notice (§0.6): only the extracted search phrases leave, after the drop check.
+- **fail closed by schema:** a value outside the `Topic` Literal fails validation, and that query is dropped. No pattern or regex scrubbing is used, since regex fails open on Arabic names and places. Nothing outside the vocabulary leaves the process;
+- the only strings sent are the `TOPIC_QUERIES` values, which are generic subject labels, so no name, number, place, email or first-person detail can reach an MCP call;
+- never sent for level D (§0.5). The router's topic IDs are discarded when `level` is D or `level_d` is true, before any MCP dispatch;
+- this matches the privacy notice (§0.6): only the fixed topic strings leave.
 
 **Architecture: two model calls plus code.**
 
@@ -158,7 +158,7 @@ This block **supersedes §0.2 items 1–4, the Bayyinat and glossary rows of §0
    - `level_d` flag;
    - `premise`, the premise restated as a checkable claim;
    - `input_kind`: one of `doubt`, `term`, `verse`, `hadith`, `other`;
-   - 2–4 `search_queries` (§0.11 (c) limits apply);
+   - up to 3 `Topic` IDs for `search_queries` (§0.11 (c): closed vocabulary, no free text);
    - up to 5 `proposed_quran_refs`.
 
    Level D goes straight to the referral template (§9). No retrieval, no compose call.

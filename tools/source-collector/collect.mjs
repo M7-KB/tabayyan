@@ -31,15 +31,17 @@ export function allowedUrl(value, base) {
     part === '.' || part === '..') || /%2f|%5c/i.test(url.pathname)) return null;
   if (url.protocol !== 'https:' || url.username || url.password || url.port) return null;
   if (!['bayenat.net', 'islamic-content.com'].includes(url.hostname)) return null;
-  if (url.hostname === 'bayenat.net' && !/^(?:\/(?:[a-z]{2}\/)?)?(?:questions?|answers?|doubts?|shubuhat|categories?|topics?)(?:\/|$)|^\/(?:[a-z]{2}\/?|)?$/i
+  // Arabic pages only: no language prefix other than /ar.
+  if (url.hostname === 'bayenat.net' && !/^(?:\/ar)?(?:\/(?:questions?|answers?|doubts?|shubuhat|categories?|topics?)(?:\/|$)|\/?$)/i
     .test(decodedPath)) return null;
   if (url.hostname === 'islamic-content.com' &&
       !/^\/dictionary(?:\/|$)/.test(url.pathname)) return null;
   if (/\.(pdf|zip|png|jpe?g|mp[34]|docx?|xlsx?|css|js)$/i.test(url.pathname)) return null;
   if (/(?:^|\/)(login|register|contact|privacy|copyright|about)(?:\/|$)/i
     .test(url.pathname)) return null;
-  // Only listing pagination and language selectors; never arbitrary search/user parameters.
-  if ([...url.searchParams.keys()].some(key => !['page', 'lang', 'language'].includes(key))) {
+  // Only listing pagination and Arabic language selectors; arbitrary search/user parameters are refused.
+  if ([...url.searchParams].some(([key, value]) => key !== 'page' &&
+    !(['lang', 'language'].includes(key) && value === 'ar'))) {
     return null;
   }
   url.hash = '';
@@ -76,7 +78,7 @@ export function extract(html, url) {
   const source = new URL(url).hostname;
   const pathname = new URL(url).pathname;
   if (source === 'bayenat.net' &&
-    /^\/(?:[a-z]{2}\/)?(?:(?:questions|answers|doubts|shubuhat|categories|topics)\/?)?$/i
+    /^(?:\/ar)?(?:\/(?:questions|answers|doubts|shubuhat|categories|topics)?\/?)?$/i
       .test(pathname)) return { links, reason: 'bayyinat_listing' };
   if (source === 'islamic-content.com' &&
     !/^\/dictionary\/word\/[^/]+\/?$/.test(pathname)) {

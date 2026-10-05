@@ -18,7 +18,7 @@ test('actual R1 collector to R2 loader: publisher language and page selectors',
       const output = path.join(directory, 'collection');
       const pages = {
         'https://bayenat.net/': '<a href="/question/1?lang=ar">One</a>' +
-          '<a href="/question/1?language=en">Two</a><a href="/question/1?page=2">Three</a>',
+          '<a href="/question/1?language=ar">Two</a><a href="/question/1?page=2">Three</a>',
         'https://islamic-content.com/dictionary':
           '<a href="/dictionary/word/1?lang=ar">Term</a>',
       };

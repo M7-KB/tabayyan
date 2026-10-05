@@ -20,9 +20,16 @@ test('URL allowlist rejects host tricks, unrelated paths, assets and personal qu
     'https://user@bayenat.net/x', 'https://bayenat.net:444/x',
     'https://islamic-content.com/news', 'https://bayenat.net/x.pdf',
     'https://bayenat.net/news/1',
-    'https://bayenat.net/?q=personal']) assert.equal(allowedUrl(url), null);
+    'https://bayenat.net/?q=personal', 'https://bayenat.net/en/questions/1',
+    'https://bayenat.net/fr/questions/1', 'https://bayenat.net/questions/1?lang=en',
+    'https://bayenat.net/questions/1?language=en']) assert.equal(allowedUrl(url), null);
   assert.equal(allowedUrl('/dictionary/word/3529#x', 'https://islamic-content.com'),
     'https://islamic-content.com/dictionary/word/3529');
+  assert.equal(allowedUrl('https://bayenat.net/ar/questions/1?page=2'),
+    'https://bayenat.net/ar/questions/1?page=2');
+  assert.equal(allowedUrl('https://bayenat.net/questions/1'), 'https://bayenat.net/questions/1');
+  assert.equal(allowedUrl('https://bayenat.net/questions/1?lang=ar'),
+    'https://bayenat.net/questions/1?lang=ar');
 });
 test('extract short source fields only, preserving decoded text', () => {
   const result = extract(bay, 'https://bayenat.net/question/1');

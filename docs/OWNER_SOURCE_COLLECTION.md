@@ -16,7 +16,7 @@ Set-Location 'C:\Users\m7md2\.buzz\REPOS\tabayyan-owner-collector-20261005'
 npm.cmd ci --prefix tools/source-collector --ignore-scripts
 if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
 $collectionOutput = Join-Path (Get-Location) ('data\private\source-collection-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-node tools/source-collector/collect.mjs --owner-run --output $collectionOutput
+node tools/source-collector/collect.mjs --owner-run --output $collectionOutput --max-pages 10000
 $collectionExit = $LASTEXITCODE
 Write-Host "Output: $collectionOutput; exit: $collectionExit"
 Get-Content -LiteralPath (Join-Path $collectionOutput 'manifest.json')
@@ -33,7 +33,8 @@ Output stays under ignored `data/private/`; never force-add it to Git.
 One global limiter spaces request starts at least 1 second apart. Only HTTPS
 bayenat.net pages and islamic-content.com/dictionary pages are fetched. Listings
 are followed for discovery. Bayyinat routes are restricted to question/answer,
-doubt, category/topic paths, plus the home/language roots. Unknown route shapes
+doubt, category/topic paths, plus the Arabic home root (`/` or `/ar/`). Only Arabic
+pages are collected; other language prefixes are refused. Unknown route shapes
 are refused and require a parser/route update from owner-supplied HTML.
 Assets, unrelated dictionary paths, authentication
 pages, arbitrary query parameters and redirects are refused. No retries or
@@ -53,9 +54,10 @@ an API/build/startup dependency. Agents must not run live collection.
 
 DOM text extraction decodes entities and standardizes HTML layout spaces/newlines.
 
-Record identity is URL path plus its unchanged query: language/pagination
-selectors remain distinct. Only page/lang/language parameters are allowed;
-selectors are never stripped to pretend that different content is identical.
+Record identity is URL path plus its unchanged query. Only `page`, and `lang` or `language` set to `ar`,
+are allowed query parameters. Other language selectors (for example `lang=en` or
+`/en/` prefixes) are refused rather than collected, and query parameters are never
+stripped to pretend that different content is identical.
 No Arabic letters or diacritics are folded. Hashes include JSONL newline bytes.
 R2 must verify hashes and validate records. Records alone do not authorize UI
 evidence, embedded scripture, hadith gradings or level-D answers.

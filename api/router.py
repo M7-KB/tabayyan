@@ -134,7 +134,15 @@ class Router:
             except Exception:
                 record("router_validation", "invalid_proposal", started)
                 raise ExtractionError(503, "PIPELINE_DEGRADED") from None
-            _relocate_spans(text, proposal)
+            try:
+                _relocate_spans(text, proposal)
+            except _SourceAbsent:
+                # A claim whose source text is not in the input is ungrounded
+                # model text; discard it and keep the whole input instead.
+                record("router_validation", "source_absent", started)
+                proposal = _whole_input_fallback(text, proposal)
+                record("router_validation", "fallback_whole_input", started)
+                break
             try:
                 _validate_claims(text, proposal)
                 break
@@ -210,25 +218,26 @@ class Router:
         )
 
 
+class _SourceAbsent(Exception):
+    """A proposed source_text does not occur in the input."""
+
+
 def _relocate_spans(text: str, proposal: RouterProposal) -> None:
     """Repair model character offsets by locating source_text in the input.
 
     Models count code points unreliably, especially in Arabic. A verbatim
-    source_text that exists in the input is kept and its span corrected; a
-    single claim whose source_text is not found covers the whole input.
+    source_text that exists in the input keeps its text and gets a corrected
+    span. Any source_text absent from the input means the claim is ungrounded,
+    whatever its origin, and the caller replaces the proposal.
     """
     for claim in proposal.claims:
         start, end = claim.span.start, claim.span.end
         if 0 <= start < end <= len(text) and text[start:end] == claim.source_text:
             continue
         found = text.find(claim.source_text)
-        if found >= 0:
-            claim.span = Span(start=found, end=found + len(claim.source_text))
-        elif len(proposal.claims) == 1:
-            claim.span = Span(start=0, end=len(text))
-            claim.source_text = text
-            if claim.origin == "stated":
-                claim.text_ar = text
+        if found < 0:
+            raise _SourceAbsent
+        claim.span = Span(start=found, end=found + len(claim.source_text))
 
 
 def _validate_claims(text: str, proposal: RouterProposal) -> None:

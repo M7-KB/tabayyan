@@ -156,6 +156,25 @@ def test_router_shape_problems_fall_back_to_whole_input(mutation):
     assert len(router_model.calls) <= 2
 
 
+@pytest.mark.parametrize("origin", ["presupposition", "term_lookup", "stated"])
+def test_absent_source_text_discards_generated_claim_for_every_origin(origin):
+    # An invented source_text means the claim text is ungrounded model output.
+    # It must never reach composition; the whole input replaces it.
+    value = route_proposal()
+    value["claims"][0].update(
+        origin=origin, source_text="unrelated fruit storage", text_ar="Fruit must be sealed."
+    )
+    if origin == "term_lookup":
+        value["input_kind"] = "term"
+    checker, router_model, _ = service(value)
+    result = checker.check(CheckRequest(original_text=TEXT))
+    assert len(result["cards"]) == 1
+    card = result["cards"][0]["claim"]
+    assert card["text_ar"] == TEXT
+    assert "Fruit" not in card["text_ar"]
+    assert len(router_model.calls) == 1
+
+
 @pytest.mark.parametrize(
     "decision",
     [

@@ -9,6 +9,7 @@ import time
 from typing import Protocol
 from urllib.parse import urlencode
 
+from api.deadline import request_deadline
 from corpus.validate import _decode
 
 
@@ -25,6 +26,7 @@ class JsonSource(Protocol):
 
 
 def _remaining(deadline):
+    deadline = min(deadline, request_deadline.get() or float("inf"))
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         raise TimeoutError

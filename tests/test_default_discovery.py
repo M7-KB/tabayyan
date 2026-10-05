@@ -29,8 +29,9 @@ def test_only_hadith_topics_use_hadeethenc(query, hadith):
     mcp, hadeethenc = Adapter(), Adapter()
     scope = SourceRequest()
     DefaultDiscovery(mcp=mcp, hadeethenc=hadeethenc).discover(query, scope)
-    assert mcp.calls == [(query, scope)]
-    assert hadeethenc.calls == ([(query, scope)] if hadith else [])
+    assert [q for q, _ in mcp.calls] == [query]
+    assert [q for q, _ in hadeethenc.calls] == ([query] if hadith else [])
+    assert all(s is not scope and s._used for _, s in mcp.calls + hadeethenc.calls)
 
 
 def test_source_outage_and_consumed_scope():

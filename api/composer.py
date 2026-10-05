@@ -3,6 +3,7 @@
 import copy
 import json
 from pathlib import Path
+from time import monotonic
 from typing import Literal
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import Field
 
 from api.config import load_config
+from api.diagnostics import record, timed
 from api.extract import ExtractedClaim, StrictObject
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.model import StructuredModel
@@ -144,13 +146,15 @@ class Composer:
     def _evidence(self, result: RetrievalResult):
         if self.gatekeeper is None:
             return evidence_from(result)
-        original = self.gatekeeper.verify(result.corpus_id, result.record["text_ar"])
+        with timed("composer_gatekeeper"):
+            original = self.gatekeeper.verify(result.corpus_id, result.record["text_ar"])
         if original is None:
             raise ValueError("Source quote rejected")
         return evidence_from(
             RetrievalResult(original, result.retrieval_score, result.overlap_score)
         )
 
+    @timed("composer_separation")
     def _isolated(self, text: str, *, glossary_label_id: str | None = None) -> bool:
         if not isinstance(text, str) or not text.strip():
             return False
@@ -198,7 +202,9 @@ class Composer:
         propose_state: bool = False,
         quran_refs=(),
     ) -> dict:
-        detection = self.detector.detect(original)
+        provider_finished = None
+        with timed("composer_input_scan"):
+            detection = self.detector.detect(original)
         findings = [
             f for f in detection.findings if claim.span.start <= f.start < f.end <= claim.span.end
         ]
@@ -272,13 +278,18 @@ class Composer:
                 # Show a hadith's own source/grading even when it is embedded in
                 # an answer excerpt on a disputed or abstaining card.
                 for e in list(card["evidence"]):
-                    for r in self.gatekeeper.dependencies(e["evidence_id"], e["quote_ar"]):
+                    with timed("composer_dependencies"):
+                        dependencies = self.gatekeeper.dependencies(e["evidence_id"], e["quote_ar"])
+                    for r in dependencies:
                         if r["corpus_id"] not in {x["evidence_id"] for x in card["evidence"]}:
                             card["evidence"].append(self._evidence(RetrievalResult(r, 0, 0)))
                 card["published_answer"] = None
                 if card["state"] == "SUPPORTED":
                     for e in list(card["evidence"]):
-                        bound = self.gatekeeper.published_answer(e["evidence_id"], e["quote_ar"])
+                        with timed("composer_published_answer"):
+                            bound = self.gatekeeper.published_answer(
+                                e["evidence_id"], e["quote_ar"]
+                            )
                         if bound is None:
                             continue
                         card["published_answer"], dependencies = bound
@@ -291,7 +302,10 @@ class Composer:
                 card["explanation_ar"] = card["explanation_en"] = None
                 if input_kind == "term":
                     card["glossary_link"] = "https://islamic-content.com/dictionary"
-            VALIDATOR.validate(card)
+            with timed("composer_card_validation"):
+                VALIDATOR.validate(card)
+            if provider_finished is not None:
+                record("composer_post_provider", "completed", provider_finished)
             return card
 
         if propose_state and claim.level == "D":
@@ -371,6 +385,7 @@ class Composer:
             return finish("LOW_CONFIDENCE")
         except Exception:
             return finish("LOW_CONFIDENCE")
+        provider_finished = monotonic()
         card["confidence"] = proposal.confidence
         card["alignment_confidence"] = proposal.alignment_confidence
         by_id = {r.corpus_id: r for r in candidates}

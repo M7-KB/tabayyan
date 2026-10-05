@@ -337,3 +337,22 @@ def test_provider_budget_is_capped_by_request_deadline():
         assert run(model)["level"] == "B"
     finally:
         request_deadline.reset(token)
+
+
+def test_binding_deadline_retains_claims_without_composition_dispatch():
+    from time import monotonic
+
+    checker, _, model = service()
+    checker.deadline_seconds = 0.05
+    release = threading.Event()
+    bound = checker.composer.for_request
+    checker.composer.for_request = lambda request: (release.wait(timeout=2), bound(request))[1]
+    started = monotonic()
+    try:
+        result = checker.check(CheckRequest(original_text=TEXT))
+        assert monotonic() - started < 0.5
+        assert result["cards"] == []
+        assert result["retryable_results"][0]["claim_id"] == "c1"
+        assert not model.calls
+    finally:
+        release.set()

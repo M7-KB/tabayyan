@@ -14,6 +14,7 @@ from api.check import CheckRequest
 from api.classifier import LevelClassifier, LevelProposal
 from api.composer import Composer, DecisionProposal
 from api.config import load_config
+from api.deadline import request_deadline
 from api.diagnostics import (
     Summary,
     configure_logging,
@@ -138,9 +139,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         token = request_id.set(uuid4().hex)
         summary_token = summary.set(Summary())
         started = monotonic()
+        deadline_token = request_deadline.set(started + 35 if stage == "check" else None)
         outcome = "unhandled_failure"
         try:
-            result = await call_next(request)
+            try:
+                result = (
+                    await asyncio.wait_for(call_next(request), timeout=35)
+                    if stage == "check"
+                    else await call_next(request)
+                )
+            except TimeoutError:
+                record("check_deadline", "CHECK_INCOMPLETE", started)
+                result = response(
+                    503,
+                    "CHECK_INCOMPLETE",
+                    "Check unfinished; please retry",
+                    "لم يكتمل التحقق، حاول مرة أخرى",
+                )
             outcome = "completed" if result.status_code < 400 else "http_failure"
             result.headers["X-Request-ID"] = request_id.get()
             return result
@@ -148,6 +163,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             record(stage, outcome, started)
             finish(outcome, started)
             summary.reset(summary_token)
+            request_deadline.reset(deadline_token)
             request_id.reset(token)
 
     if not settings.health_only:

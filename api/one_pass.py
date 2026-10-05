@@ -35,7 +35,10 @@ class OnePassCheckService(CheckService):
         self.deadline_seconds = deadline_seconds
 
     def check(self, request: CheckRequest, *, source_request: SourceRequest | None = None) -> dict:
-        token = request_deadline.set(monotonic() + self.deadline_seconds)
+        deadline = monotonic() + self.deadline_seconds
+        if request_deadline.get() is not None:
+            deadline = min(deadline, request_deadline.get())
+        token = request_deadline.set(deadline)
         try:
             return self._check(request, source_request=source_request)
         finally:
@@ -45,6 +48,8 @@ class OnePassCheckService(CheckService):
         return max(0, request_deadline.get() - monotonic())
 
     def _stage(self, action):
+        if self._remaining() <= 0:
+            raise ExtractionError(503, "CHECK_INCOMPLETE")
         pool = ThreadPoolExecutor(max_workers=1)
         context = copy_context()
         future = pool.submit(context.run, action)
@@ -93,10 +98,19 @@ class OnePassCheckService(CheckService):
                     result["retryable_results"] = [unfinished(claim) for claim in claims]
                     record("retrieval", "CHECK_INCOMPLETE", started)
                     return result
-        composer = self.composer.for_request(source_request)
+        try:
+            composer = self._stage(lambda: self.composer.for_request(source_request))
+        except ExtractionError as exc:
+            if exc.code != "CHECK_INCOMPLETE":
+                raise
+            result = self._response([])
+            result["retryable_results"] = [unfinished(claim) for claim in claims]
+            return result
         record("retrieval", "completed", started)
 
         def compose(claim):
+            if self._remaining() <= 0:
+                raise ProviderUnavailable("timeout")
             return composer.compose(
                 claim,
                 original=text,

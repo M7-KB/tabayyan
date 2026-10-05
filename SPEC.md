@@ -223,6 +223,16 @@ The following answers supersede the open O1-O5 items above. The record is event 
 - **O5:** OpenAI embeddings of published private-index text are allowed.
 - **MCP topic vocabulary:** keep the closed `Topic` `Literal`, and expand it from the current set to about 60 fixed topics. The model still cannot write query text.
 
+### 0.13 Owner rules update (2026-10-05, 21:54 UTC; supersedes older wording on these points)
+
+- **No Sharia specialist.** The owner approves corpus and test-set changes. No PR waits on any other sign-off.
+- **Merge.** Only the owner merges, after Nami's APPROVE on the exact head SHA.
+- **Names on GitHub.** Write names without `@`. `@` is for chat only.
+- **Scope frozen.** Text input only. No links, no audio, no new features. Submission closes 2026-10-06 23:59 Riyadh.
+- **No collection by agents.** Agents never download, scrape or run collectors. The owner runs them and uploads results to the private repo.
+- **No user or source text in logs.** User text, source text, keys and tokens never appear in chat, logs or reports.
+- **Religious-content decisions** go to the owner, not a specialist.
+
 ---
 
 ## 1. Scope

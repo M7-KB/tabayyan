@@ -218,7 +218,7 @@ def test_warmup_uses_exact_strict_schema_and_empty_data():
     schema = CardProposal.model_json_schema()
     model.warm_schema(schema)
     value = calls[0]
-    assert value["max_output_tokens"] == 1 and value["store"] is False
+    assert value["max_output_tokens"] == 16 and value["store"] is False
     assert json.loads(value["input"][1]["content"]) == {"untrusted_data": {}}
     strict_schema = value["text"]["format"]["schema"]
     assert set(strict_schema["required"]) == set(strict_schema["properties"])
@@ -272,3 +272,100 @@ def test_response_must_include_nullable_fields_required_by_sent_strict_schema():
     )
     with pytest.raises(ProviderUnavailable):
         model.complete_json(instructions="synthetic", data={}, schema=schema)
+
+
+def test_invalid_output_retry_shares_budget_and_only_two_attempts():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(200, json=body(content=[{"type": "output_text", "text": "bad"}]))
+        return httpx.Response(200, json=body())
+
+    assert run(adapter(handler))["level"] == "B"
+    assert len(calls) == 2
+    assert calls[1].extensions["timeout"]["read"] <= calls[0].extensions["timeout"]["read"]
+
+
+def test_http_error_identifiers_only(caplog):
+    error = {
+        "type": "invalid_request_error",
+        "code": "unsupported_value",
+        "param": "reasoning.effort",
+        "message": "PRIVATE_INPUT_SENTINEL",
+    }
+    with pytest.raises(ProviderUnavailable):
+        run(adapter(lambda _: httpx.Response(400, json={"error": error})))
+    assert (
+        "status=400 type=invalid_request_error code=unsupported_value param=reasoning.effort"
+        in caplog.text
+    )
+    assert "PRIVATE_INPUT_SENTINEL" not in caplog.text
+
+
+def test_sol_none_uses_supported_effort():
+    def handler(request):
+        assert json.loads(request.content)["reasoning"] == {"effort": "low"}
+        return httpx.Response(200, json=body())
+
+    model = OpenAIStructuredModel(
+        api_key="inert", model="gpt-6.1-sol", effort="none", transport=httpx.MockTransport(handler)
+    )
+    assert run(model)["level"] == "B"
+
+
+def test_sent_schema_constraints_are_local_field_limits():
+    schema = {
+        "type": "object",
+        "properties": {
+            "label": {"type": "string", "maxLength": 3},
+            "ids": {"type": "array", "items": {"type": "string"}, "maxItems": 1},
+        },
+    }
+
+    def handler(request):
+        sent = json.loads(request.content)["text"]["format"]["schema"]
+        assert "maxLength" not in sent["properties"]["label"]
+        assert "maxItems" not in sent["properties"]["ids"]
+        return httpx.Response(
+            200,
+            json=body(
+                content=[
+                    {
+                        "type": "output_text",
+                        "text": json.dumps({"label": "abcdef", "ids": ["a", "b"]}),
+                    }
+                ]
+            ),
+        )
+
+    result = adapter(handler).complete_json(instructions="fixed", data={}, schema=schema)
+    assert result == {"label": "abc", "ids": ["a"]}
+
+
+@pytest.mark.parametrize("label", ["", "   "])
+@pytest.mark.parametrize("explanation", ["", "   ", "Review the source."])
+def test_empty_optional_label_does_not_discard_bound_evidence(label, explanation):
+    from tests.test_composer import TEXT, claim, engine, proposal
+
+    value = proposal(
+        state="SUPPORTED", term_label_ar=label, explanation_ar=explanation, explanation_en=""
+    )
+    model = adapter(
+        lambda _: httpx.Response(
+            200, json=body(content=[{"type": "output_text", "text": json.dumps(value)}])
+        )
+    )
+    composer = engine()
+    composer.model = model
+    card = composer.compose(
+        claim(),
+        original=TEXT,
+        lang="ar",
+        input_kind="claim",
+        no_checkable_claim=False,
+        propose_state=True,
+    )
+    assert card["state"] == "SUPPORTED"
+    assert card["evidence"][0]["quote_ar"] == TEXT

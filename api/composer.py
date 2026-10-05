@@ -38,7 +38,7 @@ class CardProposal(StrictObject):
     alignment_proposal: Literal["CONFIRMS", "CONTRADICTS"] | None
     alignment_confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
-    explanation_ar: str = Field(min_length=1, max_length=3000)
+    explanation_ar: str = Field(max_length=3000)
     explanation_en: str | None
     term_label_ar: str | None = Field(default=None, min_length=1, max_length=200)
 
@@ -437,9 +437,10 @@ class Composer:
         if proposal.evidence_gap:
             card["evidence"] = []
             return finish("CONFLICTING_EVIDENCE")
-        prose = [proposal.explanation_ar]
+        prose = [proposal.explanation_ar] if proposal.explanation_ar.strip() else []
         if lang == "en":
-            prose.append(proposal.explanation_en)
+            if proposal.explanation_en and proposal.explanation_en.strip():
+                prose.append(proposal.explanation_en)
         prose.extend(
             s
             for p in proposal.positions
@@ -450,8 +451,12 @@ class Composer:
             gate["separation"] = "fail"
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
-        card["explanation_ar"] = proposal.explanation_ar
-        card["explanation_en"] = proposal.explanation_en if lang == "en" else None
+        card["explanation_ar"] = (
+            proposal.explanation_ar if proposal.explanation_ar.strip() else None
+        )
+        card["explanation_en"] = (
+            proposal.explanation_en if lang == "en" and proposal.explanation_en else None
+        )
         if input_kind == "term":
             glossary = by_id[selected_ids[0]].record
             # The loader verifies these original fields and their checksums.

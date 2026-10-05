@@ -23,7 +23,7 @@ from tests.test_extract import proposal, service
     ],
 )
 def test_fixed_provider_failures_no_payload(caplog, status, category):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="api.diagnostics")
     model = OpenAIStructuredModel(
         api_key="SECRET_SENTINEL",
         model="MODEL_SENTINEL",
@@ -37,7 +37,7 @@ def test_fixed_provider_failures_no_payload(caplog, status, category):
 
 
 def test_invalid_span_has_fixed_diagnostic_and_correlated_response(caplog):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="api.diagnostics")
     value = proposal("INPUT_SENTINEL", lang="en")
     value["claims"][0]["span"]["end"] += 1
     app = create_app(Settings(openai_api_key="inert", openai_model_extract="inert"))
@@ -56,7 +56,7 @@ def test_invalid_span_has_fixed_diagnostic_and_correlated_response(caplog):
 
 
 def test_timeout_category_without_exception_text(caplog):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="api.diagnostics")
 
     def timeout(request):
         raise httpx.ReadTimeout("PRIVATE_PROVIDER_SENTINEL", request=request)
@@ -74,7 +74,7 @@ def test_timeout_category_without_exception_text(caplog):
 
 
 def test_request_ids_are_server_generated_and_reset(caplog):
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="api.diagnostics")
     app = create_app(Settings(openai_api_key="inert", openai_model_extract="inert"))
     with TestClient(app) as client:
         app.state.extractor = service(proposal("fixture", lang="en"))
@@ -95,7 +95,7 @@ def test_check_correlation_reaches_parallel_composition_and_router(caplog):
     from tests.test_composer import TEXT, proposal
     from tests.test_one_pass import service as one_pass_service
 
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.DEBUG, logger="api.diagnostics")
     checker, _, _ = one_pass_service()
     correlations = []
 
@@ -115,3 +115,24 @@ def test_check_correlation_reaches_parallel_composition_and_router(caplog):
     assert f"request_id={correlation} stage=router_validation outcome=validated" in caplog.text
     assert f"request_id={correlation} stage=check outcome=completed" in caplog.text
     assert TEXT not in caplog.text
+
+
+def test_one_info_summary_per_request_with_parallel_states(caplog):
+    from tests.test_composer import TEXT
+    from tests.test_one_pass import service as one_pass_service
+
+    checker, _, _ = one_pass_service()
+    app = create_app(Settings(openai_api_key="inert", openai_schema_warmup=False))
+    app.state.checker = checker
+    caplog.set_level(logging.INFO, logger="api")
+    with TestClient(app) as client:
+        response = client.post("/api/v1/check", json={"original_text": TEXT})
+    summaries = [
+        r for r in caplog.records if r.name.startswith("api.") and r.levelno == logging.INFO
+    ]
+    assert len(summaries) == 1
+    line = summaries[0].getMessage()
+    assert response.headers["X-Request-ID"] in line
+    assert "routing" in line and "retrieval" in line and "composition" in line
+    assert "states=['SUPPORTED']" in line and "failures=[]" in line
+    assert TEXT not in line

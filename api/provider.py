@@ -4,6 +4,7 @@ import copy
 import json
 import logging
 import math
+import re
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -53,6 +54,41 @@ def _unique_keys(pairs):
     return result
 
 
+def sanitize_fields(value, schema, root=None):
+    """Apply display limits locally without repairing IDs, enums or numeric gates."""
+    root = root or schema
+    if "$ref" in schema:
+        target = root
+        for part in schema["$ref"].removeprefix("#/").split("/"):
+            target = target[part]
+        return sanitize_fields(value, target, root)
+    if "anyOf" in schema:
+        for option in schema["anyOf"]:
+            if option.get("type") == "string" and isinstance(value, str):
+                bounded = sanitize_fields(value, option, root)
+                if any(branch.get("type") == "null" for branch in schema["anyOf"]) and (
+                    len(bounded.strip()) < option.get("minLength", 0)
+                    or ("pattern" in option and not re.search(option["pattern"], bounded))
+                ):
+                    return None
+                return bounded
+    if isinstance(value, dict):
+        return {
+            k: sanitize_fields(v, schema.get("properties", {}).get(k, {}), root)
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [
+            sanitize_fields(v, schema.get("items", {}), root)
+            for v in value[: schema.get("maxItems", len(value))]
+        ]
+    if isinstance(value, str):
+        value = value[: schema.get("maxLength", len(value))]
+        if "pattern" in schema and not re.search(schema["pattern"], value):
+            return schema.get("default", "")
+    return value
+
+
 class OpenAIStructuredModel:
     def __init__(
         self,
@@ -71,6 +107,8 @@ class OpenAIStructuredModel:
         self._api_key = api_key
         self._model = model
         self._effort, self._timeout = effort, timeout
+        if model.startswith("gpt-6.1-sol") and effort == "none":
+            self._effort = "low"
         self._owns_client = client is None
         self._client = client or httpx.Client(transport=transport, trust_env=False)
 
@@ -78,9 +116,12 @@ class OpenAIStructuredModel:
         if self._owns_client:
             self._client.close()
 
-    def _post(self, payload):
-        deadline = time.monotonic() + self._timeout
-        for attempt in range(2):
+    def _post(self, payload, *, deadline=None, attempts=None):
+        deadline = deadline if deadline is not None else time.monotonic() + self._timeout
+        attempts = attempts if attempts is not None else [0]
+        while attempts[0] < 2:
+            attempt = attempts[0]
+            attempts[0] += 1
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise ProviderUnavailable("timeout")
@@ -105,6 +146,29 @@ class OpenAIStructuredModel:
                 time.sleep(delay)
                 continue
             if result.is_error:
+                try:
+                    error = result.json().get("error", {})
+                except (ValueError, AttributeError):
+                    error = {}
+                if not isinstance(error, dict):
+                    error = {}
+
+                def token(name, error=error):
+                    value = error.get(name)
+                    return (
+                        value
+                        if isinstance(value, str)
+                        and re.fullmatch(r"[A-Za-z0-9_.\[\]-]{1,80}", value)
+                        else "unknown"
+                    )
+
+                logger.warning(
+                    "Provider HTTP failure: status=%d type=%s code=%s param=%s",
+                    result.status_code,
+                    token("type"),
+                    token("code"),
+                    token("param"),
+                )
                 category = (
                     "rate_limit"
                     if result.status_code == 429
@@ -123,7 +187,7 @@ class OpenAIStructuredModel:
     def warm_schema(self, schema: dict[str, Any]) -> None:
         """Compile the exact schema using synthetic data, never a stored user request."""
         payload = self._payload("Schema warm-up. Return a schema object.", {}, schema)
-        payload["max_output_tokens"] = 1
+        payload["max_output_tokens"] = 16
         try:
             body = self._post(payload).json()
             if body.get("status") == "completed":
@@ -144,7 +208,16 @@ class OpenAIStructuredModel:
 
         def strict(node):
             if isinstance(node, dict):
-                node.pop("default", None)
+                for keyword in (
+                    "default",
+                    "minLength",
+                    "maxLength",
+                    "pattern",
+                    "format",
+                    "minItems",
+                    "maxItems",
+                ):
+                    node.pop(keyword, None)
                 if node.get("type") == "object":
                     node["required"] = list(node.get("properties", {}))
                     node["additionalProperties"] = False
@@ -190,25 +263,39 @@ class OpenAIStructuredModel:
         outcome = "invalid_response"
         try:
             payload = self._payload(instructions, data, schema)
-            body = self._post(payload).json()
-            if body.get("status") != "completed":
-                raise ProviderUnavailable("incomplete")
-            texts = []
-            for item in body["output"]:
-                if item["type"] == "reasoning":
-                    continue
-                if item["type"] != "message" or item.get("role") != "assistant":
-                    raise ValueError("Unexpected output")
-                for content in item["content"]:
-                    if content["type"] != "output_text":
-                        raise ProviderUnavailable("refusal")
-                    texts.append(content["text"])
-            if len(texts) != 1:
-                raise ValueError("Ambiguous output")
-            value = json.loads(
-                texts[0], parse_constant=_reject_constant, object_pairs_hook=_unique_keys
-            )
-            Draft202012Validator(payload["text"]["format"]["schema"]).validate(value)
+            deadline = time.monotonic() + self._timeout
+            attempts = [0]
+            while True:
+                try:
+                    body = self._post(payload, deadline=deadline, attempts=attempts).json()
+                    if body.get("status") != "completed":
+                        raise ProviderUnavailable("incomplete")
+                    texts = []
+                    for item in body["output"]:
+                        if item["type"] == "reasoning":
+                            continue
+                        if item["type"] != "message" or item.get("role") != "assistant":
+                            raise ValueError("Unexpected output")
+                        for content in item["content"]:
+                            if content["type"] != "output_text":
+                                raise ProviderUnavailable("refusal")
+                            texts.append(content["text"])
+                    if len(texts) != 1:
+                        raise ValueError("Ambiguous output")
+                    value = json.loads(
+                        texts[0], parse_constant=_reject_constant, object_pairs_hook=_unique_keys
+                    )
+                    Draft202012Validator(payload["text"]["format"]["schema"]).validate(value)
+                    break
+                except ProviderUnavailable:
+                    raise
+                except Exception:
+                    if attempts[0] >= 2:
+                        raise
+                    if time.monotonic() >= deadline:
+                        raise ProviderUnavailable("timeout") from None
+                    record(stage, "invalid_output_retry", started)
+            value = sanitize_fields(value, schema)
             outcome = "completed"
             return value
         except ProviderUnavailable as exc:

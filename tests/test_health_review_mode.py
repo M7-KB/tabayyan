@@ -18,6 +18,7 @@ def test_loaded_pending_corpus_owner_acceptance_only_changes_health(monkeypatch,
         "api.main.OpenAIStructuredModel", lambda **k: pytest.fail("health called model")
     )
     settings = Settings(
+        openai_schema_warmup=False,
         openai_api_key="inert",
         openai_model_extract="fixture",
         openai_model_reason="fixture",
@@ -43,6 +44,7 @@ def test_pending_acceptance_cannot_mask_unavailable_runtime(monkeypatch, missing
         "api.main.load_private_corpus", lambda *a, **k: ([{"approved_by": "pending"}], "fixture")
     )
     settings = Settings(
+        openai_schema_warmup=False,
         openai_api_key="inert",
         openai_model_extract="" if missing == "extract_model" else "fixture",
         openai_model_reason="" if missing == "reason_model" else "fixture",
@@ -68,6 +70,7 @@ def test_reviewed_mode_and_health_only_disclosure(monkeypatch):
     )
     app = create_app(
         Settings(
+            openai_schema_warmup=False,
             openai_api_key="inert",
             openai_model_extract="fixture",
             openai_model_reason="fixture",

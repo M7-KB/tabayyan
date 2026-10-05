@@ -52,6 +52,7 @@ def test_real_default_check_route_only_sends_minimized_query(monkeypatch, mcp_en
     monkeypatch.setattr("api.main.IslamicContentConnector", lambda: mcp)
     monkeypatch.setattr("api.main.HadeethEncDiscovery", lambda: hadeethenc)
     settings = Settings(
+        openai_schema_warmup=False,
         openai_api_key="inert",
         openai_model_extract="fixture",
         openai_model_reason="fixture",

@@ -47,7 +47,20 @@ spans, not verified quotes; `/check` must recompute all safety decisions.
 Every model call uses `api.model.StructuredModel`. The OpenAI implementation uses
 the Responses API with separate developer instructions and JSON-encoded
 `untrusted_data` in the user message, a strict JSON schema, local validation,
-`store: false`, no tools/conversation state and a 30-second timeout. The server
+`store: false`, and no tools/conversation state. One HTTP client is shared for the
+application lifetime and closed on shutdown. Router/extraction calls use explicit
+`OPENAI_ROUTER_EFFORT=none` with a 15-second budget; composer/reasoning calls use
+`OPENAI_COMPOSER_EFFORT=low` with a 25-second budget. Connect timeout is at most
+5 seconds. Transient transport failures and HTTP 408/429/500/502/503/504 may retry
+once within that budget. `Retry-After` seconds and HTTP dates are respected; if
+the delay cannot fit, the call fails rather than retrying early. Refusals, incomplete
+responses and invalid JSON/schema output are never retried.
+
+Startup warms the exact structured schemas with synthetic empty data, in parallel,
+when both models are configured. `OPENAI_SCHEMA_WARMUP=false` disables this for
+offline tests; `HEALTH_ONLY=true` always skips it. Warm-up failure does not prevent
+health service startup or prove readiness. Logs report only fixed failure categories,
+never provider bodies or exception text. The server
 does not persist queries or log input/provider errors. Input goes to OpenAI;
 `store: false` does not by itself remove provider abuse-monitoring retention.
 See [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs),

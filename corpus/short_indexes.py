@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from corpus.validate import ROOT, CorpusValidationError, read_sources
 
@@ -125,6 +125,8 @@ def load_short_index(
                 "Private index required text invalid",
             )
             url = urlsplit(row["url"])
+            decoded_path = unquote(url.path)
+            identity = url.path + ("?" + url.query if url.query else "")
             _require(
                 url.scheme == "https"
                 and url.hostname == host
@@ -132,16 +134,31 @@ def load_short_index(
                 and not url.username
                 and not url.password
                 and not url.fragment
-                and not url.query
+                and all(
+                    key in {"page", "lang", "language"}
+                    for key, _ in parse_qsl(url.query, keep_blank_values=True)
+                )
                 and not any(char.isspace() for char in row["url"])
-                and url.path == row["id"]
-                and "\\" not in url.path
-                and not any(part in {".", ".."} for part in url.path.split("/")),
+                and identity == row["id"]
+                and "\\" not in decoded_path
+                and "%" not in decoded_path
+                and not re.search(r"%2f|%5c", url.path, re.IGNORECASE)
+                and not any(part in {".", ".."} for part in decoded_path.split("/")),
                 "Private index source URL invalid",
             )
             _require(row["id"] not in identities, "Private index duplicate identity")
             identities.add(row["id"])
             if source_id == "bayyinat":
+                _require(
+                    bool(
+                        re.fullmatch(
+                            r"/(?:[a-z]{2}/)?(?:questions?|answers?|doubts?|shubuhat|categories?|topics?)/[^/]+(?:/[^/]+)*/?",
+                            decoded_path,
+                            re.IGNORECASE,
+                        )
+                    ),
+                    "Private index Bayyinat path invalid",
+                )
                 _require(
                     _string(row["title"]) and _string(row["category"], optional=True),
                     "Private index metadata invalid",

@@ -145,3 +145,35 @@ def test_corrupt_file_never_returns_partial_records(tmp_path, mutation):
             tmp_path, "bayyinat", digest, sources_path=registry, allow_pending_review=True
         )
     assert "private text" not in str(error.value)
+
+
+@pytest.mark.parametrize("query", ["?lang=ar", "?language=en", "?page=2&lang=ar"])
+def test_publisher_selectors_preserve_full_identity(tmp_path, query):
+    _, _, rows = handoff(tmp_path)
+    rows[0]["url"] += query
+    rows[0]["id"] += query
+    digest, registry, _ = handoff(tmp_path, rows=rows)
+    assert load_short_index(
+        tmp_path, "bayyinat", digest, sources_path=registry, allow_pending_review=True
+    )[0]["url"].endswith(query)
+
+
+@pytest.mark.parametrize(
+    "source,path",
+    [
+        ("bayyinat", "/news/1"),
+        ("bayyinat", "/question/%2e%2e"),
+        ("bayyinat", "/question/one%2ftwo"),
+        ("jamhara-glossary", "/dictionary/word/%2e%2e"),
+        ("jamhara-glossary", "/dictionary/word/%252e%252e"),
+        ("jamhara-glossary", "/dictionary/word/one%5ctwo"),
+    ],
+)
+def test_unrelated_encoded_parent_and_separator_paths_rejected(tmp_path, source, path):
+    _, _, rows = handoff(tmp_path, source)
+    host = "bayenat.net" if source == "bayyinat" else "islamic-content.com"
+    rows[0]["id"] = path
+    rows[0]["url"] = "https://" + host + path
+    digest, registry, _ = handoff(tmp_path, source, rows)
+    with pytest.raises(CorpusValidationError):
+        load_short_index(tmp_path, source, digest, sources_path=registry, allow_pending_review=True)

@@ -127,6 +127,91 @@ Where an older section says "Sharia specialist" or "specialist" as the approver,
 
 Transport details (endpoints, response shapes, latency, terms pages) come from Robin's spike table. This section sets the rules, not the transport. OpenAI's remote MCP and its web search are spike tests only and are not runtime sources (decision 29a). The runtime tools reach only the §0.3 connectors, called by our code. Model-side search is not an allowlisted source at runtime.
 
+### 0.11 Private doubt and term indexes; two-call architecture (owner decisions, 2026-10-05 ~18:00)
+
+This block **supersedes §0.2 items 1–4, the Bayyinat and glossary rows of §0.3, and the rule-1 wording of §0.4** where they conflict. Those older passages stay in place until the next SPEC cleanup PR, which is when they are rewritten.
+
+**Why we fail.** The brief names Bayyinat as the main source for dialogue answers on doubts, and the Al-Jamhara glossary for terms. Neither was ingested. Brief cases 1, 2, 3, 4, 9 and 10 are doubts (Bayyinat). Cases 7, 8 and 12 are terms (glossary). Only case 11 needs the Qur'an. The Qur'an path also uses BM25 with no clitic handling (for example "وخاتم" does not match "خاتم"), and the old flow made about 8 sequential model calls at default effort (about 60 s, with 503s).
+
+**(a) Two new private indexes, same handling as the Qur'an artifact.**
+
+- **Bayyinat (doubts).** Source: the Osul Center web edition of the approved Bayyinat, at `bayenat.net`. The PDF text extracts are corrupted and are not used. Record per question: `id`, `url`, `title`, `similar_phrasings` (the "عبارات مشابهة للسؤال" list), `short_answer` (مختصر الجواب), `keywords`, `category`.
+- **Glossary (terms).** Proposed single source: `islamic-content.com/dictionary`, the glossary the brief names. icadb is dropped from this block: it is not in the brief's approved list and the spike table records it as 403 from urllib. Record per term: `id`, `url`, `term_ar`, `definition_short`, `translations`.
+- **Display, for both:** only the short answer (or the short definition), verbatim, attributed by name, with a link to the original page. Never the full detailed answer. Never a download, and never a copy of the whole page.
+- **Basis:** the organizers' written reply of 2026-10-03, as the owner cites it. Robin records that evidence in SOURCES.md (R2). Nothing is `confirmed` in SOURCES until the written evidence is linked there.
+- **Hosts.** `bayenat.net` is not in the brief's approved list (`dawa.center/file/7937`) and is not in the spike table. The earlier sentence saying it was is withdrawn. Until the owner confirms that the organizers' evidence covers `bayenat.net` as the same approved edition (open item O1) and Robin records the host, it stays disabled under §0.3. The glossary host stays link-only under O2.
+
+**(b) The owner runs the collection; agents do not crawl.** The owner runs the one-time collection script on his own machine. The output goes to the private store and is loaded from there at startup. It is not fetched at build, and the "private store" wording is the one that stands. No agent makes these requests. The collection script is read-only and polite: 1 request per second, only the `bayenat.net` question pages (after O1) and the glossary pages (after O2). It writes JSONL with a SHA-256 manifest and a README with the exact command.
+
+**(c) MCP open search uses a closed topic vocabulary, not free text.** The router selects at most three `Topic` IDs. The vocabulary is a closed `Literal` in code (`api/search_phrases.py`, `Topic`, 20 values). Each ID maps to a fixed Arabic query string in `TOPIC_QUERIES`. The model never writes query text. The rules are:
+
+- **fail closed by schema:** a value outside the `Topic` Literal fails validation. The whole phrase list is dropped, not just the one value, and no query is sent. No pattern or regex scrubbing is used, since regex fails open on Arabic names and places. Nothing outside the vocabulary leaves the process;
+- **`safe_to_search` gate:** the proposal must have `safe_to_search` true and at least one phrase. Otherwise no query is sent. This flag is advisory only; the closed mapping is the privacy boundary;
+- **claim-overlap check:** the built query is compared, token by token, with the submitted text and every extracted claim. If any complete claim appears in the query, no query is sent. This stops a claim that equals a topic label from leaking as the query;
+- the only strings sent are the `TOPIC_QUERIES` values, which are generic subject labels, so no name, number, place, email or first-person detail can reach an MCP call;
+- never sent for level D (§0.5). The router's topic IDs are discarded when `level` is D or `level_d` is true, before any MCP dispatch;
+- this matches the privacy notice (§0.6): only the fixed topic strings leave.
+
+**Architecture: two model calls plus code.**
+
+1. **Router (one call).** Model `gpt-6-luna`, reasoning effort `none`, one fixed strict JSON schema. It returns:
+   - `claims`;
+   - `level` (A–D);
+   - `level_d` flag;
+   - `premise`, the premise restated as a checkable claim;
+   - `input_kind`: one of `doubt`, `term`, `verse`, `hadith`, `other`;
+   - up to 3 `Topic` IDs for `search_queries` (§0.11 (c): closed vocabulary, no free text);
+   - up to 5 `proposed_quran_refs`.
+
+   Level D goes straight to the referral template (§9). No retrieval, no compose call.
+2. **Retrieval (code, by `input_kind`).**
+   - `doubt`: Bayyinat match on the question title plus its similar phrasings, using embeddings and BM25. Top 5 question IDs.
+   - `term`: glossary match by term and by translation.
+   - `verse`: `proposed_quran_refs` resolved in the local Qur'an artifact, plus BM25 with clitic stripping.
+   - MCP open search and HadeethEnc run in parallel, each with a hard 3–5 s timeout.
+3. **Compose (one call per claim, in parallel).** Model `gpt-6.1-sol`, reasoning effort `low`. It picks evidence IDs only from that claim's candidates, and returns the state (§5.1), plus an explanation adapted to the asker in its own field (§0.8). It never retypes source text.
+4. **Gatekeeper (code).** Checks, in order:
+   - every returned ID is a candidate for that claim and resolves;
+   - the displayed text is fetched by ID from the source record, never from model output;
+   - a hadith has source and grading (§0.4 rule 3);
+   - level D is never SUPPORTED;
+   - **every §5 gate still applies after compose.** Compose picks the state, but the gatekeeper runs the §5.1–§5.4 rules on that pick: the CONFIRMS/CONTRADICTS confidence floor, the alignment ratchet, and the span detector. The gatekeeper may downgrade a state, never upgrade one;
+   - **the explanation-span rule still applies.** `explanation_ar` is rejected if it contains a quoted span;
+   - **explanation check (NN2).** Every religious assertion in `explanation_ar` must restate the text or short answer of a cited candidate. The explanation may not state a ruling, a grading, or what a text says unless that wording is in a cited candidate. Until owner decision O3 is recorded, the explanation is dropped and the card shows only the source text, the state, the referral and the question. Dropping it is the default;
+   - any failure means CANNOT_CONFIRM, under the §0.4 failure policy.
+
+**Request deadline (proposed, owner to confirm, O4).** `/check` has a hard end-to-end deadline of 25 s. The per-stage budgets above are caps inside it. At the deadline, unfinished claims return CANNOT_CONFIRM with a retry prompt. The p50 target under 20 s stays as the acceptance target; the deadline is the guarantee.
+
+**§0.4 rule 1, extended.** A quote matches verbatim, after §4.2 normalization, a text in: the local Qur'an artifact; the local Bayyinat index (short answers only); the local glossary index (short definitions only); or a result returned by an allowlisted source during this request. The check runs against the raw record text, never a model summary.
+
+**Acceptance on the live site (owner, 2026-10-05).**
+
+- «لماذا يعبد المسلمون الكعبة؟» answers from Bayyinat or the Qur'an, and corrects the premise.
+- «هل القرآن من تأليف محمد ﷺ؟» and «هل الإسلام انتشر بالسيف؟» answer from Bayyinat.
+- «ما معنى التوحيد؟» and «ترجم كلمة التوحيد» answer from the glossary.
+- «من هو خاتم الرسل؟» gives SUPPORTED with 33:40.
+- T05 and T14–T18 stay CANNOT_CONFIRM.
+- p50 under 20 s.
+
+Audio, the deck and the video wait until this passes (§0.9 cut line still applies).
+
+**Assignments (routed in #build, 2026-10-05).** Each item is one branch and one PR, reviewed by @Nami in arrival order, V1 first.
+
+- **Robin:** R1 collection script and README (waits on O1 and O2); R2 loaders, validators, `approved_sources` and SOURCES entries; R3 Arabic normalizer with proclitic stripping (own MIT code, no `pyarabic`); R4 Bayyinat and glossary matchers (text-embedding-3-large at 1024 dimensions, computed at startup in memory, fused with BM25), one module each. R4's glossary matcher waits on O2; its embedding step waits on O5.
+- **Vegapunk:** V1 provider (explicit effort per model; connect timeout 5 s, router about 15 s, composer about 25 s; one retry honouring `Retry-After`; check incomplete status; one shared client; schema warm-up at startup; text-free failure category). V2 one-pass `/check` with the router and per-claim parallel compose, removing the duplicate preflight and second extraction. The router call owns topic-ID selection (§0.11 (c)); V2 passes its `Topic` IDs through and does not select topics itself. V3 wire R4 matchers and MCP open queries into the router kinds, mapping IDs through `TOPIC_QUERIES` only, with published-answer cards reusing the #58 UI. Also rebase #79.
+- **Usopp:** one-page flow. Input at the top, results below, no claims page. The frontend calls `/check` with `original_text`. Each card starts with «فهمنا سؤالك هكذا: …» plus edit and re-check in place. Staged progress indicator. Published-answer card: the short answer, source name, and «اقرأ الجواب كاملاً» link. Term card: the definition plus translation.
+- **Nami:** review (above); after V2 and R4 deploy, rerun the 18 cases live, then the held-out set (H01–H10, approved by Robin) and CONTROL.
+
+**Owner-run step.** The collection output is produced by the owner, not an agent. The build is blocked on that file until it is in the private store.
+
+**Open items (owner, M7md). Nothing below is decided by an agent. The Sharia specialist review is withdrawn (§0.7), so these go to the owner only.**
+
+- **O1 — Bayyinat host.** Does the organizers' 2026-10-03 reply cover `bayenat.net` as the same approved edition as `dawa.center/file/7937`? Until yes, R1 does not run and the host stays disabled. Robin records the host in the spike table once confirmed.
+- **O2 — Glossary override.** §0.11 lets the 2026-10-05 decision apply to the glossary, but §0.3 (event `1ce33b69e38de780106acc857330681892d39c18fedb27ee48e6bc1dc083c31f`, 2026-10-04) says the islamic-content.com glossary is link-only. Confirm the override and record the 2026-10-05 decision's event ID here. Until then the glossary matcher (R4) stays off, and term questions resolve to the glossary link with no copied text. The `jamhara-glossary` row in SOURCES.md is updated to match once O2 is recorded.
+- **O3 — Explanation text.** Is generated `explanation_ar` allowed, under the explanation check above, or is it limited to source text and the state only? Until decided, the default is to drop it.
+- **O4 — Request deadline.** Confirm the 25 s hard deadline, or give another number.
+- **O5 — Embeddings.** R4 would send private Bayyinat and glossary text to OpenAI (`text-embedding-3-large`) at each startup. That is licensed record text leaving the machine. R4's embedding step waits on this answer. If the answer is no, embeddings are computed locally, with the model chosen in a follow-up.
+
 ---
 
 ## 1. Scope

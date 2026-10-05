@@ -1,5 +1,18 @@
 # Source and licence register
 
+## Terminology discovery evidence (2026-10-05)
+
+The owner's five-call probe identified icadb collection metadata (`id=5`,
+`external_id=105`) for Islamic terminology/vocabulary through
+https://icadb.com/api/encyclopedias/list/ . The API schema is published at
+https://icadb.com/api/docs/?format=openapi . No term card, translated definition
+or religious text was ingested. Item-specific licence/terms remain **pending**;
+metadata access does not establish a redistribution grant. The MCP library
+search returned https://islamcontent.com/en/content/822 , which was not fetched
+or accepted as term evidence. This note adds discovery evidence only and changes
+no source permission flags. See the
+[bounded terminology follow-up](docs/CONNECTOR_SPIKE_20261005.md#bounded-terminology-follow-up).
+
 P-03 source register, status checked 2026-10-03 against the evidence recorded below and [docs/DOWNLOAD_MANIFEST.md](docs/DOWNLOAD_MANIFEST.md). Content approval comes from [docs/challenge-brief.md](docs/challenge-brief.md). Acquisition steps belong to P-04. This register does not build a corpus. **The dated owner decision below permits challenge-app ingestion for three selected sources, with redistribution prohibited. Raw files and built corpus never enter the public repo. Machine-readable gates record this scoped permission; public distribution remains disabled.**
 
 ## Current source status

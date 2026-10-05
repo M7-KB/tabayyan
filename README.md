@@ -350,8 +350,13 @@ with a working default chosen in the restrictive direction.
 
 **Development started Oct 2, 2026, with the organizers' permission**, ahead of the Oct 4 window named in
 the brief; the owner holds their notice on file. The full plan is in [TASKS.md](TASKS.md), day by day from
-Oct 2 through Oct 6. There is no `baseline` tag and no pre-Oct-4 boundary — that earlier plan was
-superseded once the early start was permitted.
+Oct 2 through Oct 6. The starting version for the Oct 4 evaluation window is
+[`c2be3d45cee3321b0edadc7ff049ba33570eb6ad`](https://github.com/M7-KB/tabayyan/commit/c2be3d45cee3321b0edadc7ff049ba33570eb6ad),
+the last commit on main's first-parent history before **2026-10-04 09:00 Riyadh
+(06:00 UTC)**. Its commit time is 2026-10-04 00:10:59 Riyadh. This identifies the
+pre-window work separately from later changes without changing the permitted Oct 2 start.
+The existing `baseline` tag points to the earlier `daf18c6962064bdf85119d4566c9b9838585bcc8`
+and is not the Oct 4 starting version. This disclosure follows the owner's Oct 5 instruction.
 
 The corpus-free comparison arm in the eval reports is called `control`.
 
@@ -904,3 +909,14 @@ HTTP status and whether an object-shaped JSON response was returned. It stores
 no response text. A successful JSON probe does not establish usable hadith or
 grade parsing, retrieval quality, or end-to-end card correctness. This command
 has not yet run from Render; the earlier workstation 403 is not Render evidence.
+
+## Bounded connector spike (2026-10-05)
+
+The [measured source/API spike](docs/CONNECTOR_SPIKE_20261005.md) records two OpenAI
+calls and bounded direct probes, endpoint shapes, one-sample local latency and terms
+links. [TOOLS.md](TOOLS.md#bounded-connector-spike-and-quran-handoff-2026-10-05)
+records verified provider model use. Dorar returned 403 from the local machine;
+Render reachability remains untested. The five-call terminology follow-up identifies
+icadb collection metadata but no verified term response; cases 7, 8 and 12 retain
+the owner's abstention with a glossary link. MCP language access worked, terminology coverage
+is unverified, and web-search citations alone do not provide raw verbatim evidence.

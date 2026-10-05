@@ -212,6 +212,17 @@ Audio, the deck and the video wait until this passes (§0.9 cut line still appli
 - **O4 — Request deadline.** Confirm the 25 s hard deadline, or give another number.
 - **O5 — Embeddings.** R4 would send private Bayyinat and glossary text to OpenAI (`text-embedding-3-large`) at each startup. That is licensed record text leaving the machine. R4's embedding step waits on this answer. If the answer is no, embeddings are computed locally, with the model chosen in a follow-up.
 
+### 0.12 Owner answers to the 2026-10-05 planning event
+
+The following answers supersede the open O1-O5 items above. The record is event `d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f`.
+
+- **O1:** `bayenat.net` is the Osul Center web edition of the approved Bayyinat, based on the organizers' 2026-10-03 reply. Robin records the attribution and host evidence in `SOURCES.md` before enabling collection.
+- **O2:** the glossary may show a short definition and translation verbatim, attributed, with a link. This overrides the earlier link-only rule.
+- **O3:** generated explanations are allowed only when the card has evidence, are adapted to the asker, and are at most three sentences. They contain no quotes, rulings or new claims; the span detector and آ§5 gates still apply.
+- **O4:** the server deadline is 35 s and the client deadline is about 40 s. Unfinished claims return a retryable state with `لم يكتمل التحقق، حاول مرة أخرى`; this state is not CANNOT_CONFIRM and does not imply that no evidence exists.
+- **O5:** OpenAI embeddings of published private-index text are allowed.
+- **MCP topic vocabulary:** keep the closed `Topic` `Literal`, and expand it from the current set to about 60 fixed topics. The model still cannot write query text.
+
 ---
 
 ## 1. Scope

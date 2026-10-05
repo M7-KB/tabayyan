@@ -118,3 +118,24 @@ runner. No new model identifier or service-contract claim is inferred from these
 transport probes. Results and pending source terms are in
 [the terminology follow-up](docs/CONNECTOR_SPIKE_20261005.md#bounded-terminology-follow-up)
 and [SOURCES.md](SOURCES.md#terminology-discovery-evidence-2026-10-05).
+
+## HadeethEnc discovery and held-out handoff (2026-10-05)
+
+Authority: build routing event
+`74955bb4a1b90316e3a47f4f39bd1e785f28b286b8ba27415bdd66f65b2b910d`,
+channel `49777fe4-55e3-4545-8614-a17a0a9f3a80`.
+
+| Date | Task | AI tool / provider | Verified model identifier | Use | Evidence | Licence / terms status |
+|---|---|---|---|---|---|---|
+| 2026-10-05 | HadeethEnc item discovery, PR #63 rebase, private held-out handoff | Codex / OpenAI | Session identifies GPT-6; exact coding-session provider API identifier not exposed | Source-adapter code, synthetic adapter tests, documentation and ten synthetic questions; no generated scripture, grade or reference | [Discovery PR #73](https://github.com/M7-KB/tabayyan/pull/73), `e16b22a`; [rebased PR #63 review](https://github.com/M7-KB/tabayyan/pull/63#issuecomment-5990542090), `42c6a9b` | Coding service terms pending verification; source permissions recorded separately in SOURCES.md |
+
+Supporting tools: Buzz CLI (including authorized private delivery to Nami),
+Git/GitHub CLI, PowerShell, Python 3.11, pytest, Ruff, Node's test runner, and
+web retrieval of [official API documentation](https://github.com/islamhouse-dev/hadith-api).
+Skill used: local Buzz CLI. No relay-backed skills or additional OpenAI API calls.
+One bounded HadeethEnc discovery invocation with a synthetic topic returned one
+request-bound item with internal `grading_source_id: hadeethenc`. Only counts
+and provenance metadata were printed; no source religious text persisted. This
+is author-executed workstation transport evidence, not deployed accuracy or a
+pipeline evaluation. The ten held-out inputs were sent only by DM to Nami,
+not used to tune the implementation, run against the pipeline or put in this repo.

@@ -8,6 +8,27 @@ import cannotConfirm from '../../../contracts/fixtures/cannot-confirm.json'
 import disputed from '../../../contracts/fixtures/disputed.json'
 
 describe('Results', () => {
+  it('keeps completed cards and shows unfinished claims separately with fixed copy and retry', async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn()
+    render(<Results status="done" cards={[supportedConfirms]} onRetry={onRetry}
+      retryableResults={[{ claim_id: 'pending', text_ar: 'نص تجريبي', code: 'CHECK_INCOMPLETE', retryable: true, message_ar: 'unsafe server copy' }]} />)
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('لم يكتمل التحقق، حاول مرة أخرى')
+    expect(screen.getByText('نص تجريبي')).toBeInTheDocument()
+    expect(screen.queryByText('unsafe server copy')).not.toBeInTheDocument()
+    expect(screen.queryByText(strings.stateLabels.cannot_confirm)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: strings.resultsRetry }))
+    expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers retry when every claim is unfinished rather than showing empty results', () => {
+    render(<Results status="done" retryableResults={[{ claim_id: 'pending', text_ar: 'نص تجريبي' }]} />)
+    expect(screen.getByRole('status')).toHaveTextContent(strings.checkErrors.CHECK_INCOMPLETE)
+    expect(screen.queryByText(strings.resultsEmpty)).not.toBeInTheDocument()
+    expect(screen.queryByRole('article')).not.toBeInTheDocument()
+  })
+
   it('shows a status message while loading', () => {
     render(<Results status="loading" />)
     expect(screen.getByRole('status')).toHaveTextContent(strings.resultsLoading)

@@ -57,7 +57,7 @@ export default function App() {
     )
   }
 
-  function beginAttempt(deadlineMs) {
+  function beginAttempt(deadlineMs, onTimeout) {
     attemptRef.current?.cancel()
     const controller = new AbortController()
     const attempt = {
@@ -66,6 +66,10 @@ export default function App() {
       timer: setTimeout(() => {
         attempt.timedOut = true
         controller.abort()
+        if (attemptRef.current === attempt) {
+          attemptRef.current = null
+          onTimeout()
+        }
       }, deadlineMs),
       cancel() {
         clearTimeout(attempt.timer)
@@ -90,12 +94,17 @@ export default function App() {
     cancelPending()
     setRecheck(null)
     setCheck({ status: 'loading', submittedText: originalText })
-    const attempt = beginAttempt(CHECK_DEADLINE_MS)
+    const attempt = beginAttempt(CHECK_DEADLINE_MS, () => {
+      setCheck({ status: 'error', submittedText: originalText, errorCode: 'TIMEOUT' })
+    })
     try {
       const request = buildCheckRequest({ originalText })
       const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
       if (attemptRef.current === attempt) {
-        setCheck({ status: 'done', submittedText: originalText, cards: result.cards })
+        setCheck({
+          status: 'done', submittedText: originalText, cards: result.cards,
+          retryableResults: result.retryable_results ?? [],
+        })
       }
     } catch (error) {
       if (attemptRef.current === attempt) {
@@ -112,10 +121,13 @@ export default function App() {
     if (check?.status !== 'done' || text.trim().length === 0) return false
     cancelPending()
     setRecheck({ index, status: 'loading' })
-    const attempt = beginAttempt(CHECK_DEADLINE_MS)
+    const attempt = beginAttempt(CHECK_DEADLINE_MS, () => {
+      setRecheck({ index, status: 'error', errorCode: 'TIMEOUT' })
+    })
     try {
       const request = buildCheckRequest({ originalText: text })
       const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
+      if (result.retryable_results?.length) throw new ApiError('CHECK_INCOMPLETE')
       if (result.cards.length === 0) throw new ApiError('PIPELINE_DEGRADED')
       if (attemptRef.current !== attempt) return false
       setCheck((prev) => ({ ...prev, cards: replaceCard(prev.cards, index, result.cards) }))
@@ -203,6 +215,7 @@ export default function App() {
           <Results
             status={check.status}
             cards={check.cards}
+            retryableResults={check.retryableResults}
             errorCode={check.errorCode}
             recheck={recheck}
             onRecheck={recheckCard}

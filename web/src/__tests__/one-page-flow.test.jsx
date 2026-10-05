@@ -234,9 +234,11 @@ describe('one-page flow: edit and re-check a card in place', () => {
     expect(screen.getByText('الادعاء الثاني')).toBeInTheDocument()
   })
 
-  it('keeps the card and the draft when the re-check fails, and says what went wrong', async () => {
+  it.each(['PIPELINE_DEGRADED', 'CHECK_INCOMPLETE'])('keeps the card and the draft when the re-check fails with %s', async (code) => {
     const user = userEvent.setup()
-    await setupTwoCards(user, () => jsonResponse(503, { error: { code: 'PIPELINE_DEGRADED' } }))
+    await setupTwoCards(user, () => code === 'CHECK_INCOMPLETE'
+      ? jsonResponse(200, { cards: [], retryable_results: [{ claim_id: 'pending', text_ar: 'نص تجريبي', code, retryable: true, message_ar: 'ignored' }] })
+      : jsonResponse(503, { error: { code } }))
     const [first] = screen.getAllByRole('article')
 
     await user.click(within(first).getByRole('button', { name: strings.understoodEdit }))
@@ -245,7 +247,7 @@ describe('one-page flow: edit and re-check a card in place', () => {
     await user.type(editor, 'صياغة جديدة')
     await user.click(within(first).getByRole('button', { name: strings.understoodRecheck }))
 
-    expect(await within(first).findByRole('alert')).toHaveTextContent(strings.checkErrors.PIPELINE_DEGRADED)
+    expect(await within(first).findByRole('alert')).toHaveTextContent(strings.checkErrors[code])
     expect(within(first).getByLabelText(strings.understoodEditLabel)).toHaveValue('صياغة جديدة')
     expect(screen.getByText('الادعاء الثاني')).toBeInTheDocument()
     expect(screen.getAllByRole('article')).toHaveLength(2)
@@ -276,6 +278,7 @@ describe('one-page flow: client deadline', () => {
   })
 
   it('shows the timeout past the deadline, keeps the input text, and offers retry', async () => {
+    expect(CHECK_DEADLINE_MS).toBe(40_000)
     const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) })
     stubApi({ check: hangUntilAborted })
     render(<App />)
@@ -289,6 +292,48 @@ describe('one-page flow: client deadline', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(strings.checkErrors.TIMEOUT)
     expect(screen.getByRole('button', { name: strings.resultsRetry })).toBeInTheDocument()
+    expect(screen.getByLabelText(strings.textLabel)).toHaveValue('نص طويل')
+  })
+
+  it('retries the original text after a partial response and keeps completed cards visible', async () => {
+    const user = userEvent.setup()
+    const answers = [
+      jsonResponse(200, { cards: [card('c1')], retryable_results: [
+        { claim_id: 'c2', text_ar: 'نص تجريبي', code: 'CHECK_INCOMPLETE', retryable: true, message_ar: 'ignored' },
+      ] }),
+      jsonResponse(200, { cards: [card('c1'), card('c2')] }),
+    ]
+    const fetchMock = stubApi({ check: () => answers.shift() })
+    render(<App />)
+    await submitText(user, 'النص الأصلي')
+    expect(await screen.findByRole('status')).toHaveTextContent(strings.checkErrors.CHECK_INCOMPLETE)
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: strings.resultsRetry }))
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(2))
+    expect(checkCalls(fetchMock).map(([, init]) => JSON.parse(init.body).original_text)).toEqual(['النص الأصلي', 'النص الأصلي'])
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows routing timeout as incomplete verification without an evidence card', async () => {
+    const user = userEvent.setup()
+    stubApi({ check: () => jsonResponse(503, { error: { code: 'CHECK_INCOMPLETE' } }) })
+    render(<App />)
+    await submitText(user, 'النص الأصلي')
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.checkErrors.CHECK_INCOMPLETE)
+    expect(screen.queryByRole('article')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: strings.resultsRetry })).toBeInTheDocument()
+  })
+
+  it('ends loading at 40 seconds even if fetch ignores abort, and drops its late response', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) })
+    const late = deferred()
+    stubApi({ check: () => late.promise.then(() => jsonResponse(200, { cards: [card('c1')] })) })
+    render(<App />)
+    await submitText(user, 'نص طويل')
+    await act(async () => { vi.advanceTimersByTime(40_000) })
+    expect(screen.getByRole('alert')).toHaveTextContent('لم يكتمل التحقق، حاول مرة أخرى')
+    await act(async () => { late.resolve() })
+    expect(screen.queryByRole('article')).not.toBeInTheDocument()
     expect(screen.getByLabelText(strings.textLabel)).toHaveValue('نص طويل')
   })
 })

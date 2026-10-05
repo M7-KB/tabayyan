@@ -6,7 +6,7 @@ import { ClaimCard } from './card/ClaimCard.jsx'
 // `status` is 'loading' | 'error' | 'done'. Error copy is looked up by the server's error code.
 // On 'done', each card can be edited and re-checked in place: `onRecheck(index, text)` resolves to true when
 // that card was replaced. `recheck` names the card being re-checked and its state.
-export function Results({ status, cards = [], errorCode, recheck = null, onRetry, onEdit, onCancel, onRecheck }) {
+export function Results({ status, cards = [], retryableResults = [], errorCode, recheck = null, onRetry, onEdit, onCancel, onRecheck }) {
   if (status === 'loading') {
     return (
       <section className="results" aria-labelledby="results-heading">
@@ -34,7 +34,7 @@ export function Results({ status, cards = [], errorCode, recheck = null, onRetry
     )
   }
 
-  if (cards.length === 0) {
+  if (cards.length === 0 && retryableResults.length === 0) {
     return (
       <section className="results" aria-labelledby="results-heading">
         <h2 id="results-heading">{strings.resultsHeading}</h2>
@@ -49,6 +49,18 @@ export function Results({ status, cards = [], errorCode, recheck = null, onRetry
   return (
     <section className="results" aria-labelledby="results-heading">
       <h2 id="results-heading">{strings.resultsHeading}</h2>
+      {retryableResults.length > 0 && (
+        <div className="retryable-results">
+          <p role="status">{strings.checkErrors.CHECK_INCOMPLETE}</p>
+          <ul data-role="user-text" dir="auto">
+            {retryableResults.map((result) => <li key={result.claim_id}>{result.text_ar}</li>)}
+          </ul>
+          <div className="results-actions">
+            <button type="button" onClick={onRetry}>{strings.resultsRetry}</button>
+            <button type="button" onClick={onEdit}>{strings.resultsEditText}</button>
+          </div>
+        </div>
+      )}
       {cards.map((card, index) => (
         <ClaimCard
           key={card.card_id ?? card.claim.id}

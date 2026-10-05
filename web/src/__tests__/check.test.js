@@ -26,6 +26,29 @@ describe('buildCheckRequest (one-pass)', () => {
 })
 
 describe('parseCheckResponse', () => {
+  const incomplete = { claim_id: 'pending', text_ar: 'نص تجريبي', code: 'CHECK_INCOMPLETE', retryable: true, message_ar: 'not displayed' }
+
+  it('accepts completed cards alongside unfinished claims without inventing a card state', () => {
+    const body = { cards: [supportedConfirms], retryable_results: [incomplete] }
+    expect(parseCheckResponse(body)).toBe(body)
+    expect(parseCheckResponse({ cards: [], retryable_results: [incomplete] }).cards).toEqual([])
+  })
+
+  it.each([
+    null,
+    {},
+    [null],
+    [{ ...incomplete, code: 'CANNOT_CONFIRM' }],
+    [{ ...incomplete, retryable: false }],
+    [{ ...incomplete, text_ar: '' }],
+    [{ ...incomplete, claim_id: '' }],
+    [{ ...incomplete, message_ar: {} }],
+    [incomplete, incomplete],
+    [{ ...incomplete, claim_id: supportedConfirms.claim.id }],
+  ])('rejects malformed or duplicate unfinished results: %j', (retryable_results) => {
+    expect(() => parseCheckResponse({ cards: [supportedConfirms], retryable_results })).toThrow(CheckError)
+  })
+
   it('accepts a body whose cards carry the fields the UI reads', () => {
     const body = { cards: [supportedConfirms] }
     expect(parseCheckResponse(body, ['c1'])).toBe(body)

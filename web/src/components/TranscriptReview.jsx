@@ -3,7 +3,7 @@ import { strings } from '../strings.js'
 
 // Transcript review (SPEC.md §6.6, §0.9). The transcript is always shown and editable, and nothing
 // runs after it until the user confirms it. `stub` marks sample text, which the screen says aloud.
-export function TranscriptReview({ transcript, stub = false, onConfirm, onCancel }) {
+export function TranscriptReview({ transcript, notice, stub = false, onConfirm, onCancel }) {
   const [text, setText] = useState(transcript)
   const headingRef = useRef(null)
   const hasText = text.trim().length > 0
@@ -23,7 +23,8 @@ export function TranscriptReview({ transcript, stub = false, onConfirm, onCancel
         {strings.transcriptHeading}
       </h2>
       <p className="hint">{strings.transcriptHint}</p>
-      {stub && <p className="hint">{strings.transcriptStubNote}</p>}
+      {notice && <p className="hint">{notice}</p>}
+      {stub &&<p className="hint">{strings.transcriptStubNote}</p>}
 
       <form onSubmit={handleSubmit}>
         <label htmlFor="transcript-input" className="transcript-label">

@@ -49,6 +49,8 @@ export const strings = {
   transcribing: 'جارٍ تحويل المقطع إلى نص… قد يستغرق ذلك دقيقة.',
   transcriptHeading: 'راجع النص قبل التحقق',
   transcriptHint: 'صحّح النص إن لزم. لن يبدأ التحقق قبل أن تؤكد النص.',
+  // Default for the transcribe response's notice_ar (SPEC.md §3); the screen shows the server's text when present.
+  transcriptNotice: 'راجع النص وصحّحه قبل المتابعة',
   transcriptStubNote: 'هذا نص تجريبي للعرض، ولم يُستخرج من المقطع.',
   transcriptStubText: 'نص تجريبي للمراجعة.',
   transcriptLabel: 'النص المستخرج من المقطع',

@@ -31,7 +31,12 @@ export default function App() {
     setMedia({ status: 'transcribing' })
     try {
       const result = await transcribeStub(file)
-      setMedia({ status: 'review', transcript: result.transcript_ar, stub: result.stub === true })
+      setMedia({
+        status: 'review',
+        transcript: result.transcript_ar,
+        notice: result.notice_ar,
+        stub: result.stub === true,
+      })
     } catch (error) {
       setMedia({ status: 'error', errorCode: error instanceof MediaError ? error.code : 'UNKNOWN' })
     }
@@ -69,6 +74,7 @@ export default function App() {
         {media.status === 'review' && (
           <TranscriptReview
             transcript={media.transcript}
+            notice={media.notice}
             stub={media.stub}
             onConfirm={handleSubmitText}
             onCancel={() => setMedia({ status: 'idle' })}

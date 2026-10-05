@@ -37,9 +37,16 @@ describe('validateMediaFile', () => {
 })
 
 describe('transcribeStub', () => {
-  it('returns labelled sample text with no segments and never reads the file', async () => {
+  it('returns labelled sample text in the SPEC §3 shape, with null where the real endpoint is null', async () => {
     const result = await transcribeStub(fileOf('audio/mpeg'))
-    expect(result).toEqual({ transcript_ar: strings.transcriptStubText, segments: [], stub: true })
+    expect(result).toEqual({
+      transcript_ar: strings.transcriptStubText,
+      duration_s: null,
+      confidence: null,
+      segments: [],
+      notice_ar: strings.transcriptNotice,
+      stub: true,
+    })
   })
 
   it('rejects an invalid file before returning anything', async () => {

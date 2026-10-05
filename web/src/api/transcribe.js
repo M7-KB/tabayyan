@@ -25,9 +25,17 @@ export function validateMediaFile(file) {
   }
 }
 
-// Returns sample text only. It never reads the file, and the result is flagged `stub: true` so the
-// review screen says the text is not from the clip.
+// Returns sample text in the response shape of SPEC.md §3 (POST /api/v1/transcribe). It never reads the
+// file. `duration_s` and `confidence` are null, because the real endpoint returns null when it has no
+// measured value, and no number is invented. `stub: true` tells the review screen the text is not from the clip.
 export async function transcribeStub(file) {
   validateMediaFile(file)
-  return { transcript_ar: strings.transcriptStubText, segments: [], stub: true }
+  return {
+    transcript_ar: strings.transcriptStubText,
+    duration_s: null,
+    confidence: null,
+    segments: [],
+    notice_ar: strings.transcriptNotice,
+    stub: true,
+  }
 }

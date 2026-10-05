@@ -202,6 +202,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 final_states(result["cards"])
                 return result
             except ExtractionError as exc:
+                if exc.code == "CHECK_INCOMPLETE":
+                    return response(
+                        503,
+                        exc.code,
+                        "Check unfinished; please retry",
+                        "لم يكتمل التحقق، حاول مرة أخرى",
+                    )
                 return response(
                     exc.status, exc.code, "Check could not be completed", "تعذر إتمام التحقق"
                 )

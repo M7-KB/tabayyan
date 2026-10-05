@@ -22,6 +22,7 @@ from api.extract import (
     StrictObject,
 )
 from api.model import StructuredModel
+from api.provider import ProviderUnavailable
 from api.search_phrases import Topic
 
 
@@ -139,6 +140,14 @@ class Router:
                 and not all(c.origin == "term_lookup" for c in proposal.claims)
             ):
                 raise ValueError("Inconsistent unresolved subjects")
+        except ProviderUnavailable as exc:
+            record("router_validation", exc.category, started)
+            code = (
+                "CHECK_INCOMPLETE"
+                if exc.category in {"timeout", "retry_budget"}
+                else "PIPELINE_DEGRADED"
+            )
+            raise ExtractionError(503, code) from None
         except Exception:
             record("router_validation", "invalid_proposal", started)
             raise ExtractionError(503, "PIPELINE_DEGRADED") from None

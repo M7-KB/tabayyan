@@ -14,6 +14,7 @@ from typing import Any
 import httpx
 from jsonschema import Draft202012Validator
 
+from api.deadline import request_deadline
 from api.diagnostics import record
 
 logger = logging.getLogger(__name__)
@@ -264,6 +265,8 @@ class OpenAIStructuredModel:
         try:
             payload = self._payload(instructions, data, schema)
             deadline = time.monotonic() + self._timeout
+            if request_deadline.get() is not None:
+                deadline = min(deadline, request_deadline.get())
             attempts = [0]
             while True:
                 try:

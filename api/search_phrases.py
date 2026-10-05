@@ -79,6 +79,25 @@ class SearchPhraseExtractor:
     def __init__(self, model: StructuredModel | None):
         self.model = model
 
+    def from_queries(self, queries, *, safe_to_search: bool, text: str, claims: list[str]):
+        """Map router-selected Topic IDs only; retain all legacy privacy guards."""
+        try:
+            proposal = SearchPhraseProposal(phrases=list(queries), safe_to_search=safe_to_search)
+            return self._query(proposal, text=text, claims=claims)
+        except Exception:
+            return None
+
+    def _query(self, proposal, *, text, claims):
+        if not proposal.safe_to_search or not proposal.phrases:
+            return None
+        query = " ".join(TOPIC_QUERIES[topic] for topic in dict.fromkeys(proposal.phrases))
+        key = " " + " ".join(tokens(query)) + " "
+        for claim in [text, *claims]:
+            claim_key = " ".join(tokens(claim))
+            if claim_key and " " + claim_key + " " in key:
+                return None
+        return query
+
     def extract(self, *, text: str, claims: list[str]) -> str | None:
         if self.model is None:
             return None
@@ -90,18 +109,7 @@ class SearchPhraseExtractor:
                     schema=SearchPhraseProposal.model_json_schema(),
                 )
             )
-            if not proposal.safe_to_search or not proposal.phrases:
-                return None
-            # The independent privacy boundary is this closed mapping, not the
-            # model's safety flag. Unknown IDs fail schema validation above.
-            query = " ".join(TOPIC_QUERIES[topic] for topic in dict.fromkeys(proposal.phrases))
-            key = " " + " ".join(tokens(query)) + " "
-            # No complete submitted/extracted claim may be included in a query.
-            for claim in [text, *claims]:
-                claim_key = " ".join(tokens(claim))
-                if claim_key and " " + claim_key + " " in key:
-                    return None
-            return query
+            return self._query(proposal, text=text, claims=claims)
         except Exception:
             # Provider exceptions can carry input; do not log or propagate them.
             return None

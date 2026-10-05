@@ -236,7 +236,7 @@ def test_application_warms_in_parallel_and_closes_shared_pool(monkeypatch):
     from api.settings import Settings
 
     calls = []
-    barrier = threading.Barrier(3)
+    barrier = threading.Barrier(4)
 
     class Model:
         def __init__(self, **kwargs):
@@ -253,9 +253,22 @@ def test_application_warms_in_parallel_and_closes_shared_pool(monkeypatch):
         )
     )
     with TestClient(app) as client:
-        assert len(calls) == 3
+        assert len(calls) == 4
         assert len({id(config["client"]) for config, _ in calls}) == 1
         assert {config["effort"] for config, _ in calls} == {"none", "low"}
         assert client.get("/health").status_code == 200
         assert not app.state.provider_client.is_closed
     assert app.state.provider_client.is_closed
+
+
+def test_response_must_include_nullable_fields_required_by_sent_strict_schema():
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {"label": {"type": ["string", "null"], "default": None}},
+    }
+    model = adapter(
+        lambda _: httpx.Response(200, json=body(content=[{"type": "output_text", "text": "{}"}]))
+    )
+    with pytest.raises(ProviderUnavailable):
+        model.complete_json(instructions="synthetic", data={}, schema=schema)

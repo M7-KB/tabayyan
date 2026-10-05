@@ -5,6 +5,9 @@
   "$comment": "Structural contract only. Corpus provenance, original-text equality, generated-text isolation, span bounds, evidence-id resolution, and corpus-dependent notice eligibility require runtime gates. Fixtures contain synthetic text and do not establish corpus or Sharia approval. source_ref replaces corpus_id (or glossary_corpus_id) for live results; exactly one reference form is required. Runtime gates must verify current-request origin, source/source_ref equality, and published_answer excerpt linkage. Optional published_answer is a source quote field, not generated prose.",
   "type": "object",
   "properties": {
+    "glossary_link": {
+      "const": "https://islamic-content.com/dictionary"
+    },
     "card_id": {
       "type": "string",
       "minLength": 1
@@ -155,7 +158,7 @@
       ]
     },
     "explanation_ar": {
-      "type": "string",
+      "type": ["string", "null"],
       "minLength": 1
     },
     "explanation_en": {
@@ -1085,11 +1088,14 @@
         ]
       },
       "then": {
-        "properties": {
-          "explanation_en": {
-            "type": "string",
-            "minLength": 1
-          }
+        "if": {
+          "properties": {"explanation_ar": {"type": "null"}}
+        },
+        "then": {
+          "properties": {"explanation_en": {"type": "null"}}
+        },
+        "else": {
+          "properties": {"explanation_en": {"type": "string", "minLength": 1}}
         }
       }
     },

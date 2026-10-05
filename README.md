@@ -902,6 +902,12 @@ request-local Arabic library discovery on `/api/v1/check`. An empty value disabl
 it. Other URLs are refused. The application calls MCP directly; no model-side MCP
 or generated search summary supplies evidence. Server classification runs first;
 personal cases, unavailable classification and term lookups skip discovery.
+An additional structured-model step extracts at most three generic search
+phrases (six words/eighty characters each, 160 characters total), removing
+private names, individual facts and unrelated context. Only this minimized
+query reaches MCP; the full input and extracted claim never serve as a fallback.
+Invalid/unavailable proposals, identifiers, personal-case phrases and proposals
+containing a complete claim skip discovery. Queries remain request-local.
 
 One search selects at most two Arabic library item IDs. Each selected item is
 read in the same request. Only the publisher's bounded `[COMMENTARY]` section,

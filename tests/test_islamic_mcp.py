@@ -278,11 +278,17 @@ def test_check_routes_server_classification_before_discovery(level, kind, status
             return []
 
     connector = Connector()
+
+    class Phrases:
+        def extract(self, **kwargs):
+            return "موضوع عام"
+
     service = CheckService(
         extractor=Extractor(),
         composer=composer_with(gate(), proposal()),
         corpus_version="synthetic",
         connector=connector,
+        search_phrases=Phrases(),
     )
     request = CheckRequest(claims=[{"id": "c1", "text_ar": CLAIM_TEXT}], input_kind=kind)
     service.check(request)

@@ -9,6 +9,7 @@ from pydantic import Field, model_validator
 from api.composer import Composer
 from api.extract import ExtractionError, Extractor, ExtractRequest, StrictObject
 from api.gatekeeper import SourceRequest
+from api.search_phrases import SearchPhraseExtractor
 
 
 class CheckClaim(StrictObject):
@@ -40,10 +41,14 @@ class CheckService:
         composer: Composer,
         corpus_version: str | None,
         connector=None,
+        search_phrases=None,
     ):
         self.extractor, self.composer = extractor, composer
         self.corpus_version = corpus_version
         self.connector = connector
+        self.search_phrases = search_phrases or SearchPhraseExtractor(
+            getattr(extractor, "model", None)
+        )
 
     def check(self, request: CheckRequest, *, source_request: SourceRequest | None = None) -> dict:
         if not request.claims:
@@ -67,8 +72,11 @@ class CheckService:
                     for c in preflight.claims
                 )
             ):
-                query = " ".join(c.text_ar for c in preflight.claims)[:12000]
-                self.connector.discover(query, source_request)
+                query = self.search_phrases.extract(
+                    text=text, claims=[c.text_ar for c in preflight.claims]
+                )
+                if query is not None:
+                    self.connector.discover(query, source_request)
         cards = []
         composer = self.composer.for_request(source_request)
         extractor = copy.copy(self.extractor)

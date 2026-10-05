@@ -4,13 +4,13 @@ Draft text, one short section per slide. Placeholders in **[brackets]** stay unt
 
 ## 1. Problem
 
-A user hears or reads a religious claim and cannot tell whether an approved source supports it. General fact-checkers answer from open web search, so the answer is often confident and unsourced. Short clips, forwarded text and screenshots spread faster than anyone can check them.
+A user hears or reads a religious claim and needs to know whether an approved source supports it, and which source that is. This tool answers only from approved sources and shows them on every card. It does not claim how other tools perform.
 
 ## 2. Solution
 
 Tabayyan checks religious claims in Arabic text, and later links and short audio. It returns one evidence card per claim. Each card has exactly one state:
 
-- **SUPPORTED:** a verbatim quote from the approved corpus, with its visible source.
+- **SUPPORTED:** a verbatim quote from an approved source (the local corpus, or an approved-source result returned in the same request), with its visible source.
 - **DISPUTED:** the positions and their sources, with no ranking.
 - **CANNOT_CONFIRM:** an explicit abstention, a referral to an official fatwa body, and a ready question for the user to ask.
 
@@ -39,7 +39,7 @@ Every card ends with two lines on how to verify it yourself.
 - Model-based claim extraction and level classification, with strict JSON-schema outputs.
 - Lexical retrieval over the private, checksummed Qur'an artifact (SHA-256 checked at startup, fail closed).
 - Scripture-span detector: a verbatim veto first, then near-miss checks, so a misquote is not confirmed.
-- Eval harness over a 12-case brief test set plus red-team cases. A corpus-free **control** arm is reported for comparison only and is never shown to users.
+- Eval harness over the 12-case brief test set and the 18 public safety cases. The red-team set and the corpus-free **control** arm are planned and pending; their reports do not exist yet. The control arm, when run, is for comparison only and is never shown to users.
 
 ## 6. Results
 
@@ -49,7 +49,7 @@ Placeholders until the eval runs. Do not fill these with estimates.
 - Abstention precision and recall: **[pending eval]**
 - Unmatched or unsourced quotes: **[pending eval]**
 - Control arm (plain model, same prompts, no corpus): fabricated-source rate **[pending eval]**, correct-abstention rate **[pending eval]**
-- Live demo check, four chips reviewed by @Nami: **[pending]**
+- Live demo check, four chips reviewed by Nami: **[pending]**
 
 ## 7. Known limits
 

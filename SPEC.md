@@ -145,7 +145,9 @@ This block **supersedes §0.2 items 1–4, the Bayyinat and glossary rows of §0
 
 **(c) MCP open search uses a closed topic vocabulary, not free text.** The router selects at most three `Topic` IDs. The vocabulary is a closed `Literal` in code (`api/search_phrases.py`, `Topic`, 20 values). Each ID maps to a fixed Arabic query string in `TOPIC_QUERIES`. The model never writes query text. The rules are:
 
-- **fail closed by schema:** a value outside the `Topic` Literal fails validation, and that query is dropped. No pattern or regex scrubbing is used, since regex fails open on Arabic names and places. Nothing outside the vocabulary leaves the process;
+- **fail closed by schema:** a value outside the `Topic` Literal fails validation. The whole phrase list is dropped, not just the one value, and no query is sent. No pattern or regex scrubbing is used, since regex fails open on Arabic names and places. Nothing outside the vocabulary leaves the process;
+- **`safe_to_search` gate:** the proposal must have `safe_to_search` true and at least one phrase. Otherwise no query is sent. This flag is advisory only; the closed mapping is the privacy boundary;
+- **claim-overlap check:** the built query is compared, token by token, with the submitted text and every extracted claim. If any complete claim appears in the query, no query is sent. This stops a claim that equals a topic label from leaking as the query;
 - the only strings sent are the `TOPIC_QUERIES` values, which are generic subject labels, so no name, number, place, email or first-person detail can reach an MCP call;
 - never sent for level D (§0.5). The router's topic IDs are discarded when `level` is D or `level_d` is true, before any MCP dispatch;
 - this matches the privacy notice (§0.6): only the fixed topic strings leave.

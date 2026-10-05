@@ -235,6 +235,16 @@ accuracy, the 12-case eval/CONTROL comparison and deployed readiness remain unme
 
 ## Arabic normalizer (normalizer portion of T-402)
 
+R3 adds `corpus.retrieval_normalize.retrieval_token_groups` and
+`retrieval_tokens` (`ar-search-v1`, MIT; no third-party Arabic package). These
+search helpers retain each original ar-v1 word plus possible conjunction,
+preposition and definite-article aliases, leaving at least three Arabic letters.
+Groups let a matcher count one query word once; aliases are not independent
+evidence. Initial letters may belong to the stem, so the original is retained.
+R4/V3 opt in when building their indexes; legacy BM25 behaviour stays unchanged.
+These helpers never rewrite question intent, display text, stored corpus keys,
+checksums or the scripture comparison surface, and cannot authorize quotes.
+
 Python 3.11+, standard library only for the normalizer. Install the API development dependencies
 using the setup below, then run the full Python suite from the repository root:
 

@@ -67,7 +67,7 @@ def test_health_only_is_explicit_environment_opt_in(monkeypatch):
 def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
     blueprint = yaml.safe_load((Path(__file__).resolve().parents[1] / "render.yaml").read_text())
     (service,) = blueprint["services"]
-    assert service["plan"] == "free"
+    assert "plan" not in service  # Owner selects the paid instance in Render.
     assert service["branch"] == "main"
     assert service["autoDeployTrigger"] == "off"
     assert service["healthCheckPath"] == "/health"

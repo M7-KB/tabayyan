@@ -555,7 +555,9 @@ transcription and ingestion routes are not implemented by this PR. Errors use th
 ## First Render API deployment (T-420)
 
 - Service type: Python web service `tabayyan-api-v0`, using [render.yaml](render.yaml).
-- Plan: Free; manual deployment.
+- Plan: owner-selected paid instance through Oct 22 (owner decision 29); manual deployment.
+  The blueprint omits `plan` so it does not pin the service to Free. Confirm the paid
+  instance in Render before applying the blueprint; this repository change does not upgrade it.
 - Branch: `main`.
 - Dashboard env vars: `HEALTH_ONLY=true` (no `OPENAI_API_KEY` required),
   `CORS_ORIGINS=[]` until the web origin exists, `BUILD_SHA` (deployed commit),

@@ -321,10 +321,10 @@ def test_flag_default_off_and_environment_opt_in(monkeypatch):
     assert Settings().private_corpus_path == Path("/etc/secrets/corpus.jsonl")
 
 
-def test_owner_clearance_is_scoped_to_three_sources():
+def test_owner_clearance_is_scoped_to_authorized_sources():
     sources = read_sources(Path("corpus/approved_sources.json"))
     register = read_register(Path("SOURCES.md"))
-    cleared = {"kfc-mushaf", "sahih-bukhari", "dorar-hadith"}
+    cleared = {"kfc-mushaf", "sahih-bukhari", "dorar-hadith", "bayyinat", "jamhara-glossary"}
     for key, source in sources.items():
         assert source["redistribution_allowed"] is False
         assert source["approved_by"] == "pending"
@@ -335,9 +335,14 @@ def test_owner_clearance_is_scoped_to_three_sources():
             assert register[key]["license_url"] == source["license_url"]
             assert register[key]["Owner decision evidence URL"] == source["license_evidence_url"]
             assert "github.com/M7-KB/tabayyan" not in register[key]["license_url"]
-        # Owner decision 2026-10-05 permits matched KFC/Dorar display only;
-        # Bukhari is dropped, and all file redistribution remains disabled.
-        assert source["public_display_allowed"] is (key in {"kfc-mushaf", "dorar-hadith"})
+        # O1/O2 add short Bayyinat/glossary display; Bukhari remains dropped.
+        assert source["public_display_allowed"] is (
+            key in {"kfc-mushaf", "dorar-hadith", "bayyinat", "jamhara-glossary"}
+        )
+        if key in {"bayyinat", "jamhara-glossary"}:
+            assert source["owner_authority_event"] == (
+                "d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f"
+            )
 
 
 def test_private_tree_guard_and_public_manifest():

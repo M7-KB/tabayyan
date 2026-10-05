@@ -1,0 +1,178 @@
+"""Load owner-collected private short fields; no fetching, repairs or AI calls."""
+
+import hashlib
+import json
+import re
+from pathlib import Path
+from urllib.parse import urlsplit
+
+from corpus.validate import ROOT, CorpusValidationError, read_sources
+
+AUTHORITY_EVENT = "d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f"
+_HEX = re.compile(r"[0-9a-f]{64}")
+_CONFIG = {
+    "bayyinat": ("bayyinat.jsonl", "bayenat.net", "short_answer"),
+    "jamhara-glossary": ("glossary.jsonl", "islamic-content.com", "definition_short"),
+}
+_FIELDS = {
+    "bayyinat": {"id", "url", "title", "similar_phrasings", "short_answer", "keywords", "category"},
+    "jamhara-glossary": {"id", "url", "term_ar", "definition_short", "translations"},
+}
+
+
+def _require(condition: bool, reason: str) -> None:
+    if not condition:
+        raise CorpusValidationError(reason)
+
+
+def _object(pairs: list) -> dict:
+    value = {}
+    for key, item in pairs:
+        _require(key not in value, "Private index duplicate JSON key")
+        value[key] = item
+    return value
+
+
+def _read(path: Path, limit: int) -> bytes:
+    with path.open("rb") as stream:
+        value = stream.read(limit + 1)
+    _require(len(value) <= limit, "Private index size limit exceeded")
+    return value
+
+
+def _string(value: object, *, optional: bool = False) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) <= 12000
+        and (optional or bool(value.strip()))
+        and not any(0xD800 <= ord(char) <= 0xDFFF or char == "\x00" for char in value)
+    )
+
+
+def load_short_index(
+    directory: Path,
+    source_id: str,
+    expected_sha256: str,
+    *,
+    sources_path: Path = ROOT / "corpus/approved_sources.json",
+    allow_pending_review: bool = False,
+    owner_review_event: str | None = None,
+) -> tuple[dict, ...]:
+    """Validate the whole file or return nothing; source text is copied unchanged.
+
+    expected_sha256 must come from the owner's trusted handoff, not computed by
+    the caller from the file being loaded. A complete R1 manifest is also required.
+    Scoped display permission is distinct from unrestricted redistribution.
+    Returned records are candidates, not quote/embedded-scripture authorization.
+    """
+    _require(source_id in _CONFIG, "Unknown private short-index source")
+    _require(
+        isinstance(expected_sha256, str) and bool(_HEX.fullmatch(expected_sha256)),
+        "Private index trusted checksum required",
+    )
+    _require(
+        allow_pending_review
+        or (isinstance(owner_review_event, str) and bool(_HEX.fullmatch(owner_review_event))),
+        "Private index owner review required",
+    )
+    name, host, short_field = _CONFIG[source_id]
+    try:
+        source = read_sources(sources_path).get(source_id, {})
+        _require(
+            source.get("license_status") == "confirmed"
+            and source.get("ingestion_allowed") is True
+            and source.get("public_display_allowed") is True
+            and source.get("redistribution_allowed") is False
+            and source.get("owner_authority_event") == AUTHORITY_EVENT,
+            "Private index scoped source permission required",
+        )
+        manifest = json.loads(
+            _read(directory / "manifest.json", 4 * 1024 * 1024), object_pairs_hook=_object
+        )
+        _require(
+            isinstance(manifest, dict)
+            and type(manifest.get("format_version")) is int
+            and manifest.get("format_version") == 1
+            and manifest.get("complete") is True
+            and manifest.get("authority_event") == AUTHORITY_EVENT,
+            "Private index complete owner manifest required",
+        )
+        files = manifest.get("files")
+        _require(isinstance(files, list), "Private index manifest files required")
+        matching = [item for item in files if isinstance(item, dict) and item.get("file") == name]
+        _require(len(matching) == 1, "Private index manifest entry must be unique")
+        entry = matching[0]
+        data = _read(directory / name, 32 * 1024 * 1024)
+        _require(
+            hashlib.sha256(data).hexdigest() == expected_sha256
+            and entry.get("sha256") == expected_sha256
+            and entry.get("source_host") == host
+            and type(entry.get("bytes")) is int
+            and entry["bytes"] == len(data),
+            "Private index checksum or source mismatch",
+        )
+        records = []
+        identities = set()
+        for line in data.decode("utf-8").splitlines():
+            _require(bool(line.strip()), "Private index blank row")
+            row = json.loads(line, object_pairs_hook=_object)
+            _require(
+                isinstance(row, dict) and row.keys() == _FIELDS[source_id],
+                "Private index fields mismatch",
+            )
+            _require(
+                all(_string(row[field]) for field in ("id", "url", short_field)),
+                "Private index required text invalid",
+            )
+            url = urlsplit(row["url"])
+            _require(
+                url.scheme == "https"
+                and url.hostname == host
+                and url.port in {None, 443}
+                and not url.username
+                and not url.password
+                and not url.fragment
+                and not url.query
+                and not any(char.isspace() for char in row["url"])
+                and url.path == row["id"]
+                and "\\" not in url.path
+                and not any(part in {".", ".."} for part in url.path.split("/")),
+                "Private index source URL invalid",
+            )
+            _require(row["id"] not in identities, "Private index duplicate identity")
+            identities.add(row["id"])
+            if source_id == "bayyinat":
+                _require(
+                    _string(row["title"]) and _string(row["category"], optional=True),
+                    "Private index metadata invalid",
+                )
+                for field in ("similar_phrasings", "keywords"):
+                    _require(
+                        isinstance(row[field], list)
+                        and len(row[field]) <= 200
+                        and all(_string(item) for item in row[field]),
+                        "Private index phrase list invalid",
+                    )
+            else:
+                _require(
+                    bool(re.fullmatch(r"/dictionary/word/[^/]+/?", url.path))
+                    and _string(row["term_ar"]),
+                    "Private index glossary URL or term invalid",
+                )
+                translations = row["translations"]
+                _require(
+                    isinstance(translations, dict)
+                    and len(translations) <= 200
+                    and all(_string(key) and _string(value) for key, value in translations.items()),
+                    "Private index translations invalid",
+                )
+            records.append(row)
+        _require(
+            records and type(entry.get("records")) is int and entry["records"] == len(records),
+            "Private index record count mismatch",
+        )
+        return tuple(records)
+    except CorpusValidationError:
+        raise
+    except (OSError, ValueError, UnicodeError, RecursionError, TypeError, AttributeError):
+        raise CorpusValidationError("Private short-index validation failed") from None

@@ -14,7 +14,15 @@ from api.check import CheckRequest
 from api.classifier import LevelClassifier, LevelProposal
 from api.composer import Composer, DecisionProposal
 from api.config import load_config
-from api.diagnostics import record, request_id
+from api.diagnostics import (
+    Summary,
+    configure_logging,
+    final_states,
+    finish,
+    record,
+    request_id,
+    summary,
+)
 from api.discovery import DefaultDiscovery
 from api.errors import install_handlers, response
 from api.extract import (
@@ -41,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
+    configure_logging()
     settings = settings if settings is not None else Settings()
 
     def model_adapter(app, *, router=False):
@@ -127,6 +136,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if stage is None:
             return await call_next(request)
         token = request_id.set(uuid4().hex)
+        summary_token = summary.set(Summary())
         started = monotonic()
         outcome = "unhandled_failure"
         try:
@@ -136,6 +146,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return result
         finally:
             record(stage, outcome, started)
+            finish(outcome, started)
+            summary.reset(summary_token)
             request_id.reset(token)
 
     if not settings.health_only:
@@ -187,11 +199,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     # Store only services/indexes, never request data or result cards.
                     app.state.checker = service
                 result = service.check(request)
-                logger.info(
-                    "Check complete: cards=%d states=%s",
-                    len(result["cards"]),
-                    [card["state"] for card in result["cards"]],
-                )
+                final_states(result["cards"])
                 return result
             except ExtractionError as exc:
                 return response(

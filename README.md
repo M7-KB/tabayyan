@@ -14,7 +14,8 @@ a designed output here, not a failure mode.
 
 ## Text extraction (T-501)
 
-For live failure diagnosis, enable INFO logging for `api.diagnostics`. `/extract`
+API INFO logging is configured automatically. One request summary reports request ID,
+stage durations/outcomes, final states and failure categories; detailed stages use DEBUG. `/extract`
 and `/check` responses include a server-generated `X-Request-ID`, also exposed
 through CORS. Fixed stage/outcome labels and elapsed milliseconds correlate router,
 composition, standalone extraction/classification and route failures. Correlation
@@ -65,9 +66,17 @@ application lifetime and closed on shutdown. Router/extraction calls use explici
 5 seconds. Transient transport failures and HTTP 408/429/500/502/503/504 may retry
 once within that budget. `Retry-After` seconds and HTTP dates are respected; if
 the delay cannot fit, the call fails rather than retrying early. Refusals, incomplete
-responses and invalid JSON/schema output are never retried.
+responses are never retried. Invalid JSON/sent-schema output may retry once inside
+the same budget; transport and output retries share a maximum of two HTTP attempts.
 Retrying a POST after a transport/read failure may bill both attempts. Returned
-JSON is validated against the exact strict schema sent to the provider.
+JSON is validated against the exact strict schema sent to the provider. String/array
+lengths and patterns are removed from that schema and bounded locally before downstream
+validation; enums, numeric safety thresholds and source-span checks remain fail closed.
+
+GPT-6.1 Sol uses low effort if none was configured (no model substitution).
+Startup uses a 16-token warm-up budget instead of the rejected 1-token request.
+HTTP failures log status plus bounded OpenAI error.type/code/param identifiers,
+never error.message or response text.
 
 Startup warms the exact structured schemas with synthetic empty data, in parallel,
 when both models are configured (router and decision schemas, plus the standalone

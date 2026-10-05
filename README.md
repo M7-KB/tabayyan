@@ -955,8 +955,13 @@ Two reporting rules make the output usable as gate evidence:
 - `unmatched_quotes` is reported as `null` with a reason, not as `0`, while there is no corpus to
   match against.
 
-G9 fails today, by design: T03, T10 and T11 carry `g9_countable: false`, so three of the twelve
-brief cases are not covered. The run also fails if a brief case id is removed from the file. A
+T03 and T10 still carry `g9_countable: false`. T11's owner-approved data is countable and
+requires `quran:33:40`, but the synthetic stub has no loaded Quran corpus. In that run T11's
+required-ID assertion and case remain `not_evaluated`, its report excludes it from G9 and
+execution/accuracy metrics, and G9 fails. Approving the input does not establish source
+availability or a successful correction. The Python fixtures assert this for both unavailable
+corpus and validated corpus missing the verse; no synthetic evidence is labelled as 33:40.
+The run also fails if a brief case id is removed from the file. A
 filtered `--only` run reports G9 as `not evaluated` rather than claiming coverage it does not have.
 
 `eval/stubs/contract_pass.json` is a stub card source, not product behaviour: every card starts as

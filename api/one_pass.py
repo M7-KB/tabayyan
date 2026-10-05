@@ -121,6 +121,7 @@ class OnePassCheckService(CheckService):
                 input_kind=route.extracted.input_kind,
                 no_checkable_claim=route.extracted.no_checkable_claim,
                 propose_state=True,
+                quran_refs=route.quran_refs,
             )
             if progress is not None:
                 progress.complete(claim.id, card)

@@ -129,6 +129,7 @@ def test_topic_mapping_is_closed_and_contains_no_provider_strings():
         SearchPhraseProposal.model_json_schema()["properties"]["phrases"]["items"]["enum"]
     )
     assert schema_ids == set(TOPIC_QUERIES)
+    assert len(schema_ids) == 60
     for topic, expected in TOPIC_QUERIES.items():
         value = {"phrases": [topic], "safe_to_search": True}
         actual = SearchPhraseExtractor(Stub(value)).extract(

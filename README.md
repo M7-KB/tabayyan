@@ -1197,3 +1197,23 @@ before the orchestration response is serialized, it snapshots those cards and
 returns known unfinished claims in retryable_results. A generic 503 is used only
 before claims are known. The snapshot is sealed, ignores late results, and exists
 only in request memory; it is never cached or logged.
+
+### Local Quran nominations and question intent
+
+The router's proposed_quran_refs are resolved only by verse key in loader-validated
+local KFC records and added to each claim's candidates, even without BM25 overlap.
+Nominations without lexical overlap have retrieval score zero and never authorize a quote or state: normal
+candidate-ID, source-binding, span, confidence and alignment gates still run.
+Missing or wrong-source nominations are ignored. Level D skips this retrieval.
+For a single question_subject, code retains the full original input, including
+context before and after the question mark. Valid complete spans are never shortened.
+Multiple questions retain complete supplied spans only when those spans cover all
+non-whitespace input context; ambiguous subject-only spans or omitted conditions
+fail closed before retrieval. Punctuation is not used to guess context boundaries. Presuppositions
+still follow the misconception path. Referral ready_to_ask_question_ar includes the
+user's original question, without a generated answer or generic substitute.
+
+The closed MCP Topic Literal has 60 fixed public subject IDs covering the brief's
+Quran, hadith, creed, fiqh, history, ethics, doubts, dialogue and terminology domains.
+The three-topic cap, complete-claim overlap veto and level-D dispatch prohibition
+remain enforced. No free-form model/user query reaches MCP.

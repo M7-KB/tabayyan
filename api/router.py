@@ -53,6 +53,12 @@ and dialogue questions, term for definitions/translations, verse for Quran looku
 hadith for hadith verification, other otherwise. Return the overall restrictive level
 and level_confidence, and level_d true for any personal case or judgment.
 premise restates the question as a checkable claim, without supplying its answer.
+For question_subject, retain the complete question, including interrogatives,
+permission/validity intent, negation, conditions and timing. Never turn a request
+asking whether an act is permitted into a statement that the act occurred.
+Include context before AND after the question mark. For multiple questions, source
+spans must cover all input context, with no omitted non-whitespace gaps; use complete
+questions, never subject-only spans. Do not invent boundaries when context is ambiguous.
 For questions use presupposition or question_subject; assertions retain stated origin.
 For term requests use term_lookup. search_queries contains up to three Topic IDs
 from its closed schema vocabulary, never free text. safe_to_search is false if
@@ -115,6 +121,23 @@ class Router:
                     schema=RouterProposal.model_json_schema(),
                 )
             )
+            questions = [c for c in proposal.claims if c.origin == "question_subject"]
+            if len(questions) > 1:
+                # Punctuation cannot establish which question owns trailing
+                # conditions. Accept separate spans only when none of the user's
+                # context was omitted; reject ambiguous narrowed multi-question output.
+                cursor = 0
+                for question in sorted(questions, key=lambda c: c.span.start):
+                    start, end = question.span.start, question.span.end
+                    if (
+                        start < cursor
+                        or text[cursor:start].strip()
+                        or not any(mark in question.source_text for mark in ("?", "؟"))
+                    ):
+                        raise ValueError("Incomplete question context")
+                    cursor = end
+                if text[cursor:].strip():
+                    raise ValueError("Omitted trailing question context")
             seen = set()
             for claim in proposal.claims:
                 start, end = claim.span.start, claim.span.end
@@ -126,6 +149,14 @@ class Router:
                     raise ValueError("Invalid source span")
                 if claim.origin == "stated" and claim.text_ar != claim.source_text:
                     raise ValueError("Invalid stated claim")
+                if claim.origin == "question_subject":
+                    if len(questions) == 1:
+                        # Preserve all original context, including conditions AFTER
+                        # the question mark. Never shorten a valid complete span.
+                        start, end = 0, len(text)
+                        claim.span = Span(start=start, end=end)
+                        claim.source_text = text
+                    claim.text_ar = claim.source_text
                 identity = (start, end, claim.text_ar)
                 if identity in seen:
                     raise ValueError("Duplicate claim")

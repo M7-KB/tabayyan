@@ -196,6 +196,7 @@ class Composer:
         input_kind: str,
         no_checkable_claim: bool,
         propose_state: bool = False,
+        quran_refs=(),
     ) -> dict:
         detection = self.detector.detect(original)
         findings = [
@@ -266,9 +267,7 @@ class Composer:
                 card["referral"] = {
                     k: r[k] for k in ("body_name_ar", "body_url", "fallback_line_ar")
                 }
-                card["referral"]["ready_to_ask_question_ar"] = (
-                    "هل يمكن توضيح هذه المسألة وبيان مصادرها، وما المعلومات اللازمة للتحقق منها؟"
-                )
+                card["referral"]["ready_to_ask_question_ar"] = "سؤالي: " + original.strip()
             if self.gatekeeper is not None:
                 # Show a hadith's own source/grading even when it is embedded in
                 # an answer excerpt on a disputed or abstaining card.
@@ -321,6 +320,23 @@ class Composer:
         candidates = self.retriever.retrieve(
             claim.text_ar, domain="glossary" if input_kind == "term" else None
         )
+        # Model nominations are lookup keys only, never evidence or confidence.
+        # Resolve solely in already loader-validated local KFC records.
+        if input_kind != "term" and quran_refs:
+            lexical = {r.corpus_id: r for r in self.retriever.candidates(claim.text_ar)}
+            nominated = []
+            for ref in quran_refs:
+                candidate = self.records.get(f"quran:{ref.surah}:{ref.ayah}")
+                if (
+                    candidate is not None
+                    and candidate["domain"] == "quran"
+                    and candidate["source_id"] == "kfc-mushaf"
+                    and candidate["ref"] == {"surah": ref.surah, "ayah": ref.ayah}
+                ):
+                    nominated.append(
+                        lexical.get(candidate["corpus_id"], RetrievalResult(candidate, 0, 0))
+                    )
+            candidates = list({r.corpus_id: r for r in [*nominated, *candidates]}.values())
         if not candidates:
             self._notice(card, near)
             return finish("NO_MATCHING_EVIDENCE")

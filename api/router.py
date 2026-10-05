@@ -53,6 +53,9 @@ and dialogue questions, term for definitions/translations, verse for Quran looku
 hadith for hadith verification, other otherwise. Return the overall restrictive level
 and level_confidence, and level_d true for any personal case or judgment.
 premise restates the question as a checkable claim, without supplying its answer.
+For question_subject, retain the complete question, including interrogatives,
+permission/validity intent, negation, conditions and timing. Never turn a request
+asking whether an act is permitted into a statement that the act occurred.
 For questions use presupposition or question_subject; assertions retain stated origin.
 For term requests use term_lookup. search_queries contains up to three Topic IDs
 from its closed schema vocabulary, never free text. safe_to_search is false if
@@ -126,6 +129,8 @@ class Router:
                     raise ValueError("Invalid source span")
                 if claim.origin == "stated" and claim.text_ar != claim.source_text:
                     raise ValueError("Invalid stated claim")
+                if claim.origin == "question_subject":
+                    claim.text_ar = claim.source_text
                 identity = (start, end, claim.text_ar)
                 if identity in seen:
                     raise ValueError("Duplicate claim")

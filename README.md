@@ -1190,6 +1190,12 @@ only; until a HadeethEnc result returns, hadith claims abstain with referral.
 
 ## Bounded connector spike (2026-10-05)
 
+R4's [private matcher integration](docs/PRIVATE_INDEX_MATCHERS.md) describes
+in-memory Bayyinat/glossary candidate retrieval with BM25 and 1024-dimensional
+OpenAI embeddings. No query/index cache is written, level D does not retrieve,
+and candidate scores never authorize evidence. V3 API wiring, owner source
+handoff and live/held-out retrieval evaluation remain separate requirements.
+
 R2's [private short-index handoff](docs/PRIVATE_SHORT_INDEX_HANDOFF.md) describes
 loading owner-collected Bayyinat/glossary files with trusted SHA-256 values and
 source permission gates. No public source data is added. Loaders do not enable

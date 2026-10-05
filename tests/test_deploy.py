@@ -30,6 +30,7 @@ def test_health_only_without_artifacts_or_config(tmp_path, monkeypatch):
         assert result.status_code == 200
         assert result.json() == {
             "status": "degraded",
+            "review_mode": "disabled",
             "corpus_version": None,
             "corpus_items": 0,
             "corpus_status": "disabled",

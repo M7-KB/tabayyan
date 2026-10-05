@@ -177,15 +177,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict:
+        pending_items = sum(record["approved_by"] == "pending" for record in app.state.corpus)
+        pending_review = pending_items > 0 or (
+            app.state.policy is not None and app.state.policy.approved_by == "pending"
+        )
+        review_mode = (
+            "disabled"
+            if settings.health_only
+            else "owner_accepted_pending_review"
+            if pending_review and settings.allow_pending_review
+            else "pending_review"
+            if pending_review
+            else "reviewed"
+        )
+        configured = (
+            not settings.health_only
+            and app.state.corpus_status == "loaded"
+            and bool(app.state.corpus)
+            and app.state.corpus_error is None
+            and app.state.policy is not None
+            and app.state.tuning is not None
+            and bool(settings.openai_model_extract.strip())
+            and bool(settings.openai_model_reason.strip())
+        )
         return {
-            "status": "degraded",
+            "status": "ok"
+            if configured and (not pending_review or settings.allow_pending_review)
+            else "degraded",
+            "review_mode": review_mode,
             "corpus_version": app.state.corpus_version,
             "corpus_items": len(app.state.corpus),
             "corpus_status": app.state.corpus_status,
             "corpus_error": app.state.corpus_error,
-            "pending_review_items": sum(
-                record["approved_by"] == "pending" for record in app.state.corpus
-            ),
+            "pending_review_items": pending_items,
             "allow_pending_review": settings.allow_pending_review,
             "policy_version": app.state.policy.policy_version if app.state.policy else None,
             "policy_approved_by": app.state.policy.approved_by if app.state.policy else "pending",

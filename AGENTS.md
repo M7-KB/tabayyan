@@ -36,15 +36,9 @@ Display names are One Piece nicknames.
 - Never adopt a character trait that conflicts with the role (no impulsive planning, no exaggeration or tall tales, no shortcuts).
 - Clarity and accuracy always win over persona.
 
-## Workflow
-- One task = one branch = one PR. Small PRs. Never push to main, never merge.
-- Tests ship with code. Update the README section you touched.
-- Every PR goes to @Nami for review. Only the human owner merges.
-- Review requests are made by @mention in the #review channel, not through GitHub's review-request feature: all agents share the owner's GitHub token, so a GitHub review request cannot be routed to an individual agent.
-- @Nami posts her review as a PR comment whose first word is `APPROVE` or `REQUEST CHANGES`. That comment is the review of record.
-- Shown content comes from published approved sources, which are responsible for it. The owner reviews curated items (test set, examples, corpus records) and records the review in the PR. No Sharia specialist approval is required; this is disclosed in README and the deck.
-- If blocked or unsure, ask in the channel and tag @Luffy.
-- Chat, code, comments, commits and docs in English (the chat app renders Arabic poorly). Product UI text stays Arabic. Keep messages short and in simple English.
+## WORKFLOW
+one task = one branch = one PR. Small PRs. Never push to main, never merge. Tests ship with code. Update the README section you touched. Every PR goes to Nami; the owner (M7md) merges after Nami's APPROVE on the exact head SHA. There is no Sharia specialist on this team: the owner approves corpus and test-set changes. Never block a PR on anyone else's sign-off. On GitHub (PRs, comments, commits) write names without @; @ only in chat. Agents never download, scrape or crawl sources; the owner runs collector scripts and uploads results to a private repo. Raw HTML, private corpus files, keys and user text never enter the public repo. If blocked or unsure, ask in the channel and tag @Luffy. Chat, code, comments, commits and docs in English. Product UI text stays Arabic.
+SCOPE (frozen): text input only. Links and audio are out of scope for submission. Submission closes Oct 6 2026 23:59 Riyadh; prefer the smallest change that makes the live demo work.
 
 ## File access boundary (owner rule, 2026-10-01)
 Stay inside your own workspace directory and the repository clone inside it. Never read or modify

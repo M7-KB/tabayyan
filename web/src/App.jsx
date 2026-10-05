@@ -90,12 +90,15 @@ export default function App() {
   }
 
   // Sends the text as the user wrote it. The server extracts the claims and answers with one card per claim.
-  async function runCheck(originalText) {
+  async function runCheck(originalText, { retainResults = false } = {}) {
     cancelPending()
     setRecheck(null)
-    setCheck({ status: 'loading', submittedText: originalText })
+    const retained = retainResults ? {
+      cards: check?.cards, retryableResults: check?.retryableResults,
+    } : {}
+    setCheck({ ...retained, status: 'loading', submittedText: originalText })
     const attempt = beginAttempt(CHECK_DEADLINE_MS, () => {
-      setCheck({ status: 'error', submittedText: originalText, errorCode: 'TIMEOUT' })
+      setCheck({ ...retained, status: 'error', submittedText: originalText, errorCode: 'TIMEOUT' })
     })
     try {
       const request = buildCheckRequest({ originalText })
@@ -108,7 +111,7 @@ export default function App() {
       }
     } catch (error) {
       if (attemptRef.current === attempt) {
-        setCheck({ status: 'error', submittedText: originalText, errorCode: failureCodeOf(attempt, error) })
+        setCheck({ ...retained, status: 'error', submittedText: originalText, errorCode: failureCodeOf(attempt, error) })
       }
     } finally {
       clearTimeout(attempt.timer)
@@ -147,7 +150,9 @@ export default function App() {
   function cancelCheck() {
     cancelPending()
     setRecheck(null)
-    setCheck(null)
+    setCheck((prev) => prev?.cards || prev?.retryableResults
+      ? { ...prev, status: 'done', errorCode: undefined }
+      : null)
   }
 
   function focusInput() {
@@ -219,7 +224,7 @@ export default function App() {
             errorCode={check.errorCode}
             recheck={recheck}
             onRecheck={recheckCard}
-            onRetry={() => runCheck(check.submittedText)}
+            onRetry={() => runCheck(check.submittedText, { retainResults: true })}
             onEdit={focusInput}
             onCancel={cancelCheck}
           />

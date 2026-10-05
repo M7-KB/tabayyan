@@ -573,7 +573,9 @@ The response may include `retryable_results` alongside validated `cards`. Each u
 `claim_id`, `text_ar`, `code: CHECK_INCOMPLETE`, `retryable: true`, and `message_ar`. The client validates
 that shape and uses fixed Arabic UI copy rather than displaying server diagnostic text. Completed cards
 remain visible; unfinished claims appear in a separate status list with retry and edit actions. Retry
-resubmits the original input. HTTP 503 `CHECK_INCOMPLETE` uses the same incomplete message. If a card
+resubmits the original input, keeping completed cards and their open edits mounted during loading,
+failure, timeout and cancellation. Only a successful response replaces the prior results.
+HTTP 503 `CHECK_INCOMPLETE` uses the same incomplete message. If a card
 re-check is incomplete, its previous card and edited draft stay visible until a complete retry succeeds.
 The deadline ends loading even when the transport ignores abort. A newer attempt replaces an older one, and a late response from a timed-out, cancelled
 or superseded attempt is dropped. Shared JSON posting and error codes live in `web/src/api/http.js`;

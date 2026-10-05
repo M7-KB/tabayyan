@@ -295,6 +295,46 @@ describe('one-page flow: client deadline', () => {
     expect(screen.getByLabelText(strings.textLabel)).toHaveValue('نص طويل')
   })
 
+  it.each(['failure', 'timeout', 'cancel'])('retains completed cards and open drafts through a partial retry: %s', async (outcome) => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) })
+    const retry = deferred()
+    let calls = 0
+    stubApi({ check: () => ++calls === 1
+      ? jsonResponse(200, { cards: [card('c1')], retryable_results: [
+        { claim_id: 'c2', text_ar: 'نص تجريبي', code: 'CHECK_INCOMPLETE', retryable: true, message_ar: 'ignored' },
+      ] })
+      : retry.promise })
+    render(<App />)
+    await submitText(user, 'النص الأصلي')
+    const completed = await screen.findByRole('article')
+    await user.click(within(completed).getByRole('button', { name: strings.understoodEdit }))
+    const editor = within(completed).getByLabelText(strings.understoodEditLabel)
+    await user.clear(editor)
+    await user.type(editor, 'صياغة جديدة')
+    await user.click(screen.getByRole('button', { name: strings.resultsRetry }))
+    expect(screen.getByRole('article')).toBe(completed)
+    expect(editor).toHaveValue('صياغة جديدة')
+    expect(screen.getByText('نص تجريبي')).toBeInTheDocument()
+
+    if (outcome === 'failure') {
+      await act(async () => retry.resolve(jsonResponse(503, { error: { code: 'CHECK_INCOMPLETE' } })))
+    } else if (outcome === 'timeout') {
+      await act(async () => { vi.advanceTimersByTime(40_000) })
+    } else {
+      await user.click(screen.getByRole('button', { name: strings.checkCancel }))
+    }
+    expect(screen.getByRole('article')).toBe(completed)
+    expect(screen.getByLabelText(strings.understoodEditLabel)).toBe(editor)
+    expect(editor).toHaveValue('صياغة جديدة')
+    expect(screen.getByRole('button', { name: strings.resultsRetry })).toBeInTheDocument()
+    expect(screen.getByLabelText(strings.textLabel)).toHaveValue('النص الأصلي')
+    if (outcome !== 'failure') {
+      await act(async () => retry.resolve(jsonResponse(200, { cards: [card('replacement')] })))
+      expect(screen.getByRole('article')).toBe(completed)
+      expect(editor).toHaveValue('صياغة جديدة')
+    }
+  })
+
   it('retries the original text after a partial response and keeps completed cards visible', async () => {
     const user = userEvent.setup()
     const answers = [

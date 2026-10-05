@@ -13,7 +13,7 @@ export function UnderstoodClaim({ claim, recheck = null, onRecheck }) {
   const checking = recheck?.status === 'checking'
 
   function startEdit() {
-    setDraft(claim.text_original)
+    setDraft(claim.text_ar)
     setEditing(true)
   }
 
@@ -30,8 +30,8 @@ export function UnderstoodClaim({ claim, recheck = null, onRecheck }) {
 
       {!editing && (
         <>
-          <blockquote lang={claim.lang} dir="auto">
-            {claim.text_original}
+          <blockquote lang="ar" dir="rtl">
+            {claim.text_ar}
           </blockquote>
           {claim.time_span && (
             <p className="timestamp">

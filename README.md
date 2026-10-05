@@ -536,7 +536,7 @@ Ajv adds a runtime dependency to the web bundle. Arabic error copy is provisiona
 
 `web/src/App.jsx` shows the input on top and the results below it. There is no claims page. A submit sends the
 text once to `/check`. Each card starts with «فهمنا سؤالك هكذا:» (`UnderstoodClaim.jsx`), which shows how the
-text was understood. The user can edit that line and re-check only that card, in place. The edited text is sent
+text was understood: `claim.text_ar`, the checkable premise, not the user's own wording. The user can edit that line and re-check only that card, in place. The edited text is sent
 as `original_text`, and the card is replaced by the returned cards. A failed re-check keeps the card and the
 draft. A re-check that returns no cards is `PIPELINE_DEGRADED`.
 
@@ -544,6 +544,10 @@ While a check runs, `web/src/components/CheckProgress.jsx` shows three stages an
 advance on a timer, because `/check` answers once. They are indicative and are not measured progress, and the
 screen says so. Cancel drops the request and keeps the input text. A published-answer card shows the source
 host, the excerpt, and the link «اقرأ الجواب كاملاً».
+
+A term card with `glossary_link` (SPEC 0.11 O2) shows a link-only block: a link to the glossary and no copied
+definition. A card with `explanation_ar: null` (SPEC 0.11 O3) hides the explanation block; the state, source
+text, referral and «how to verify» remain.
 
 The extract step (`web/src/api/extract.js`) is no longer called by the app. `EXTRACT_DEADLINE_MS` in
 `config/api.js` is unused for the same reason. Both are kept until the server's one-pass `/check` is live; then
@@ -563,6 +567,7 @@ claims. That guard moves to the server's one-pass `/check`.
 Tests: `web/src/__tests__/one-page-flow.test.jsx` covers submit, layout, the understood line, staged progress,
 cancel, late responses, the empty, error and network states, edit and re-check in place, the empty-edit guard,
 the client deadline and the preview banner. `check.test.js` covers the request shape and card validation.
+`card.test.jsx` covers the glossary link-only fallback and the dropped explanation.
 `extract.test.js` and `health.test.js` cover their own clients. All stub `fetch` per endpoint.
 
 Live check on 2026-10-05 (before this change): `POST /api/v1/extract` and `POST /api/v1/check` on the Render API

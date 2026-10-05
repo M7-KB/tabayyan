@@ -127,6 +127,10 @@ export const strings = {
   understoodRecheck: 'إعادة التحقق',
   understoodCancel: 'إلغاء التعديل',
   understoodEmpty: 'اكتب الادعاء أو السؤال قبل إعادة التحقق.',
+  // Term questions resolve to the glossary link only (SPEC §0.11 O2): no copied definition is shown here.
+  glossaryHeading: 'المصطلح في المعجم',
+  glossaryBody: 'لا نعرض تعريفاً منقولاً هنا. يمكنك الاطلاع على تعريف المصطلح في المعجم مباشرة.',
+  glossaryLink: 'فتح المعجم (يفتح في نافذة جديدة)',
   recheckLoading: 'جارٍ إعادة التحقق من هذا الادعاء…',
   checkStagesLabel: 'مراحل التحقق',
   checkStages: [

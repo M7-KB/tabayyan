@@ -54,6 +54,18 @@ export function ClaimCard({ card, recheck = null, onRecheck }) {
         </section>
       )}
 
+      {card.glossary_link && (
+        <section className="term-block glossary-link">
+          <h3>{strings.glossaryHeading}</h3>
+          <p>{strings.glossaryBody}</p>
+          <p>
+            <a href={card.glossary_link} target="_blank" rel="noopener noreferrer">
+              {strings.glossaryLink}
+            </a>
+          </p>
+        </section>
+      )}
+
       {card.referral && <ReferralBlock referral={card.referral} />}
 
       <details className="verify">

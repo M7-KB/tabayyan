@@ -3,7 +3,6 @@ services:
   - type: web
     name: tabayyan-api-v0
     runtime: python
-    plan: free
     repo: https://github.com/M7-KB/tabayyan
     branch: main
     autoDeployTrigger: "off"

@@ -575,8 +575,19 @@ The extract step (`web/src/api/extract.js`) is no longer called by the app. `EXT
 they can be removed.
 
 Error states each give a next step: check errors have retry and edit actions, and `PIPELINE_DEGRADED` never shows
-a partial result. Each check and re-check has a client deadline (`CHECK_DEADLINE_MS` 90 s in `config/api.js`)
-and shows `TIMEOUT` when it passes. A newer attempt replaces an older one, and a late response from a cancelled
+a partial result. Each check and re-check has a client deadline (`CHECK_DEADLINE_MS` 40 s in `config/api.js`,
+owner O4, event `d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f`).
+At that deadline it shows the retryable message «لم يكتمل التحقق، حاول مرة أخرى» and keeps the input or
+edited draft. An unfinished request is not labelled CANNOT_CONFIRM and does not imply missing evidence.
+The response may include `retryable_results` alongside validated `cards`. Each unfinished item has
+`claim_id`, `text_ar`, `code: CHECK_INCOMPLETE`, `retryable: true`, and `message_ar`. The client validates
+that shape and uses fixed Arabic UI copy rather than displaying server diagnostic text. Completed cards
+remain visible; unfinished claims appear in a separate status list with retry and edit actions. Retry
+resubmits the original input, keeping completed cards and their open edits mounted during loading,
+failure, timeout and cancellation. Only a successful response replaces the prior results.
+HTTP 503 `CHECK_INCOMPLETE` uses the same incomplete message. If a card
+re-check is incomplete, its previous card and edited draft stay visible until a complete retry succeeds.
+The deadline ends loading even when the transport ignores abort. A newer attempt replaces an older one, and a late response from a timed-out, cancelled
 or superseded attempt is dropped. Shared JSON posting and error codes live in `web/src/api/http.js`;
 `CheckError` is an alias of its `ApiError`. The API origin comes from `VITE_API_BASE_URL`
 (`web/src/config/api.js`), with no trailing slash. An empty value means same-origin requests. The preview banner

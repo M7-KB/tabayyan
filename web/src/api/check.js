@@ -29,12 +29,28 @@ export function isValidCard(card) {
   return validateCardSchema(card) === true
 }
 
+// Incomplete work is operational status, never a fourth evidence-card state.
+function isValidRetryableResult(result) {
+  return result && typeof result === 'object' &&
+    typeof result.claim_id === 'string' && result.claim_id.trim().length > 0 &&
+    typeof result.text_ar === 'string' && result.text_ar.trim().length > 0 &&
+    result.code === 'CHECK_INCOMPLETE' && result.retryable === true &&
+    typeof result.message_ar === 'string'
+}
+
 export function parseCheckResponse(body) {
   if (!body || typeof body !== 'object' || !Array.isArray(body.cards)) {
     throw new CheckError('PIPELINE_DEGRADED')
   }
   if (!body.cards.every(isValidCard)) {
     throw new CheckError('PIPELINE_DEGRADED')
+  }
+  if (body.retryable_results !== undefined) {
+    if (!Array.isArray(body.retryable_results) || !body.retryable_results.every(isValidRetryableResult)) {
+      throw new CheckError('PIPELINE_DEGRADED')
+    }
+    const ids = [...body.cards.map((card) => card.claim.id), ...body.retryable_results.map((item) => item.claim_id)]
+    if (new Set(ids).size !== ids.length) throw new CheckError('PIPELINE_DEGRADED')
   }
   return body
 }

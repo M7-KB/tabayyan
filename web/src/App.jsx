@@ -57,7 +57,7 @@ export default function App() {
     )
   }
 
-  function beginAttempt(deadlineMs) {
+  function beginAttempt(deadlineMs, onTimeout) {
     attemptRef.current?.cancel()
     const controller = new AbortController()
     const attempt = {
@@ -66,6 +66,10 @@ export default function App() {
       timer: setTimeout(() => {
         attempt.timedOut = true
         controller.abort()
+        if (attemptRef.current === attempt) {
+          attemptRef.current = null
+          onTimeout()
+        }
       }, deadlineMs),
       cancel() {
         clearTimeout(attempt.timer)
@@ -86,20 +90,28 @@ export default function App() {
   }
 
   // Sends the text as the user wrote it. The server extracts the claims and answers with one card per claim.
-  async function runCheck(originalText) {
+  async function runCheck(originalText, { retainResults = false } = {}) {
     cancelPending()
     setRecheck(null)
-    setCheck({ status: 'loading', submittedText: originalText })
-    const attempt = beginAttempt(CHECK_DEADLINE_MS)
+    const retained = retainResults ? {
+      cards: check?.cards, retryableResults: check?.retryableResults,
+    } : {}
+    setCheck({ ...retained, status: 'loading', submittedText: originalText })
+    const attempt = beginAttempt(CHECK_DEADLINE_MS, () => {
+      setCheck({ ...retained, status: 'error', submittedText: originalText, errorCode: 'TIMEOUT' })
+    })
     try {
       const request = buildCheckRequest({ originalText })
       const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
       if (attemptRef.current === attempt) {
-        setCheck({ status: 'done', submittedText: originalText, cards: result.cards })
+        setCheck({
+          status: 'done', submittedText: originalText, cards: result.cards,
+          retryableResults: result.retryable_results ?? [],
+        })
       }
     } catch (error) {
       if (attemptRef.current === attempt) {
-        setCheck({ status: 'error', submittedText: originalText, errorCode: failureCodeOf(attempt, error) })
+        setCheck({ ...retained, status: 'error', submittedText: originalText, errorCode: failureCodeOf(attempt, error) })
       }
     } finally {
       clearTimeout(attempt.timer)
@@ -112,10 +124,13 @@ export default function App() {
     if (check?.status !== 'done' || text.trim().length === 0) return false
     cancelPending()
     setRecheck({ index, status: 'loading' })
-    const attempt = beginAttempt(CHECK_DEADLINE_MS)
+    const attempt = beginAttempt(CHECK_DEADLINE_MS, () => {
+      setRecheck({ index, status: 'error', errorCode: 'TIMEOUT' })
+    })
     try {
       const request = buildCheckRequest({ originalText: text })
       const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
+      if (result.retryable_results?.length) throw new ApiError('CHECK_INCOMPLETE')
       if (result.cards.length === 0) throw new ApiError('PIPELINE_DEGRADED')
       if (attemptRef.current !== attempt) return false
       setCheck((prev) => ({ ...prev, cards: replaceCard(prev.cards, index, result.cards) }))
@@ -135,7 +150,9 @@ export default function App() {
   function cancelCheck() {
     cancelPending()
     setRecheck(null)
-    setCheck(null)
+    setCheck((prev) => prev?.cards || prev?.retryableResults
+      ? { ...prev, status: 'done', errorCode: undefined }
+      : null)
   }
 
   function focusInput() {
@@ -203,10 +220,11 @@ export default function App() {
           <Results
             status={check.status}
             cards={check.cards}
+            retryableResults={check.retryableResults}
             errorCode={check.errorCode}
             recheck={recheck}
             onRecheck={recheckCard}
-            onRetry={() => runCheck(check.submittedText)}
+            onRetry={() => runCheck(check.submittedText, { retainResults: true })}
             onEdit={focusInput}
             onCancel={cancelCheck}
           />

@@ -103,7 +103,7 @@ export const strings = {
   devPreviewBanner: 'بيانات تجريبية للعرض فقط، ولا تمثل مصدراً معتمداً.',
 
   // Results and check errors (T-504). Each error gives a next step. Provisional copy: owner review.
-  resultsLoading: 'جارٍ التحقق من الادعاءات… قد يستغرق ذلك دقيقة.',
+  resultsLoading: 'جارٍ التحقق من الادعاءات… يرجى الانتظار.',
   resultsEmpty: 'لم تُرجع الخدمة أي بطاقة لهذا النص. عدّل النص وحاول مرة أخرى.',
   resultsEditText: 'تعديل النص',
   resultsRetry: 'حاول مرة أخرى',
@@ -115,7 +115,8 @@ export const strings = {
     PIPELINE_DEGRADED: 'تعذّر إكمال التحقق الآن، ولن نعرض نتيجة غير مكتملة. حاول مرة أخرى بعد قليل.',
     RATE_LIMITED: 'طلبات كثيرة في وقت قصير. انتظر دقيقة ثم حاول مرة أخرى.',
     NETWORK: 'تعذّر الاتصال بالخدمة. تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى.',
-    TIMEOUT: 'استغرق الطلب وقتاً أطول من المتوقع. نصّك وادعاءاتك محفوظة، حاول مرة أخرى.',
+    TIMEOUT: 'لم يكتمل التحقق، حاول مرة أخرى',
+    CHECK_INCOMPLETE: 'لم يكتمل التحقق، حاول مرة أخرى',
     UNKNOWN: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
   },
 

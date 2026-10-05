@@ -112,76 +112,50 @@ class Router:
                 ),
                 floor,
             )
-        try:
-            started = monotonic()
-            proposal = RouterProposal.model_validate(
-                self.model.complete_json(
-                    instructions=INSTRUCTIONS,
-                    data={"text": text},
-                    schema=RouterProposal.model_json_schema(),
+        started = monotonic()
+        proposal = None
+        for attempt in range(2):
+            try:
+                proposal = RouterProposal.model_validate(
+                    self.model.complete_json(
+                        instructions=INSTRUCTIONS,
+                        data={"text": text},
+                        schema=RouterProposal.model_json_schema(),
+                    )
                 )
-            )
-            questions = [c for c in proposal.claims if c.origin == "question_subject"]
-            if len(questions) > 1:
-                # Punctuation cannot establish which question owns trailing
-                # conditions. Accept separate spans only when none of the user's
-                # context was omitted; reject ambiguous narrowed multi-question output.
-                cursor = 0
-                for question in sorted(questions, key=lambda c: c.span.start):
-                    start, end = question.span.start, question.span.end
-                    if (
-                        start < cursor
-                        or text[cursor:start].strip()
-                        or not any(mark in question.source_text for mark in ("?", "؟"))
-                    ):
-                        raise ValueError("Incomplete question context")
-                    cursor = end
-                if text[cursor:].strip():
-                    raise ValueError("Omitted trailing question context")
-            seen = set()
-            for claim in proposal.claims:
-                start, end = claim.span.start, claim.span.end
-                if (
-                    not 0 <= start < end <= len(text)
-                    or text[start:end] != claim.source_text
-                    or not claim.text_ar.strip()
-                ):
-                    raise ValueError("Invalid source span")
-                if claim.origin == "stated" and claim.text_ar != claim.source_text:
-                    raise ValueError("Invalid stated claim")
-                if claim.origin == "question_subject":
-                    if len(questions) == 1:
-                        # Preserve all original context, including conditions AFTER
-                        # the question mark. Never shorten a valid complete span.
-                        start, end = 0, len(text)
-                        claim.span = Span(start=start, end=end)
-                        claim.source_text = text
-                    claim.text_ar = claim.source_text
-                identity = (start, end, claim.text_ar)
-                if identity in seen:
-                    raise ValueError("Duplicate claim")
-                seen.add(identity)
-            if proposal.input_kind == "term" and (
-                len(proposal.claims) != 1 or proposal.claims[0].origin != "term_lookup"
-            ):
-                raise ValueError("Invalid term route")
-            if (
-                proposal.input_kind != "term"
-                and any(c.origin == "term_lookup" for c in proposal.claims)
-                and not all(c.origin == "term_lookup" for c in proposal.claims)
-            ):
-                raise ValueError("Inconsistent unresolved subjects")
-        except ProviderUnavailable as exc:
-            record("router_validation", exc.category, started)
-            code = (
-                "CHECK_INCOMPLETE"
-                if exc.category in {"timeout", "retry_budget"}
-                else "PIPELINE_DEGRADED"
-            )
-            raise ExtractionError(503, code) from None
-        except Exception:
-            record("router_validation", "invalid_proposal", started)
-            raise ExtractionError(503, "PIPELINE_DEGRADED") from None
+            except ProviderUnavailable as exc:
+                record("router_validation", exc.category, started)
+                code = (
+                    "CHECK_INCOMPLETE"
+                    if exc.category in {"timeout", "retry_budget"}
+                    else "PIPELINE_DEGRADED"
+                )
+                raise ExtractionError(503, code) from None
+            except Exception:
+                record("router_validation", "invalid_proposal", started)
+                raise ExtractionError(503, "PIPELINE_DEGRADED") from None
+            try:
+                _relocate_spans(text, proposal)
+            except _SourceAbsent:
+                # A claim whose source text is not in the input is ungrounded
+                # model text; discard it and keep the whole input instead.
+                record("router_validation", "source_absent", started)
+                proposal = _whole_input_fallback(text, proposal)
+                record("router_validation", "fallback_whole_input", started)
+                break
+            try:
+                _validate_claims(text, proposal)
+                break
+            except ValueError:
+                # Model offsets and span shapes are unreliable; shape problems must
+                # never fail the request. Retry once, then keep the whole input as
+                # one claim so no user context is dropped. Downstream gates still
+                # decide evidence, state and referral.
+                record("router_validation", "invalid_proposal", started)
+                if attempt == 0:
+                    continue
+                proposal = _whole_input_fallback(text, proposal)
+                record("router_validation", "fallback_whole_input", started)
         record("router_validation", "validated", started)
         if proposal.detected_lang == "unsupported":
             raise ExtractionError(422, "TEXT_NOT_SUPPORTED_LANG")
@@ -242,3 +216,103 @@ class Router:
             () if restricted else tuple(proposal.proposed_quran_refs),
             proposal.safe_to_search and not restricted,
         )
+
+
+class _SourceAbsent(Exception):
+    """A proposed source_text does not occur in the input."""
+
+
+def _relocate_spans(text: str, proposal: RouterProposal) -> None:
+    """Repair model character offsets by locating source_text in the input.
+
+    Models count code points unreliably, especially in Arabic. A verbatim
+    source_text that exists in the input keeps its text and gets a corrected
+    span. Any source_text absent from the input means the claim is ungrounded,
+    whatever its origin, and the caller replaces the proposal.
+    """
+    for claim in proposal.claims:
+        start, end = claim.span.start, claim.span.end
+        if 0 <= start < end <= len(text) and text[start:end] == claim.source_text:
+            continue
+        found = text.find(claim.source_text)
+        if found < 0:
+            raise _SourceAbsent
+        claim.span = Span(start=found, end=found + len(claim.source_text))
+
+
+def _validate_claims(text: str, proposal: RouterProposal) -> None:
+    questions = [c for c in proposal.claims if c.origin == "question_subject"]
+    if len(questions) > 1:
+        # Punctuation cannot establish which question owns trailing
+        # conditions. Accept separate spans only when none of the user's
+        # context was omitted; reject ambiguous narrowed multi-question output.
+        cursor = 0
+        for question in sorted(questions, key=lambda c: c.span.start):
+            start, end = question.span.start, question.span.end
+            if (
+                start < cursor
+                or text[cursor:start].strip()
+                or not any(mark in question.source_text for mark in ("?", "؟"))
+            ):
+                raise ValueError("Incomplete question context")
+            cursor = end
+        if text[cursor:].strip():
+            raise ValueError("Omitted trailing question context")
+    seen = set()
+    for claim in proposal.claims:
+        start, end = claim.span.start, claim.span.end
+        if (
+            not 0 <= start < end <= len(text)
+            or text[start:end] != claim.source_text
+            or not claim.text_ar.strip()
+        ):
+            raise ValueError("Invalid source span")
+        if claim.origin == "stated" and claim.text_ar != claim.source_text:
+            raise ValueError("Invalid stated claim")
+        if claim.origin == "question_subject":
+            if len(questions) == 1:
+                # Preserve all original context, including conditions AFTER
+                # the question mark. Never shorten a valid complete span.
+                start, end = 0, len(text)
+                claim.span = Span(start=start, end=end)
+                claim.source_text = text
+            claim.text_ar = claim.source_text
+        identity = (start, end, claim.text_ar)
+        if identity in seen:
+            raise ValueError("Duplicate claim")
+        seen.add(identity)
+    if proposal.input_kind == "term" and (
+        len(proposal.claims) != 1 or proposal.claims[0].origin != "term_lookup"
+    ):
+        raise ValueError("Invalid term route")
+    if (
+        proposal.input_kind != "term"
+        and any(c.origin == "term_lookup" for c in proposal.claims)
+        and not all(c.origin == "term_lookup" for c in proposal.claims)
+    ):
+        raise ValueError("Inconsistent unresolved subjects")
+
+
+def _whole_input_fallback(text: str, proposal: RouterProposal) -> RouterProposal:
+    """One claim over the complete input; level, kind and nominations are kept.
+
+    Term routes keep their lookup origin so the glossary path still applies.
+    """
+    if proposal.input_kind == "term":
+        origin = "term_lookup"
+    elif any(mark in text for mark in ("?", "؟")):
+        origin = "question_subject"
+    else:
+        origin = "stated"
+    return proposal.model_copy(
+        update={
+            "claims": [
+                ClaimProposal(
+                    text_ar=text,
+                    source_text=text,
+                    span=Span(start=0, end=len(text)),
+                    origin=origin,
+                )
+            ]
+        }
+    )

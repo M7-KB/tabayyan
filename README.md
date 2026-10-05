@@ -111,6 +111,15 @@ source order. The composer selects candidate IDs and proposes a state; the exist
 policy, provenance, scripture-span, grading, separation and alignment gates may
 downgrade it, never upgrade it. Source text is copied by ID, never from model output.
 
+Router claim spans are repaired, not trusted: a `source_text` that exists in the input
+is located by search and its span corrected; a `source_text` absent from the input
+marks the claim as ungrounded model text, whatever its origin, and the whole input
+replaces it as one claim. Remaining shape problems (omitted multi-question context,
+duplicate or mismatched claims, inconsistent term routing) get one model retry, then
+fall back to one claim over the complete input (`router_validation`
+`fallback_whole_input`). Shape problems never fail the request; only an unparseable
+or unavailable provider response does. Evidence, state and referral gates are unchanged.
+
 Legacy `claims` requests remain accepted and are joined for the single router call;
 when `original_text` is present it is authoritative. Client levels and deterministic
 personal-case cues in client claims can only restrict the result. An entire request

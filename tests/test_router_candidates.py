@@ -5,7 +5,6 @@ import json
 import pytest
 
 from api.check import CheckRequest
-from api.extract import ExtractionError
 from api.router import QuranRef
 from tests.test_composer import TEXT, claim, engine, proposal
 from tests.test_one_pass import route_proposal, service
@@ -217,7 +216,8 @@ def test_multiple_questions_fail_closed_when_context_is_omitted(subjects_only):
             }
         )
     checker, _, composer = service(routed)
-    with pytest.raises(ExtractionError) as error:
-        checker.check(CheckRequest(original_text=text))
-    assert error.value.code == "PIPELINE_DEGRADED"
-    assert not composer.calls
+    result = checker.check(CheckRequest(original_text=text))
+    # Omitted context never drops the request: the whole input becomes one
+    # claim, so both questions and their conditions survive to the gates.
+    assert len(result["cards"]) == 1
+    assert result["cards"][0]["claim"]["text_ar"] == text

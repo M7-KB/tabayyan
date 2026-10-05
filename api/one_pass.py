@@ -6,7 +6,7 @@ from time import monotonic
 
 from api.check import CheckRequest, CheckService
 from api.classifier import rule_level
-from api.deadline import request_deadline
+from api.deadline import request_deadline, request_progress
 from api.diagnostics import record
 from api.extract import ExtractionError
 from api.gatekeeper import SourceRequest
@@ -78,6 +78,9 @@ class OnePassCheckService(CheckService):
         ]
         if not claims:
             raise ExtractionError(400, "NO_CLAIMS")
+        progress = request_progress.get()
+        if progress is not None:
+            progress.register(self._response([]), [unfinished(claim) for claim in claims])
         restricted = any(c.level == "D" for c in claims)
         started = monotonic()
         source_request = source_request or SourceRequest()
@@ -111,7 +114,7 @@ class OnePassCheckService(CheckService):
         def compose(claim):
             if self._remaining() <= 0:
                 raise ProviderUnavailable("timeout")
-            return composer.compose(
+            card = composer.compose(
                 claim,
                 original=text,
                 lang=route.extracted.detected_lang,
@@ -119,6 +122,9 @@ class OnePassCheckService(CheckService):
                 no_checkable_claim=route.extracted.no_checkable_claim,
                 propose_state=True,
             )
+            if progress is not None:
+                progress.complete(claim.id, card)
+            return card
 
         if restricted:
             # Restrict the whole request: no retrieval/composition model call, even

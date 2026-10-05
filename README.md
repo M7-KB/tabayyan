@@ -1190,3 +1190,10 @@ CHECK_INCOMPLETE. The client deadline is about 40 seconds.
 Running synchronous operations cannot be forcibly interrupted; the response stops
 waiting at the deadline and cancels queued work. Provider calls inherit the absolute
 deadline, and late worker results are discarded without persistence.
+
+The HTTP deadline owner shares request-local progress with claim workers. Each
+validated card is registered immediately on completion. If the outer timer wins
+before the orchestration response is serialized, it snapshots those cards and
+returns known unfinished claims in retryable_results. A generic 503 is used only
+before claims are known. The snapshot is sealed, ignores late results, and exists
+only in request memory; it is never cached or logged.

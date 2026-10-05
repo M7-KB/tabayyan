@@ -3,12 +3,17 @@ import { ClaimCard } from './card/ClaimCard.jsx'
 
 // Result area for one check. Loading, error and empty states each give a next step (agent brief).
 // `status` is 'loading' | 'error' | 'done'. Error copy is looked up by the server's error code.
-export function Results({ status, cards = [], errorCode, onRetry, onEdit }) {
+export function Results({ status, cards = [], errorCode, onRetry, onEdit, onCancel }) {
   if (status === 'loading') {
     return (
       <section className="results" aria-labelledby="results-heading">
         <h2 id="results-heading">{strings.resultsHeading}</h2>
         <p role="status">{strings.resultsLoading}</p>
+        <div className="results-actions">
+          <button type="button" onClick={onCancel}>
+            {strings.resultsCancel}
+          </button>
+        </div>
       </section>
     )
   }
@@ -49,6 +54,13 @@ export function Results({ status, cards = [], errorCode, onRetry, onEdit }) {
       {cards.map((card) => (
         <ClaimCard key={card.card_id ?? card.claim.id} card={card} />
       ))}
+      {onEdit && (
+        <div className="results-actions">
+          <button type="button" onClick={onEdit}>
+            {strings.resultsEditClaims}
+          </button>
+        </div>
+      )}
     </section>
   )
 }

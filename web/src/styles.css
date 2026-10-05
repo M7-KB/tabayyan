@@ -462,10 +462,15 @@ button:disabled {
   box-sizing: border-box;
 }
 
-.review-actions {
+.review-actions,
+.results-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.claim-edit {
   margin-top: 0.75rem;
 }
 

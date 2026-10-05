@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CHECK_PATH, CheckError, buildCheckRequest, parseCheckResponse, postCheck } from '../api/check.js'
 import supportedConfirms from '../../../contracts/fixtures/supported-confirms.json'
-import disputed from '../../../contracts/fixtures/disputed.json'
 import cannotConfirm from '../../../contracts/fixtures/cannot-confirm.json'
 
 function jsonResponse(status, body) {
@@ -45,19 +44,19 @@ describe('buildCheckRequest', () => {
 
 describe('parseCheckResponse', () => {
   it('accepts a body whose cards carry the fields the UI reads', () => {
-    const body = { cards: [supportedConfirms, disputed] }
-    expect(parseCheckResponse(body)).toBe(body)
+    const body = { cards: [supportedConfirms] }
+    expect(parseCheckResponse(body, ['c1'])).toBe(body)
   })
 
   it('rejects a body without a cards array', () => {
-    expect(() => parseCheckResponse({})).toThrow(CheckError)
-    expect(() => parseCheckResponse(null)).toThrow(CheckError)
+    expect(() => parseCheckResponse({}, ['c1'])).toThrow(CheckError)
+    expect(() => parseCheckResponse(null, ['c1'])).toThrow(CheckError)
   })
 
   it('rejects a card with the wrong number of verify lines (never a best-effort card)', () => {
     const broken = { ...supportedConfirms, how_to_verify_ar: ['سطر واحد فقط'] }
     try {
-      parseCheckResponse({ cards: [broken] })
+      parseCheckResponse({ cards: [broken] }, ['c1'])
       expect.unreachable('parseCheckResponse should have thrown')
     } catch (error) {
       expect(error).toBeInstanceOf(CheckError)
@@ -72,8 +71,66 @@ function cloneCard(card) {
 
 async function checkWithCard(card) {
   const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { cards: [card] }))
-  return postCheck({ claims: [], locale: 'ar' }, { fetchImpl })
+  return postCheck({ claims: [{ id: 'c1', text_ar: 'نص' }], locale: 'ar' }, { fetchImpl })
 }
+
+// Coverage against the confirmed claims (every claim answered once, no unrelated or repeated cards).
+async function checkCards(confirmedIds, cards) {
+  const claims = confirmedIds.map((id) => ({ id, text_ar: 'نص' }))
+  const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { cards }))
+  return postCheck({ claims, locale: 'ar' }, { fetchImpl })
+}
+
+function cardFor(claimId, base = supportedConfirms) {
+  const card = cloneCard(base)
+  card.claim.id = claimId
+  return card
+}
+
+describe('claim coverage (every confirmed claim answered once)', () => {
+  it('accepts one card per confirmed claim', async () => {
+    const result = await checkCards(['c1', 'c2'], [cardFor('c1'), cardFor('c2', cannotConfirm)])
+    expect(result.cards).toHaveLength(2)
+  })
+
+  it('rejects a response that leaves a confirmed claim out', async () => {
+    await expect(checkCards(['c1', 'c2'], [cardFor('c1')])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
+  })
+
+  it('rejects a card for a claim the user did not confirm', async () => {
+    await expect(checkCards(['c1'], [cardFor('c9')])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
+  })
+
+  it('rejects a whole response when one of its cards is unrelated, even if the rest are valid', async () => {
+    await expect(checkCards(['c1'], [cardFor('c1'), cardFor('c9')])).rejects.toMatchObject({
+      code: 'PIPELINE_DEGRADED',
+    })
+  })
+
+  it('rejects two cards for the same claim', async () => {
+    await expect(checkCards(['c1'], [cardFor('c1'), cardFor('c1', cannotConfirm)])).rejects.toMatchObject({
+      code: 'PIPELINE_DEGRADED',
+    })
+  })
+
+  it('accepts server split children of a confirmed claim (submitted.id:child.id)', async () => {
+    const result = await checkCards(['c1'], [cardFor('c1:1'), cardFor('c1:2', cannotConfirm)])
+    expect(result.cards.map((card) => card.claim.id)).toEqual(['c1:1', 'c1:2'])
+  })
+
+  it('does not treat an id that only shares a prefix as a split child', async () => {
+    await expect(checkCards(['c1'], [cardFor('c10')])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
+  })
+
+  it('accepts split children for one confirmed claim and a plain card for another', async () => {
+    const result = await checkCards(['c1', 'c2'], [cardFor('c1:1'), cardFor('c1:2'), cardFor('c2')])
+    expect(result.cards).toHaveLength(3)
+  })
+
+  it('rejects a response with no cards when claims were confirmed', async () => {
+    await expect(checkCards(['c1'], [])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
+  })
+})
 
 describe('card contract validation (SPEC.md §3, A12)', () => {
   it('accepts a nested correction notice whose evidence is verbatim-verified', async () => {

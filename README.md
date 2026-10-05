@@ -396,7 +396,7 @@ npm run dev
 npm run build
 ```
 
-The page shows a temporary development-preview banner (remove it when T-504 wires the check endpoint),
+The page shows a development-preview banner until `GET /health` answers (`web/src/api/health.js`),
 the input screen has the AI-not-a-fatwa notice as a pill under the tagline (always visible), a composer with
 an icon-only send button, a collapsed privacy row under the composer (its short line is always visible), and
 the source footer. The example chips render only when `strings.exampleChips` holds owner-approved entries; it is empty for now.
@@ -405,8 +405,9 @@ it sits behind `features.mediaUpload` in `web/src/config/features.js`, which is 
 task sets it to `true`. With the flag off, the privacy notice covers text input only
 (text first; audio/video and image input are not live yet, image input is P2). It says the text goes to
 the AI provider, only the extracted search phrases go to approved sources (SPEC §0.6), we do not store
-the text, and the provider may keep data briefly under its own policy. No API calls yet: submit
-handlers are empty until T-504, and the UI does not read `VITE_API_URL` yet.
+the text, and the provider may keep data briefly under its own policy. Submitting text calls
+`POST /api/v1/extract`, shows the extracted claims for the user to confirm or edit, and only then calls
+`POST /api/v1/check` (see "Text path wiring" below). The API origin comes from `VITE_API_BASE_URL`.
 
 With `features.mediaUpload` on, a chosen clip is checked on the device (audio or video type, at most 25 MB)
 and then handed to `transcribeStub` in `web/src/api/transcribe.js`. The stub returns labelled sample text and
@@ -479,10 +480,35 @@ nested evidence and the misquote notice. A card that does not validate is treate
 `web/src/components/Results.jsx` shows loading, error (with retry and edit), empty and card states; each error
 code has an Arabic message with a next step.
 
-Not wired yet: the input screen has no claims to send. `/check` takes claims from `/extract` (T-501), which
-is not on main, and the client does not segment or classify text itself. The submit handlers stay empty and
-the development-preview banner stays on until a live card works end to end. Tests use the P-07 fixtures and
-mocked `fetch`; no live call was made. Ajv adds a runtime dependency to the web bundle. Arabic error copy is provisional until owner review.
+Ajv adds a runtime dependency to the web bundle. Arabic error copy is provisional until owner review.
+
+## Text path wiring (feat/web-api-wiring)
+
+`web/src/api/extract.js` sends `POST /api/v1/extract` with `{ text }` and checks that the response has a
+claims array of `{ id, text_ar }` pairs. Anything else is `PIPELINE_DEGRADED`. The client does not segment or
+classify text itself. `web/src/components/ClaimReview.jsx` shows the claims as editable text. Emptying a
+claim's text drops it, and nothing is checked until the user confirms. `web/src/App.jsx` then sends only the
+confirmed claims, with `input_kind` from the extract response, to `/api/v1/check`. The results view keeps
+the AI-not-a-fatwa notice in the header and offers a way back to edit the claims.
+
+Error states each give a next step: extraction errors have retry and back actions, check errors have retry
+and edit actions, and `PIPELINE_DEGRADED` never shows a partial result.
+
+A check response must answer every confirmed claim. Each card's `claim.id` must match a confirmed id, or be a
+server split child `<confirmed id>:<child id>`. An unrelated card, a second card for the same claim, or a
+missing claim fails the whole response with `PIPELINE_DEGRADED` (`coversConfirmedClaims` in `check.js`).
+
+Each extract and check request has a client deadline (`EXTRACT_DEADLINE_MS` 45 s, `CHECK_DEADLINE_MS` 90 s in
+`config/api.js`) and shows `TIMEOUT` when it passes. While either request is pending, the user can cancel
+and return to the text or the claims. Cancel and timeout keep the input text and claim edits. A newer
+attempt replaces an older one, and a late response from a cancelled or superseded attempt is dropped. Shared JSON posting and error codes
+live in `web/src/api/http.js`; `CheckError` is an alias of its `ApiError`. The API origin comes from
+`VITE_API_BASE_URL` (`web/src/config/api.js`), with no trailing slash. An empty value means same-origin
+requests. The preview banner hides when `GET /health` returns 200 with a `status` field.
+
+Tests (`web/src/__tests__/extract.test.js`, `health.test.js`, `claim-flow.test.jsx`, `check.test.js`, `attempts.test.jsx`) stub `fetch` per endpoint. `attempts.test.jsx` uses fake timers and controlled promises for deadlines, cancel and late responses.
+Live check on 2026-10-05: `POST /api/v1/extract` and `POST /api/v1/check` on the Render API returned 200, and
+the returned card validates against `contracts/card.schema.json`.
 
 ## API scaffold (T-401)
 
@@ -610,7 +636,7 @@ transcription and ingestion routes are not implemented by this PR. Errors use th
 - Live health-only API: <https://tabayyan-api.onrender.com> (degraded, `corpus_items: 0`, build `f696a50`).
 - Live web preview: <https://tabayyan.pages.dev> (development preview; verification is not active yet).
   Cloudflare Pages: root directory `web`, build command `npm run build`, output directory `dist`,
-  `NODE_VERSION=22`, `VITE_API_URL` set to the Render API URL. The UI does not read `VITE_API_URL` yet.
+  `NODE_VERSION=22`, `VITE_API_BASE_URL` set to the Render API URL (no trailing slash).
 - Smoke test after deployment (replace the URL):
 
 ```sh

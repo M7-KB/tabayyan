@@ -7,7 +7,7 @@ export const strings = {
   aiNotice: 'هذه أداة ذكاء اصطناعي، وليست فتوى.',
   themeToDark: 'تفعيل الوضع الداكن',
   themeToLight: 'تفعيل الوضع الفاتح',
-  // Temporary: remove when the check endpoint is wired (T-504).
+  // Shown until GET /health answers (see api/health.js).
   previewBanner: 'نسخة تجريبية للتطوير. التحقق من الادعاءات غير مفعّل بعد.',
 
   inputHeading: 'ما الذي تريد التحقق منه؟',
@@ -107,14 +107,32 @@ export const strings = {
   resultsLoading: 'جارٍ التحقق من الادعاءات… قد يستغرق ذلك دقيقة.',
   resultsEmpty: 'لم تُرجع الخدمة أي بطاقة لهذا النص. عدّل النص وحاول مرة أخرى.',
   resultsEditText: 'تعديل النص',
+  resultsEditClaims: 'تعديل الادعاءات',
   resultsRetry: 'حاول مرة أخرى',
   resultsHeading: 'النتائج',
+  resultsCancel: 'إلغاء والرجوع إلى الادعاءات',
   checkErrors: {
     NO_CLAIMS: 'لم نجد في النص ادعاءً يمكن التحقق منه. جرّب صياغة الادعاء كجملة واضحة.',
     TEXT_NOT_SUPPORTED_LANG: 'اللغة غير مدعومة. أدخل النص بالعربية أو بالإنجليزية.',
+    INVALID_REQUEST: 'تعذّر إرسال الطلب بصيغته الحالية. عدّل النص وحاول مرة أخرى.',
     PIPELINE_DEGRADED: 'تعذّر إكمال التحقق الآن، ولن نعرض نتيجة غير مكتملة. حاول مرة أخرى بعد قليل.',
     RATE_LIMITED: 'طلبات كثيرة في وقت قصير. انتظر دقيقة ثم حاول مرة أخرى.',
     NETWORK: 'تعذّر الاتصال بالخدمة. تحقق من اتصالك بالإنترنت ثم حاول مرة أخرى.',
+    TIMEOUT: 'استغرق الطلب وقتاً أطول من المتوقع. نصّك وادعاءاتك محفوظة، حاول مرة أخرى.',
     UNKNOWN: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
   },
+
+  // Claim review (SPEC.md §6.2): the extracted claims are shown for the user to confirm or edit before any check runs.
+  extractingHeading: 'جارٍ استخراج الادعاءات',
+  extracting: 'جارٍ تحليل النص لاستخراج الادعاءات… قد يستغرق ذلك لحظات.',
+  extractCancel: 'إلغاء والرجوع إلى النص',
+  claimsHeading: 'الادعاءات المستخرجة',
+  claimsHint: 'راجع كل ادعاء وصحّحه إن لزم. أفرغ خانة الادعاء لتجاهله. لن يبدأ التحقق قبل أن تؤكد.',
+  claimLabel: 'الادعاء',
+  claimsNoneLeft: 'اترك ادعاءً واحداً على الأقل مكتوباً لتتمكن من التحقق.',
+  claimsEmpty: 'لم نجد في النص ادعاءً يمكن التحقق منه. عدّل النص وحاول مرة أخرى.',
+  claimsConfirm: 'تأكيد والتحقق',
+  claimsBack: 'العودة إلى النص',
+  extractErrorHeading: 'تعذّر استخراج الادعاءات',
+  extractRetry: 'حاول مرة أخرى',
 }

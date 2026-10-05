@@ -109,3 +109,12 @@ and local artifact build), pytest, Node.js test runner and web search/page retri
 (primary API documentation only). Skills used: Buzz CLI and OpenAI Docs. No relay-backed
 skills loaded. Tool outputs contain metadata; keys are read only from the authorized
 dev environment and never recorded. Source permissions stay in SOURCES.md.
+
+The resumed documentation session completed the separate five-call terminology
+probe (two earlier urllib requests, three resumed HTTPX requests; zero OpenAI
+requests), reconciled the README starting-version disclosure and rebased this PR.
+It used Codex, Buzz CLI, Git/GitHub CLI, PowerShell, Python/HTTPX and Node's test
+runner. No new model identifier or service-contract claim is inferred from these
+transport probes. Results and pending source terms are in
+[the terminology follow-up](docs/CONNECTOR_SPIKE_20261005.md#bounded-terminology-follow-up)
+and [SOURCES.md](SOURCES.md#terminology-discovery-evidence-2026-10-05).

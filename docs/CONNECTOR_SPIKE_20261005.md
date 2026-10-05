@@ -22,3 +22,36 @@ Observed MCP tool names: `search`, `fetch`, `get_quran_verses`, `list_quran_tran
 The web-search sources include `test.dorar.net`. OpenAI's documented filter includes subdomains; it does not implement the app's exact-host boundary. The observed response supplies citations/source URLs, not raw page bodies suitable for the verbatim gatekeeper. Do not accept model prose as source text. Remote MCP raw tool output exists, but the tested OpenAI call fetched language metadata only: religious-evidence validation is not established by that call. Use app-controlled connectors with exact-host checks and raw source-bound text.
 
 Additional exploratory calls: icadb docs HTML and OpenAPI schema; a misspelled `/hadiths/list/` returned 404 before the documented `/hadeeths/one/` probe. No bulk religious download, no persistence of API religious text, no rate-limit response observed in the listed calls. Dorar 403 is specific to this execution environment; Render reachability still needs Vegapunk's authorized smoke probe. Total provider tokens 9,933; dollar cost not measured, no budget claim inferred.
+
+## Bounded terminology follow-up
+
+The owner authorized at most five calls in events
+`5afa964bf62ce0124aefede5b9383fd31e10c219925ab0238b358dfb668f00d3` and
+`0f6d019222f73b47c0b897a50d377c9372d315569be21ba05a07cb20f96aed9c`.
+The interrupted probe's two calls count toward that limit; the resumed probe made
+three more. No OpenAI calls, bulk download, religious-text persistence or ingestion.
+
+| Call | Probe | Result | Seconds |
+|---|---|---|---|
+| 1 | icadb `/api/encyclopedias/list/`, urllib | 403 | 0.44 |
+| 2 | MCP library `search`, Tawhid, English, limit 1, urllib | 403 | 0.28 |
+| 3 | Same icadb metadata endpoint, HTTPX | 200 JSON list, 28 collections | 1.95 |
+| 4 | MCP initialize, HTTPX | 200 SSE JSON-RPC result | 0.52 |
+| 5 | Same MCP library search, HTTPX | 200 SSE, content + structuredContent; returned `https://islamcontent.com/en/content/822`, no terminologyenc.com URL | 1.81 |
+
+icadb identifies the Islamic terminology/vocabulary collection at `id=5`,
+`external_id=105`, with 1,055 cards and five fields. The previously retrieved
+[official schema](https://icadb.com/api/docs/?format=openapi) describes paginated
+`/api/encyclopedias/{encyclopedia_id}/cards/` and single-card
+`/api/encyclopedias/cards/one/?id=<old_id>&language=en` endpoints. Collection
+metadata is a candidate path, not a verified term response: no Tawhid card id,
+translation, verbatim definition, publisher link or term provenance was validated.
+The different transport statuses do not establish why the earlier calls failed.
+
+The five-call budget is exhausted. Cases 7, 8 and 12 therefore retain the owner's
+fallback: abstain with the [approved glossary link](https://islamic-content.com/dictionary)
+until a source-bound term response is verified. This log does not change runtime
+or eval expectations. Publisher item terms remain pending; no redistribution
+permission is inferred. Local metadata logs are retained at
+`RESEARCH/TABAYYAN_TERM_PROBE_20261005_RESULTS.json` and
+`RESEARCH/TABAYYAN_TERM_PROBE_RESUME_20261005_RESULTS.json` in the Buzz workspace.

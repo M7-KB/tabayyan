@@ -3,6 +3,8 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from time import monotonic
+from uuid import uuid4
 
 import httpx
 from fastapi import FastAPI
@@ -12,6 +14,7 @@ from api.check import CheckRequest
 from api.classifier import LevelClassifier, LevelProposal
 from api.composer import Composer, DecisionProposal
 from api.config import load_config
+from api.diagnostics import record, request_id
 from api.discovery import DefaultDiscovery
 from api.errors import install_handlers, response
 from api.extract import (
@@ -114,8 +117,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
+        expose_headers=["X-Request-ID"],
     )
     install_handlers(app)
+
+    @app.middleware("http")
+    async def diagnostic_request(request, call_next):
+        stage = {"/api/v1/extract": "extract", "/api/v1/check": "check"}.get(request.url.path)
+        if stage is None:
+            return await call_next(request)
+        token = request_id.set(uuid4().hex)
+        started = monotonic()
+        outcome = "unhandled_failure"
+        try:
+            result = await call_next(request)
+            outcome = "completed" if result.status_code < 400 else "http_failure"
+            result.headers["X-Request-ID"] = request_id.get()
+            return result
+        finally:
+            record(stage, outcome, started)
+            request_id.reset(token)
 
     if not settings.health_only:
 

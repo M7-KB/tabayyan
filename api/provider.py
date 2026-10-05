@@ -7,10 +7,13 @@ import math
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from time import monotonic
 from typing import Any
 
 import httpx
 from jsonschema import Draft202012Validator
+
+from api.diagnostics import record
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +105,15 @@ class OpenAIStructuredModel:
                 time.sleep(delay)
                 continue
             if result.is_error:
-                category = "rate_limit" if result.status_code == 429 else "http_error"
+                category = (
+                    "rate_limit"
+                    if result.status_code == 429
+                    else "authentication"
+                    if result.status_code in {401, 403}
+                    else "server"
+                    if result.status_code >= 500
+                    else "http_error"
+                )
                 raise ProviderUnavailable(category)
             if time.monotonic() >= deadline:
                 raise ProviderUnavailable("timeout")
@@ -168,6 +179,15 @@ class OpenAIStructuredModel:
     def complete_json(
         self, *, instructions: str, data: dict[str, str], schema: dict[str, Any]
     ) -> object:
+        started = monotonic()
+        stage = {
+            "RouterProposal": "router_provider",
+            "ExtractionProposal": "extraction_provider",
+            "LevelProposal": "classification_provider",
+            "CardProposal": "composition_provider",
+            "DecisionProposal": "composition_provider",
+        }.get(schema.get("title"), "structured_provider")
+        outcome = "invalid_response"
         try:
             payload = self._payload(instructions, data, schema)
             body = self._post(payload).json()
@@ -189,11 +209,25 @@ class OpenAIStructuredModel:
                 texts[0], parse_constant=_reject_constant, object_pairs_hook=_unique_keys
             )
             Draft202012Validator(payload["text"]["format"]["schema"]).validate(value)
+            outcome = "completed"
             return value
         except ProviderUnavailable as exc:
+            outcome = {
+                "timeout": "provider_timeout",
+                "network": "transport_error",
+                "authentication": "authentication_error",
+                "rate_limit": "rate_limited",
+                "server": "provider_server_error",
+                "http_error": "http_error",
+                "retry_budget": "retry_budget",
+                "incomplete": "incomplete_response",
+                "refusal": "refusal_or_unexpected_content",
+            }.get(exc.category, "invalid_response")
             logger.warning("Structured provider failure: category=%s", exc.category)
             raise ProviderUnavailable(exc.category) from None
         except Exception:
             # No exception chaining: HTTP errors can include secrets or input.
             logger.warning("Structured provider failure: category=invalid_output")
             raise ProviderUnavailable("invalid_output") from None
+        finally:
+            record(stage, outcome, started)

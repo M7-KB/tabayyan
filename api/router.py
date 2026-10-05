@@ -1,12 +1,14 @@
 """One structured routing call; source text remains untrusted input."""
 
 from dataclasses import dataclass
+from time import monotonic
 from typing import Literal
 
 from pydantic import Field
 
 from api.classifier import INSTRUCTIONS as LEVEL_INSTRUCTIONS
 from api.classifier import LevelClassifier, rule_level
+from api.diagnostics import record
 from api.extract import (
     INSTRUCTIONS as EXTRACTION_INSTRUCTIONS,
 )
@@ -104,6 +106,7 @@ class Router:
                 floor,
             )
         try:
+            started = monotonic()
             proposal = RouterProposal.model_validate(
                 self.model.complete_json(
                     instructions=INSTRUCTIONS,
@@ -137,7 +140,9 @@ class Router:
             ):
                 raise ValueError("Inconsistent unresolved subjects")
         except Exception:
+            record("router_validation", "invalid_proposal", started)
             raise ExtractionError(503, "PIPELINE_DEGRADED") from None
+        record("router_validation", "validated", started)
         if proposal.detected_lang == "unsupported":
             raise ExtractionError(422, "TEXT_NOT_SUPPORTED_LANG")
         if not proposal.claims:

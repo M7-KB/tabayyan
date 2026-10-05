@@ -14,6 +14,17 @@ a designed output here, not a failure mode.
 
 ## Text extraction (T-501)
 
+For live failure diagnosis, enable INFO logging for `api.diagnostics`. `/extract`
+and `/check` responses include a server-generated `X-Request-ID`, also exposed
+through CORS. Fixed stage/outcome labels and elapsed milliseconds correlate router,
+composition, standalone extraction/classification and route failures. Correlation
+propagates to parallel claim workers. No input, source text, model identifier, key,
+provider body or exception text appears in these events. Validation failures use
+fixed categories. Client-supplied request IDs are ignored and context resets after
+each request. A route's elapsed time is observational, not an enforced deadline:
+O4 remains an owner decision. Historical 503s remain unattributed without deployment
+logs; these diagnostics must deploy before they can classify new live failures.
+
 `POST /api/v1/extract` accepts `{"text":"...","max_claims":10}`. Text is limited
 to 12,000 Unicode code points; `max_claims` is an integer from 1 to 50. The server
 validates strict structured extraction output, exact original source substrings,

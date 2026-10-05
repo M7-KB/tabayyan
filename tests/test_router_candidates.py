@@ -5,8 +5,11 @@ import json
 import pytest
 
 from api.check import CheckRequest
+from api.composer import COMPOSE_POOL
+from api.diagnostics import Summary, summary
 from api.router import QuranRef
 from tests.test_composer import TEXT, claim, engine, proposal
+from tests.test_composer import record as fixture_record
 from tests.test_one_pass import route_proposal, service
 from tests.test_quran_binding import paired
 
@@ -221,3 +224,35 @@ def test_multiple_questions_fail_closed_when_context_is_omitted(subjects_only):
     # claim, so both questions and their conditions survive to the gates.
     assert len(result["cards"]) == 1
     assert result["cards"][0]["claim"]["text_ar"] == text
+
+
+def test_nominated_ref_survives_compose_pool_and_counts_stay_text_free():
+    question = "من هو خاتم الأنبياء؟"
+    lexical = [
+        fixture_record(f"fixture:l{i}", domain="quran", text=f"خاتم عينة {i}") for i in range(6)
+    ]
+    composer = engine(
+        records=[quran_record(), *lexical],
+        value=proposal(state="SUPPORTED", corpus_ids=["quran:33:40"]),
+    )
+    metrics = Summary()
+    token = summary.set(metrics)
+    try:
+        result = composer.compose(
+            claim(question, origin="question_subject"),
+            original=question,
+            lang="ar",
+            input_kind="question",
+            no_checkable_claim=False,
+            propose_state=True,
+            quran_refs=[QuranRef(surah=33, ayah=40)],
+        )
+    finally:
+        summary.reset(token)
+    sent = [r["corpus_id"] for r in json.loads(composer.model.calls[0]["data"]["records"])]
+    assert "quran:33:40" in sent
+    assert len(sent) <= COMPOSE_POOL + 1
+    assert metrics.counts["resolved_refs"] == 1
+    assert metrics.counts["lexical_candidates"] >= COMPOSE_POOL
+    assert metrics.counts["compose_candidates"] == len(sent)
+    assert result["state"] in {"SUPPORTED", "DISPUTED", "CANNOT_CONFIRM"}

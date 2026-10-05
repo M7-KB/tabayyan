@@ -333,7 +333,7 @@ def test_retrieval_deadline_keeps_known_claim_retryable():
     release = threading.Event()
 
     class Slow:
-        def discover(self, query, source_request):
+        def discover(self, query, source_request, *, hadith=False):
             release.wait(timeout=2)
 
     checker.connector = Slow()
@@ -488,3 +488,18 @@ def test_sealed_http_snapshot_ignores_late_results():
         assert progress.snapshot() == snapshot
     finally:
         request_deadline.reset(token)
+
+
+@pytest.mark.parametrize("kind,hadith", [("hadith", True), ("other", False)])
+def test_hadeethenc_flag_follows_router_kind_only(kind, hadith):
+    checker, _, _ = service(route_proposal(TEXT, input_kind=kind))
+    seen = []
+
+    class Connector:
+        def discover(self, query, source_request, *, hadith=False):
+            seen.append(hadith)
+            return []
+
+    checker.connector = Connector()
+    checker.check(CheckRequest(original_text=TEXT))
+    assert seen == [hadith]

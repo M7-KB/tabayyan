@@ -7,7 +7,6 @@ from time import monotonic
 from api.deadline import request_deadline
 from api.diagnostics import record
 from api.gatekeeper import SourceRequest
-from api.retrieval import tokens
 
 
 class DefaultDiscovery:
@@ -17,18 +16,15 @@ class DefaultDiscovery:
         self.mcp = mcp
         self.hadeethenc = hadeethenc
 
-    def discover(self, query: str, request: SourceRequest) -> list:
+    def discover(self, query: str, request: SourceRequest, *, hadith: bool = False) -> list:
         if request._used:
             return []
         results = []
-        # Hadith discovery is for a disclosed hadith topic, not every question.
-        hadith_topic = bool(
-            set(tokens(query)) & {"حديث", "الحديث", "احاديث", "الاحاديث", "hadith", "hadeeth"}
-        )
+        # HadeethEnc runs only when the router classified the input as a hadith check.
         adapters = [
             (name, adapter)
             for name, adapter in (("mcp", self.mcp), ("hadeethenc", self.hadeethenc))
-            if adapter is not None and (name != "hadeethenc" or hadith_topic)
+            if adapter is not None and (name != "hadeethenc" or hadith)
         ]
         if not adapters:
             return []

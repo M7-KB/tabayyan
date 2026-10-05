@@ -7,7 +7,7 @@ from time import monotonic
 from api.check import CheckRequest, CheckService
 from api.classifier import rule_level
 from api.deadline import request_deadline, request_progress
-from api.diagnostics import record
+from api.diagnostics import code, count, record
 from api.extract import ExtractionError
 from api.gatekeeper import SourceRequest
 from api.provider import ProviderUnavailable
@@ -68,6 +68,9 @@ class OnePassCheckService(CheckService):
         started = monotonic()
         route = self._stage(lambda: self.router.route(text))
         record("routing", "completed", started)
+        count("proposed_refs", len(route.quran_refs))
+        for routed in route.extracted.claims:
+            code(f"classifier:{routed.classifier_status}")
         client_floor = max((c.level for c in request.claims), key="ABCD".index, default="A")
         client_floor = max(
             (client_floor, *(rule_level(c.text_ar) for c in request.claims)), key="ABCD".index
@@ -93,7 +96,11 @@ class OnePassCheckService(CheckService):
             )
             if query is not None:
                 try:
-                    self._stage(lambda: self.connector.discover(query, source_request))
+                    self._stage(
+                        lambda: self.connector.discover(
+                            query, source_request, hadith=route.kind == "hadith"
+                        )
+                    )
                 except ExtractionError as exc:
                     if exc.code != "CHECK_INCOMPLETE":
                         raise
@@ -123,6 +130,7 @@ class OnePassCheckService(CheckService):
                 propose_state=True,
                 quran_refs=route.quran_refs,
             )
+            code(card["abstained_reason"] or card["state"])
             if progress is not None:
                 progress.complete(claim.id, card)
             return card

@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import Field
 
 from api.config import load_config
-from api.diagnostics import record, timed
+from api.diagnostics import count, record, timed
 from api.extract import ExtractedClaim, StrictObject
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.model import StructuredModel
@@ -25,6 +25,10 @@ from corpus.quran_binding import display_text, matching_text
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "contracts/card.schema.json").read_text("utf-8"))
 VALIDATOR = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
+# Lexical hits are counted for diagnostics; only the top COMPOSE_POOL reach the model.
+# Nominated Quran refs are added ahead of this pool, so they never compete with it.
+LEXICAL_HITS = 50
+COMPOSE_POOL = 3
 
 
 class PositionProposal(StrictObject):
@@ -331,9 +335,13 @@ class Composer:
             return finish("LEVEL_D_PERSONAL_CASE")
         if no_checkable_claim and input_kind != "term":
             return finish("NO_CHECKABLE_CLAIM")
-        candidates = self.retriever.retrieve(
-            claim.text_ar, domain="glossary" if input_kind == "term" else None
+        hits = self.retriever.retrieve(
+            claim.text_ar,
+            top_k=LEXICAL_HITS,
+            domain="glossary" if input_kind == "term" else None,
         )
+        count("lexical_candidates", len(hits))
+        candidates = hits[:COMPOSE_POOL]
         # Model nominations are lookup keys only, never evidence or confidence.
         # Resolve solely in already loader-validated local KFC records.
         if input_kind != "term" and quran_refs:
@@ -350,7 +358,9 @@ class Composer:
                     nominated.append(
                         lexical.get(candidate["corpus_id"], RetrievalResult(candidate, 0, 0))
                     )
+            count("resolved_refs", len(nominated))
             candidates = list({r.corpus_id: r for r in [*nominated, *candidates]}.values())
+        count("compose_candidates", len(candidates))
         if not candidates:
             self._notice(card, near)
             return finish("NO_MATCHING_EVIDENCE")

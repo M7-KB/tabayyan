@@ -16,6 +16,8 @@ class Summary:
     stages: list = field(default_factory=list)
     states: list = field(default_factory=list)
     failures: list = field(default_factory=list)
+    counts: dict = field(default_factory=dict)
+    codes: list = field(default_factory=list)
     lock: Lock = field(default_factory=Lock)
 
 
@@ -36,16 +38,35 @@ def final_states(cards):
             current.states = [card["state"] for card in cards]
 
 
+def count(name: str, value: int) -> None:
+    """Add a text-free integer to the request totals; never pass user or source text."""
+    current = summary.get()
+    if current is not None:
+        with current.lock:
+            current.counts[name] = current.counts.get(name, 0) + value
+
+
+def code(value: str) -> None:
+    """Record a text-free enum code, such as a classifier status or abstain reason."""
+    current = summary.get()
+    if current is not None:
+        with current.lock:
+            current.codes.append(value)
+
+
 def finish(outcome, started):
     current = summary.get()
     logger.info(
-        "Request summary: request_id=%s outcome=%s elapsed_ms=%d stages=%s states=%s failures=%s",
+        "Request summary: request_id=%s outcome=%s elapsed_ms=%d stages=%s states=%s "
+        "failures=%s counts=%s codes=%s",
         request_id.get(),
         outcome,
         round((monotonic() - started) * 1000),
         current.stages,
         current.states,
         current.failures,
+        current.counts,
+        current.codes,
     )
 
 

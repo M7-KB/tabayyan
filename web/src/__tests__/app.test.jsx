@@ -77,13 +77,21 @@ describe('composer', () => {
 describe('example chips', () => {
   const example = { label: 'مثال تجريبي', text: 'نص معتمد للتجربة' }
 
-  // The approved list is empty in the build, so each case adds one example and removes it afterwards.
+  // The approved list is empty and the flag is off in the build, so each case sets both and restores them.
   beforeEach(() => {
     strings.exampleChips.push(example)
+    features.exampleChips = true
   })
 
   afterEach(() => {
     strings.exampleChips.length = 0
+    features.exampleChips = false
+  })
+
+  it('renders no chips while the exampleChips flag is off, even with approved entries', () => {
+    features.exampleChips = false
+    const { container } = render(<InputScreen onSubmitText={vi.fn()} onSubmitMedia={vi.fn()} />)
+    expect(container.querySelector('.example-chips')).toBeNull()
   })
 
   it('fill the composer with the approved text, focus it, and do not submit', async () => {

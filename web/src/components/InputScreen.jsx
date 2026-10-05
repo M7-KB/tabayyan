@@ -71,7 +71,7 @@ export function InputScreen({ onSubmitText, onSubmitMedia }) {
         )}
       </form>
 
-      {strings.exampleChips.length > 0 && (
+      {features.exampleChips && strings.exampleChips.length > 0 && (
         <ExampleChips examples={strings.exampleChips} onPick={handleExamplePick} />
       )}
 

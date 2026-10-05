@@ -22,7 +22,7 @@ from eval.testset import load_testset, validate_record
 ROOT = Path(__file__).resolve().parents[1]
 TESTSET = ROOT / "eval" / "testset.jsonl"
 BUNDLE = ROOT / "eval" / "stubs" / "contract_pass.json"
-BLOCKED_BRIEF_IDS = ("T03", "T10", "T11")
+BLOCKED_BRIEF_IDS = ("T03", "T10")
 
 
 def records():
@@ -79,7 +79,7 @@ def assertion(report, case_id, name):
 
 
 def countable_testset(tmp_path):
-    """The current file with the three blocked brief cases marked countable."""
+    """Mark the two path stand-ins countable without changing corpus bindings."""
     items = records()
     for item in items:
         if item["case_id"] in BLOCKED_BRIEF_IDS:
@@ -95,7 +95,8 @@ def test_every_case_is_reported_with_every_hard_assertion(tmp_path):
         names = {entry["name"] for entry in item["assertions"]}
         assert set(HARD_ASSERTIONS) <= names
         assert "pair_consistency" in names
-        assert item["status"] == "pass", item["assertions"]
+        expected_status = "not_evaluated" if item["case_id"] == "T11" else "pass"
+        assert item["status"] == expected_status, item["assertions"]
         assert item["soft_review"]["status"] == "awaiting manual review"
 
 
@@ -109,9 +110,20 @@ def test_blocked_brief_cases_fail_g9_and_the_run(tmp_path):
         assert case_id in detail
 
 
-def test_run_passes_once_every_brief_case_is_countable(tmp_path):
+def test_countable_data_does_not_pass_without_t11_required_corpus(tmp_path):
     code, report = run(tmp_path, testset=countable_testset(tmp_path))
-    assert gate(report, "G9")["status"] == "pass"
+    assert gate(report, "G9")["status"] == "fail"
+    assert "T11" in gate(report, "G9")["detail"]
+    assert case(report, "T11")["status"] == "not_evaluated"
+    assert report["outcome"] == "fail"
+    assert code == 1
+
+
+def test_source_independent_stub_cases_pass_without_claiming_full_coverage(tmp_path):
+    selected = ",".join(item["case_id"] for item in records() if item["case_id"] != "T11")
+    code, report = run(tmp_path, testset=countable_testset(tmp_path), only=selected)
+    assert all(item["status"] == "pass" for item in report["cases"])
+    assert gate(report, "G9")["status"] == "not_evaluated"
     assert report["outcome"] == "pass"
     assert code == 0
 
@@ -204,7 +216,10 @@ def test_hadith_domain_near_miss_does_not_block_confirms(tmp_path):
     bundle = write_bundle(tmp_path / "bundle.json", patch)
     code, report = run(tmp_path, testset=countable_testset(tmp_path), bundle=bundle)
     assert gate(report, "G17")["status"] == "pass"
-    assert code == 0
+    assert case(report, "T04")["status"] == "pass"
+    assert case(report, "T11")["status"] == "not_evaluated"
+    assert gate(report, "G9")["status"] == "fail"
+    assert code == 1
 
 
 def test_level_d_supported_fails_g4(tmp_path):
@@ -516,6 +531,26 @@ def corpus_args(tmp_path, corpus_id):
     )
 
 
+@pytest.mark.parametrize("availability", ["unavailable", "absent"])
+def test_real_t11_binding_is_not_evaluated_without_loaded_verse(tmp_path, availability):
+    record = next(item for item in records() if item["case_id"] == "T11")
+    assert record["expect"]["required_corpus_ids"] == ["quran:33:40"]
+    assert record["g9_countable"] is True
+    extra = () if availability == "unavailable" else corpus_args(tmp_path, "synthetic:other")
+    code, report = run(tmp_path, testset=countable_testset(tmp_path), extra=extra)
+    check = assertion(report, "T11", "required_corpus_ids")
+    assert check["status"] == "not_evaluated"
+    assert case(report, "T11")["status"] == "not_evaluated"
+    assert case(report, "T11")["g9_countable"] is False
+    assert case(report, "T11")["blocked_reason_en"] == check["detail"]
+    assert gate(report, "G9")["status"] == "fail"
+    assert "T11" in gate(report, "G9")["detail"]
+    assert report["metrics"]["cases_executed"] == len(records()) - 1
+    assert report["metrics"]["cases_passing"] == len(records()) - 1
+    assert report["metrics"]["cases_not_evaluated"] == 1
+    assert code == 1
+
+
 @pytest.mark.parametrize(
     "availability,returned,status",
     [
@@ -545,14 +580,17 @@ def test_required_ids_use_validated_loaded_corpus(tmp_path, availability, return
     code, report = run(tmp_path, testset=path, bundle=bundle, extra=extra)
     assert assertion(report, "T01", "required_corpus_ids")["status"] == status
     assert case(report, "T01")["status"] == status
-    assert gate(report, "G9")["status"] == ("pass" if status == "pass" else "fail")
-    assert code == (0 if status == "pass" else 1)
+    # The independent T01 assertion can pass, but T11 still lacks its real corpus.
+    assert case(report, "T11")["status"] == "not_evaluated"
+    assert gate(report, "G9")["status"] == "fail"
+    assert "T11" in gate(report, "G9")["detail"]
+    assert code == 1
     if status == "not_evaluated":
         assert case(report, "T01")["g9_countable"] is False
         assert case(report, "T01")["blocked_reason_en"]
-        assert report["metrics"]["cases_executed"] == len(items) - 1
-        assert report["metrics"]["cases_passing"] == len(items) - 1
-        assert report["metrics"]["cases_not_evaluated"] == 1
+        assert report["metrics"]["cases_executed"] == len(items) - 2
+        assert report["metrics"]["cases_passing"] == len(items) - 2
+        assert report["metrics"]["cases_not_evaluated"] == 2
     if availability != "unavailable":
         assert report["loaded_corpus"]["status"] == "validated"
         assert len(report["loaded_corpus"]["sha256"]) == 64
@@ -581,7 +619,9 @@ def test_malformed_cards_report_g23_and_continue(tmp_path, malformed):
     assert "T01" in gate(report, "G23")["detail"]
     assert case(report, "T02")["status"] == "pass"
     assert len(report["cases"]) == len(records())
-    assert report["metrics"]["cases_executed"] == len(records()) - 1
+    assert case(report, "T11")["status"] == "not_evaluated"
+    assert report["metrics"]["cases_not_evaluated"] == 1
+    assert report["metrics"]["cases_executed"] == len(records()) - 2
     assert harness.render_markdown(report)
 
 

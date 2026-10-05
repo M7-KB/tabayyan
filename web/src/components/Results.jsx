@@ -1,19 +1,17 @@
 import { strings } from '../strings.js'
+import { CheckProgress } from './CheckProgress.jsx'
 import { ClaimCard } from './card/ClaimCard.jsx'
 
-// Result area for one check. Loading, error and empty states each give a next step (agent brief).
+// Result area for the one-page flow (U1). Loading, error and empty states each give a next step (agent brief).
 // `status` is 'loading' | 'error' | 'done'. Error copy is looked up by the server's error code.
-export function Results({ status, cards = [], errorCode, onRetry, onEdit, onCancel }) {
+// On 'done', each card can be edited and re-checked in place: `onRecheck(index, text)` resolves to true when
+// that card was replaced. `recheck` names the card being re-checked and its state.
+export function Results({ status, cards = [], errorCode, recheck = null, onRetry, onEdit, onCancel, onRecheck }) {
   if (status === 'loading') {
     return (
       <section className="results" aria-labelledby="results-heading">
         <h2 id="results-heading">{strings.resultsHeading}</h2>
-        <p role="status">{strings.resultsLoading}</p>
-        <div className="results-actions">
-          <button type="button" onClick={onCancel}>
-            {strings.resultsCancel}
-          </button>
-        </div>
+        <CheckProgress onCancel={onCancel} />
       </section>
     )
   }
@@ -51,16 +49,14 @@ export function Results({ status, cards = [], errorCode, onRetry, onEdit, onCanc
   return (
     <section className="results" aria-labelledby="results-heading">
       <h2 id="results-heading">{strings.resultsHeading}</h2>
-      {cards.map((card) => (
-        <ClaimCard key={card.card_id ?? card.claim.id} card={card} />
+      {cards.map((card, index) => (
+        <ClaimCard
+          key={card.card_id ?? card.claim.id}
+          card={card}
+          recheck={recheck?.index === index ? recheck : null}
+          onRecheck={onRecheck ? (text) => onRecheck(index, text) : undefined}
+        />
       ))}
-      {onEdit && (
-        <div className="results-actions">
-          <button type="button" onClick={onEdit}>
-            {strings.resultsEditClaims}
-          </button>
-        </div>
-      )}
     </section>
   )
 }

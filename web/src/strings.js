@@ -79,7 +79,6 @@ export const strings = {
     cannot_confirm: 'لا يمكن التأكد من المصادر المتاحة',
   },
   sourceTextIntro: 'النص كما ورد في المصدر:',
-  claimHeading: 'الادعاء كما أُدخل',
   timestampFrom: 'من',
   timestampTo: 'إلى',
   explanationHeading: 'شرح مُولَّد بالذكاء الاصطناعي',
@@ -89,7 +88,7 @@ export const strings = {
   // Published answer (SPEC.md §0.5, §0.8). The excerpt is the source's own text, shown apart from our explanation.
   publishedAnswerHeading: 'جواب منشور من مصدر معتمد',
   publishedAnswerNote: 'هذا نص الجواب كما نشره المصدر، وليس شرحاً من تبيّن.',
-  publishedAnswerLink: 'عرض الجواب في المصدر',
+  publishedAnswerLink: 'اقرأ الجواب كاملاً',
   translationLabel: 'ترجمة من المصدر',
   translationSourceLink: 'مصدر الترجمة',
   gradingLabel: 'الحكم',
@@ -107,10 +106,8 @@ export const strings = {
   resultsLoading: 'جارٍ التحقق من الادعاءات… قد يستغرق ذلك دقيقة.',
   resultsEmpty: 'لم تُرجع الخدمة أي بطاقة لهذا النص. عدّل النص وحاول مرة أخرى.',
   resultsEditText: 'تعديل النص',
-  resultsEditClaims: 'تعديل الادعاءات',
   resultsRetry: 'حاول مرة أخرى',
   resultsHeading: 'النتائج',
-  resultsCancel: 'إلغاء والرجوع إلى الادعاءات',
   checkErrors: {
     NO_CLAIMS: 'لم نجد في النص ادعاءً يمكن التحقق منه. جرّب صياغة الادعاء كجملة واضحة.',
     TEXT_NOT_SUPPORTED_LANG: 'اللغة غير مدعومة. أدخل النص بالعربية أو بالإنجليزية.',
@@ -122,17 +119,25 @@ export const strings = {
     UNKNOWN: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
   },
 
-  // Claim review (SPEC.md §6.2): the extracted claims are shown for the user to confirm or edit before any check runs.
-  extractingHeading: 'جارٍ استخراج الادعاءات',
-  extracting: 'جارٍ تحليل النص لاستخراج الادعاءات… قد يستغرق ذلك لحظات.',
-  extractCancel: 'إلغاء والرجوع إلى النص',
-  claimsHeading: 'الادعاءات المستخرجة',
-  claimsHint: 'راجع كل ادعاء وصحّحه إن لزم. أفرغ خانة الادعاء لتجاهله. لن يبدأ التحقق قبل أن تؤكد.',
-  claimLabel: 'الادعاء',
-  claimsNoneLeft: 'اترك ادعاءً واحداً على الأقل مكتوباً لتتمكن من التحقق.',
-  claimsEmpty: 'لم نجد في النص ادعاءً يمكن التحقق منه. عدّل النص وحاول مرة أخرى.',
-  claimsConfirm: 'تأكيد والتحقق',
-  claimsBack: 'العودة إلى النص',
-  extractErrorHeading: 'تعذّر استخراج الادعاءات',
-  extractRetry: 'حاول مرة أخرى',
+  // One-page flow (U1): each card shows how we understood the text. The user can edit that line and re-check
+  // only that card, in place. The stages are indicative: /check answers once, so they are not measured progress.
+  understoodHeading: 'فهمنا سؤالك هكذا:',
+  understoodEdit: 'تعديل',
+  understoodEditLabel: 'صياغة الادعاء أو السؤال',
+  understoodRecheck: 'إعادة التحقق',
+  understoodCancel: 'إلغاء التعديل',
+  understoodEmpty: 'اكتب الادعاء أو السؤال قبل إعادة التحقق.',
+  // Term questions resolve to the glossary link only (SPEC §0.11 O2): no copied definition is shown here.
+  glossaryHeading: 'المصطلح في المعجم',
+  glossaryBody: 'لا نعرض تعريفاً منقولاً هنا. يمكنك الاطلاع على تعريف المصطلح في المعجم مباشرة.',
+  glossaryLink: 'فتح المعجم (يفتح في نافذة جديدة)',
+  recheckLoading: 'جارٍ إعادة التحقق من هذا الادعاء…',
+  checkStagesLabel: 'مراحل التحقق',
+  checkStages: [
+    'قراءة النص وتحديد ما يُتحقَّق منه',
+    'البحث في المصادر المعتمدة',
+    'مقارنة النتائج وكتابة البطاقات',
+  ],
+  checkStagesNote: 'هذه المراحل تقريبية، وليست قياساً دقيقاً لتقدم التحقق.',
+  checkCancel: 'إلغاء التحقق',
 }

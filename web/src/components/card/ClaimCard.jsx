@@ -7,11 +7,12 @@ import { PublishedAnswer } from './PublishedAnswer.jsx'
 import { ReferralBlock } from './ReferralBlock.jsx'
 import { ScriptureBlock } from './ScriptureBlock.jsx'
 import { StateBadge } from './StateBadge.jsx'
-import { formatSeconds } from './format.js'
+import { UnderstoodClaim } from './UnderstoodClaim.jsx'
 
 // One evidence card. Scripture, generated explanation and the user's own text each sit in their own
-// container with a data-role (SPEC.md §6.4, G16).
-export function ClaimCard({ card }) {
+// container with a data-role (SPEC.md §6.4, G16). `onRecheck` is set on the one-page results (U1): the card
+// then offers edit and re-check in place. `recheck` is the state of a re-check of this card.
+export function ClaimCard({ card, recheck = null, onRecheck }) {
   const { claim, state_label_key: labelKey, alignment } = card
   const evidenceById = Object.fromEntries(card.evidence.map((item) => [item.evidence_id, item]))
   const isDisputed = card.state === 'DISPUTED'
@@ -21,18 +22,7 @@ export function ClaimCard({ card }) {
     <article className="claim-card" aria-label={strings.stateLabels[labelKey]}>
       <StateBadge labelKey={labelKey} />
 
-      <section className="claim-block" data-role="user-text" aria-label={strings.claimHeading}>
-        <h3>{strings.claimHeading}</h3>
-        <blockquote lang={claim.lang} dir="auto">
-          {claim.text_original}
-        </blockquote>
-        {claim.time_span && (
-          <p className="timestamp">
-            {strings.timestampFrom} {formatSeconds(claim.time_span.start_s)} {strings.timestampTo}{' '}
-            {formatSeconds(claim.time_span.end_s)}
-          </p>
-        )}
-      </section>
+      <UnderstoodClaim claim={claim} recheck={recheck} onRecheck={onRecheck} />
 
       {isCannotConfirm && <p className="abstain">{strings.cannotConfirmBody}</p>}
 
@@ -60,6 +50,18 @@ export function ClaimCard({ card }) {
           </p>
           <p lang="en" dir="ltr">
             {card.term.term_en}
+          </p>
+        </section>
+      )}
+
+      {card.glossary_link && (
+        <section className="term-block glossary-link">
+          <h3>{strings.glossaryHeading}</h3>
+          <p>{strings.glossaryBody}</p>
+          <p>
+            <a href={card.glossary_link} target="_blank" rel="noopener noreferrer">
+              {strings.glossaryLink}
+            </a>
           </p>
         </section>
       )}

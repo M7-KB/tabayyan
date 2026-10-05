@@ -534,42 +534,56 @@ Cards use `--c-control-border` and `--radius-card`; their layout is unchanged.
 
 ## Check client and results (T-504, part 1)
 
-`web/src/api/check.js` builds and sends `POST /api/v1/check` (SPEC.md §3). It sends only the claim id,
-the confirmed text, and an optional level; the server decides the final level and input kind. Every card is
-validated against `contracts/card.schema.json` with Ajv (draft 2020-12) before it reaches the UI, including
-nested evidence and the misquote notice. A card that does not validate is treated as `PIPELINE_DEGRADED`.
-`web/src/components/Results.jsx` shows loading, error (with retry and edit), empty and card states; each error
-code has an Arabic message with a next step.
+`web/src/api/check.js` builds and sends `POST /api/v1/check` (SPEC.md §3). In the one-page flow it sends
+`{ original_text, locale }`: the text as the user typed it. The client sends no claims, levels or input kinds;
+the server extracts and routes them. Every card is validated against `contracts/card.schema.json` with Ajv
+(draft 2020-12) before it reaches the UI, including nested evidence and the misquote notice. A card that does
+not validate is treated as `PIPELINE_DEGRADED`. `web/src/components/Results.jsx` shows loading, error (with
+retry and edit), empty and card states; each error code has an Arabic message with a next step.
 
 Ajv adds a runtime dependency to the web bundle. Arabic error copy is provisional until owner review.
 
-## Text path wiring (feat/web-api-wiring)
+## One-page flow (U1, feat/one-page-check)
 
-`web/src/api/extract.js` sends `POST /api/v1/extract` with `{ text }` and checks that the response has a
-claims array of `{ id, text_ar }` pairs. Anything else is `PIPELINE_DEGRADED`. The client does not segment or
-classify text itself. `web/src/components/ClaimReview.jsx` shows the claims as editable text. Emptying a
-claim's text drops it, and nothing is checked until the user confirms. `web/src/App.jsx` then sends only the
-confirmed claims, with `input_kind` from the extract response, to `/api/v1/check`. The results view keeps
-the AI-not-a-fatwa notice in the header and offers a way back to edit the claims.
+`web/src/App.jsx` shows the input on top and the results below it. There is no claims page. A submit sends the
+text once to `/check`. Each card starts with «فهمنا سؤالك هكذا:» (`UnderstoodClaim.jsx`), which shows how the
+text was understood: `claim.text_ar`, the checkable premise, not the user's own wording. The user can edit that line and re-check only that card, in place. The edited text is sent
+as `original_text`, and the card is replaced by the returned cards. A failed re-check keeps the card and the
+draft. A re-check that returns no cards is `PIPELINE_DEGRADED`.
 
-Error states each give a next step: extraction errors have retry and back actions, check errors have retry
-and edit actions, and `PIPELINE_DEGRADED` never shows a partial result.
+While a check runs, `web/src/components/CheckProgress.jsx` shows three stages and a cancel button. The stages
+advance on a timer, because `/check` answers once. They are indicative and are not measured progress, and the
+screen says so. Cancel drops the request and keeps the input text. A published-answer card shows the source
+host, the excerpt, and the link «اقرأ الجواب كاملاً».
 
-A check response must answer every confirmed claim. Each card's `claim.id` must match a confirmed id, or be a
-server split child `<confirmed id>:<child id>`. An unrelated card, a second card for the same claim, or a
-missing claim fails the whole response with `PIPELINE_DEGRADED` (`coversConfirmedClaims` in `check.js`).
+A term card with `glossary_link` (SPEC 0.11 O2) shows a link-only block: a link to the glossary and no copied
+definition. A card with `explanation_ar: null` (SPEC 0.11 O3) hides the explanation block; the state, source
+text, referral and «how to verify» remain.
 
-Each extract and check request has a client deadline (`EXTRACT_DEADLINE_MS` 45 s, `CHECK_DEADLINE_MS` 90 s in
-`config/api.js`) and shows `TIMEOUT` when it passes. While either request is pending, the user can cancel
-and return to the text or the claims. Cancel and timeout keep the input text and claim edits. A newer
-attempt replaces an older one, and a late response from a cancelled or superseded attempt is dropped. Shared JSON posting and error codes
-live in `web/src/api/http.js`; `CheckError` is an alias of its `ApiError`. The API origin comes from
-`VITE_API_BASE_URL` (`web/src/config/api.js`), with no trailing slash. An empty value means same-origin
-requests. The preview banner hides when `GET /health` returns 200 with a `status` field.
+The extract step (`web/src/api/extract.js`) is no longer called by the app. `EXTRACT_DEADLINE_MS` in
+`config/api.js` is unused for the same reason. Both are kept until the server's one-pass `/check` is live; then
+they can be removed.
 
-Tests (`web/src/__tests__/extract.test.js`, `health.test.js`, `claim-flow.test.jsx`, `check.test.js`, `attempts.test.jsx`) stub `fetch` per endpoint. `attempts.test.jsx` uses fake timers and controlled promises for deadlines, cancel and late responses.
-Live check on 2026-10-05: `POST /api/v1/extract` and `POST /api/v1/check` on the Render API returned 200, and
-the returned card validates against `contracts/card.schema.json`.
+Error states each give a next step: check errors have retry and edit actions, and `PIPELINE_DEGRADED` never shows
+a partial result. Each check and re-check has a client deadline (`CHECK_DEADLINE_MS` 90 s in `config/api.js`)
+and shows `TIMEOUT` when it passes. A newer attempt replaces an older one, and a late response from a cancelled
+or superseded attempt is dropped. Shared JSON posting and error codes live in `web/src/api/http.js`;
+`CheckError` is an alias of its `ApiError`. The API origin comes from `VITE_API_BASE_URL`
+(`web/src/config/api.js`), with no trailing slash. An empty value means same-origin requests. The preview banner
+hides when `GET /health` returns 200 with a `status` field.
+
+The client no longer checks that each card answers a confirmed claim, because the client no longer confirms
+claims. That guard moves to the server's one-pass `/check`.
+
+Tests: `web/src/__tests__/one-page-flow.test.jsx` covers submit, layout, the understood line, staged progress,
+cancel, late responses, the empty, error and network states, edit and re-check in place, the empty-edit guard,
+the client deadline and the preview banner. `check.test.js` covers the request shape and card validation.
+`card.test.jsx` covers the glossary link-only fallback and the dropped explanation.
+`extract.test.js` and `health.test.js` cover their own clients. All stub `fetch` per endpoint.
+
+Live check on 2026-10-05 (before this change): `POST /api/v1/extract` and `POST /api/v1/check` on the Render API
+returned 200, and the returned card validates against `contracts/card.schema.json`. The one-pass request is not
+live until the server's V2 change is deployed; the current server still requires a `claims` list.
 
 ## API scaffold (T-401)
 

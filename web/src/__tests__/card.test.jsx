@@ -113,7 +113,7 @@ describe('data-role separation (G16)', () => {
   it('puts the user claim in data-role="user-text" and the evidence in data-role="scripture"', () => {
     const { container } = render(<ClaimCard card={supportedConfirms} />)
     const claim = container.querySelector('[data-role="user-text"]')
-    expect(claim).toHaveTextContent(supportedConfirms.claim.text_original)
+    expect(claim).toHaveTextContent(supportedConfirms.claim.text_ar)
     const scripture = container.querySelector('[data-role="scripture"]')
     expect(scripture).toHaveTextContent(supportedConfirms.evidence[0].quote_ar)
     expect(claim.contains(scripture)).toBe(false)
@@ -290,6 +290,29 @@ describe('claim timestamp and term', () => {
     render(<ClaimCard card={termCard} />)
     expect(screen.getByText('مصطلح تجريبي')).toBeInTheDocument()
     expect(screen.getByText('Synthetic term')).toBeInTheDocument()
+  })
+
+  it('renders a link-only glossary fallback with no copied definition (SPEC §0.11 O2)', () => {
+    const glossaryCard = {
+      ...cannotConfirm,
+      glossary_link: 'https://islamic-content.com/dictionary',
+      term: null,
+      explanation_ar: null,
+      explanation_en: null,
+      misquote_notice: null,
+    }
+    const { container } = render(<ClaimCard card={glossaryCard} />)
+    const link = screen.getByRole('link', { name: strings.glossaryLink })
+    expect(link).toHaveAttribute('href', 'https://islamic-content.com/dictionary')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(container.querySelector('.glossary-link')).not.toBeNull()
+    expect(container.querySelector('[data-role="explanation"]')).toBeNull()
+  })
+
+  it('hides the explanation block when the server drops it (null explanation, SPEC §0.11 O3)', () => {
+    const { container } = render(<ClaimCard card={{ ...cannotConfirm, explanation_ar: null, explanation_en: null, misquote_notice: null }} />)
+    expect(container.querySelector('[data-role="explanation"]')).toBeNull()
   })
 })
 

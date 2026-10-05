@@ -11,34 +11,17 @@ function jsonResponse(status, body) {
   }
 }
 
-describe('buildCheckRequest', () => {
-  it('sends only the confirmed claim text, id and optional level', () => {
-    const request = buildCheckRequest({
-      claims: [{ id: 'c1', text_ar: 'نص الادعاء', text_original: 'نص الادعاء', level: 'B', span: {} }],
-    })
-    expect(request).toEqual({
-      claims: [{ id: 'c1', text_ar: 'نص الادعاء', level: 'B' }],
-      locale: 'ar',
-    })
+describe('buildCheckRequest (one-pass)', () => {
+  it('sends the text as the user wrote it, with the locale and no claims', () => {
+    const originalText = '  هل القرآن من تأليف محمد؟\n'
+    expect(buildCheckRequest({ originalText })).toEqual({ original_text: originalText, locale: 'ar' })
   })
 
-  it('omits level when the claim has none and omits empty segments', () => {
-    const request = buildCheckRequest({
-      claims: [{ id: 'c1', text_ar: 'نص' }],
-      segments: [],
-    })
-    expect(request).toEqual({ claims: [{ id: 'c1', text_ar: 'نص' }], locale: 'ar' })
-  })
-
-  it('passes input_kind and segments through when given', () => {
-    const segments = [{ start: 0, end: 4.2, text_ar: 'نص' }]
-    const request = buildCheckRequest({
-      claims: [{ id: 'c1', text_ar: 'نص' }],
-      inputKind: 'question',
-      segments,
-    })
-    expect(request.input_kind).toBe('question')
-    expect(request.segments).toEqual(segments)
+  it('sends no claim list, level or input kind; the server extracts them', () => {
+    const request = buildCheckRequest({ originalText: 'نص' })
+    expect(request).not.toHaveProperty('claims')
+    expect(request).not.toHaveProperty('input_kind')
+    expect(request).not.toHaveProperty('level')
   })
 })
 
@@ -71,66 +54,8 @@ function cloneCard(card) {
 
 async function checkWithCard(card) {
   const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { cards: [card] }))
-  return postCheck({ claims: [{ id: 'c1', text_ar: 'نص' }], locale: 'ar' }, { fetchImpl })
+  return postCheck(buildCheckRequest({ originalText: 'نص' }), { fetchImpl })
 }
-
-// Coverage against the confirmed claims (every claim answered once, no unrelated or repeated cards).
-async function checkCards(confirmedIds, cards) {
-  const claims = confirmedIds.map((id) => ({ id, text_ar: 'نص' }))
-  const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { cards }))
-  return postCheck({ claims, locale: 'ar' }, { fetchImpl })
-}
-
-function cardFor(claimId, base = supportedConfirms) {
-  const card = cloneCard(base)
-  card.claim.id = claimId
-  return card
-}
-
-describe('claim coverage (every confirmed claim answered once)', () => {
-  it('accepts one card per confirmed claim', async () => {
-    const result = await checkCards(['c1', 'c2'], [cardFor('c1'), cardFor('c2', cannotConfirm)])
-    expect(result.cards).toHaveLength(2)
-  })
-
-  it('rejects a response that leaves a confirmed claim out', async () => {
-    await expect(checkCards(['c1', 'c2'], [cardFor('c1')])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
-  })
-
-  it('rejects a card for a claim the user did not confirm', async () => {
-    await expect(checkCards(['c1'], [cardFor('c9')])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
-  })
-
-  it('rejects a whole response when one of its cards is unrelated, even if the rest are valid', async () => {
-    await expect(checkCards(['c1'], [cardFor('c1'), cardFor('c9')])).rejects.toMatchObject({
-      code: 'PIPELINE_DEGRADED',
-    })
-  })
-
-  it('rejects two cards for the same claim', async () => {
-    await expect(checkCards(['c1'], [cardFor('c1'), cardFor('c1', cannotConfirm)])).rejects.toMatchObject({
-      code: 'PIPELINE_DEGRADED',
-    })
-  })
-
-  it('accepts server split children of a confirmed claim (submitted.id:child.id)', async () => {
-    const result = await checkCards(['c1'], [cardFor('c1:1'), cardFor('c1:2', cannotConfirm)])
-    expect(result.cards.map((card) => card.claim.id)).toEqual(['c1:1', 'c1:2'])
-  })
-
-  it('does not treat an id that only shares a prefix as a split child', async () => {
-    await expect(checkCards(['c1'], [cardFor('c10')])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
-  })
-
-  it('accepts split children for one confirmed claim and a plain card for another', async () => {
-    const result = await checkCards(['c1', 'c2'], [cardFor('c1:1'), cardFor('c1:2'), cardFor('c2')])
-    expect(result.cards).toHaveLength(3)
-  })
-
-  it('rejects a response with no cards when claims were confirmed', async () => {
-    await expect(checkCards(['c1'], [])).rejects.toMatchObject({ code: 'PIPELINE_DEGRADED' })
-  })
-})
 
 describe('card contract validation (SPEC.md §3, A12)', () => {
   it('accepts a nested correction notice whose evidence is verbatim-verified', async () => {
@@ -166,7 +91,7 @@ describe('card contract validation (SPEC.md §3, A12)', () => {
 describe('postCheck', () => {
   it('POSTs JSON to the check path and returns the parsed cards', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { cards: [supportedConfirms] }))
-    const request = { claims: [{ id: 'c1', text_ar: 'نص' }], locale: 'ar' }
+    const request = buildCheckRequest({ originalText: 'نص' })
 
     const result = await postCheck(request, { baseUrl: 'https://api.example.invalid', fetchImpl })
 
@@ -187,7 +112,7 @@ describe('postCheck', () => {
       .mockResolvedValue(
         jsonResponse(503, { error: { code: 'PIPELINE_DEGRADED', message_ar: '…', message_en: '…' } }),
       )
-    await expect(postCheck({ claims: [], locale: 'ar' }, { fetchImpl })).rejects.toMatchObject({
+    await expect(postCheck(buildCheckRequest({ originalText: 'نص' }), { fetchImpl })).rejects.toMatchObject({
       code: 'PIPELINE_DEGRADED',
       status: 503,
     })
@@ -201,7 +126,7 @@ describe('postCheck', () => {
         throw new SyntaxError('not json')
       },
     })
-    await expect(postCheck({ claims: [], locale: 'ar' }, { fetchImpl })).rejects.toMatchObject({
+    await expect(postCheck(buildCheckRequest({ originalText: 'نص' }), { fetchImpl })).rejects.toMatchObject({
       code: 'UNKNOWN',
       status: 502,
     })
@@ -209,14 +134,14 @@ describe('postCheck', () => {
 
   it('reports a network failure as NETWORK', async () => {
     const fetchImpl = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
-    await expect(postCheck({ claims: [], locale: 'ar' }, { fetchImpl })).rejects.toMatchObject({
+    await expect(postCheck(buildCheckRequest({ originalText: 'نص' }), { fetchImpl })).rejects.toMatchObject({
       code: 'NETWORK',
     })
   })
 
   it('treats a 200 with an unrenderable card as PIPELINE_DEGRADED', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(200, { cards: [{ state: 'SUPPORTED' }] }))
-    await expect(postCheck({ claims: [], locale: 'ar' }, { fetchImpl })).rejects.toMatchObject({
+    await expect(postCheck(buildCheckRequest({ originalText: 'نص' }), { fetchImpl })).rejects.toMatchObject({
       code: 'PIPELINE_DEGRADED',
     })
   })

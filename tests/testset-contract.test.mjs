@@ -43,7 +43,7 @@ test('brief records are present and draft expectations obey pinned policy invari
       assert.ok(Array.isArray(e[key]));
       assert.ok(e[key].every(value => typeof value === 'string' && value.length > 0));
     }
-    assert.equal(record.reviewed_by, 'pending');
+    assert.equal(record.reviewed_by, record.case_id === 'T11' ? 'owner' : 'pending');
     assert.equal(record.needs_sharia_review, record.reviewed_by === 'pending');
     assert.equal(typeof record.needs_sharia_review, 'boolean');
     assert.equal(typeof record.g9_countable, 'boolean');
@@ -76,15 +76,29 @@ test('owner-fixed outcomes and glossary/English paths remain pinned', () => {
   assert.deepEqual(cases.get('T04').expect.required_evidence_domains, ['fiqh']);
 });
 
-test('path stand-ins and missing verse cannot count as G9 behavior coverage', () => {
-  for (const id of ['T03', 'T10', 'T11']) {
+test('path stand-ins cannot count as G9 behavior coverage', () => {
+  for (const id of ['T03', 'T10']) {
     const record = cases.get(id);
     assert.equal(record.g9_countable, false);
     assert.ok(record.blocked_reason_en.length > 0);
   }
   assert.equal(cases.get('T03').expect.abstained_reason, 'NO_MATCHING_EVIDENCE');
   assert.equal(cases.get('T10').expect.abstained_reason, 'NO_CHECKABLE_CLAIM');
-  assert.equal(cases.get('T11').input.text, '[PENDING_OWNER_MISQUOTED_VERSE_FIXTURE]');
+});
+
+test('owner-approved T11 binds the exact misquote to retrieved Quran 33:40', () => {
+  const record = cases.get('T11');
+  assert.equal(record.input.text, 'قال الله تعالى: «ولكن رسول الله وخاتم الرسل»، فهل هذا صحيح؟');
+  assert.deepEqual(record.expect.required_corpus_ids, ['quran:33:40']);
+  assert.equal(record.expect.level, 'A');
+  assert.equal(record.expect.state, 'SUPPORTED');
+  assert.equal(record.expect.alignment, 'CONTRADICTS');
+  assert.equal(record.g9_countable, true);
+  assert.equal(record.blocked_reason_en, null);
+  assert.equal(record.reviewed_by, 'owner');
+  assert.equal(record.needs_sharia_review, false);
+  assert.ok(record.notes_en.includes('ed5cd6b2996d5ce1773c3f0b922aea2aeb50caa314299bcee07ae402d1579642'));
+  assert.ok(!record.notes_en.includes('PENDING'));
 });
 
 test('hostile question and executable neutral twin use the same fixture and expectation', () => {

@@ -452,4 +452,43 @@ describe('hadith and glossary presentation (live-case fixes)', () => {
     expect(container.querySelector('.source-meta')).not.toHaveTextContent('/dictionary')
     expect(container.querySelector('details.references')).toBeNull()
   })
+
+  it('labels a published answer as «source: question title», not by its page path', () => {
+    const faq = {
+      ...supportedConfirms,
+      evidence: [{
+        ...liveEvidence,
+        domain: 'faq',
+        source_name_ar: 'بينات',
+        grading: null,
+        ref: { label: 'عنوان سؤال تجريبي' },
+      }],
+    }
+    const { container } = render(<ClaimCard card={faq} />)
+    expect(container.querySelector('.source-meta')).toHaveTextContent('بينات: عنوان سؤال تجريبي')
+    expect(container.querySelector('.source-meta')).not.toHaveTextContent('/ar/category')
+  })
+
+  it('shows a published answer once: the evidence block of the same record is not repeated', () => {
+    const answer = { ...syntheticAnswer, url: liveEvidence.source_ref.url }
+    const faqEvidence = { ...liveEvidence, domain: 'faq', grading: null, ref: { label: 'عنوان' } }
+    const otherEvidence = { ...supportedConfirms.evidence[0], evidence_id: 'e2' }
+    const card = {
+      ...supportedConfirms, evidence: [faqEvidence, otherEvidence], published_answer: answer, misquote_notice: null,
+    }
+    const { container } = render(<ClaimCard card={card} />)
+    expect(validateCard(card)).toBe(true)
+    const scripture = container.querySelectorAll('[data-role="scripture"]')
+    expect(scripture).toHaveLength(1)
+    expect(scripture[0]).toHaveTextContent(otherEvidence.quote_ar)
+    expect(container.querySelectorAll('[data-role="published-answer"]')).toHaveLength(1)
+    expect(container.textContent.split(answer.excerpt_ar)).toHaveLength(2)
+  })
+
+  it('renders no evidence block on a card that cannot confirm', () => {
+    const { container } = render(<ClaimCard card={{ ...cannotConfirm, misquote_notice: null }} />)
+    expect(container.querySelector('[data-role="scripture"]')).toBeNull()
+    expect(container.querySelector('[data-role="published-answer"]')).toBeNull()
+    expect(validateCard(cannotConfirm)).toBe(true)
+  })
 })

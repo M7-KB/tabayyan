@@ -15,8 +15,9 @@ function splitHadithRef(ref) {
 export function ScriptureBlock({ item }) {
   const showGrading = hasCompleteGrading(item.grading)
   const hadithRef = item.domain === 'hadith' && item.ref ? splitHadithRef(item.ref) : null
-  // A glossary record is labelled «source: term»; other records «source · reference».
-  const sourceMeta = item.domain === 'glossary' && item.ref?.label
+  // A glossary record is labelled «source: term» and a published answer «source: title»;
+  // other records «source · reference».
+  const sourceMeta = ['glossary', 'faq'].includes(item.domain) && item.ref?.label
     ? `${item.source_name_ar}: ${item.ref.label}`
     : hadithRef
       ? `${item.source_name_ar}${Object.keys(hadithRef.short).length ? ` · ${formatRef(hadithRef.short)}` : ''}`

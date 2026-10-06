@@ -996,6 +996,12 @@
           "abstained_reason": {
             "type": "string"
           },
+          "evidence": {
+            "maxItems": 0
+          },
+          "published_answer": {
+            "type": "null"
+          },
           "positions": {
             "maxItems": 0
           },

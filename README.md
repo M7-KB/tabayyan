@@ -1321,8 +1321,11 @@ Private candidates retain the measured lexical overlap floor; only resolved
 router Quran references receive the existing D2 question exception.
 Bayyinat indexes title, question, keywords and detailed answer; display copies
 the summary unchanged, or the first paragraph of the detailed answer up to
-400 characters with no added ellipsis. Paragraphs end at a blank line; internal
-line breaks are copied unchanged. Glossary indexes term, short explanation
+400 characters with no added ellipsis. A leading section label («الجواب
+التفصيلي», «الخلاصة», ...) is skipped, the excerpt stops before «المراجع» or
+«الآيات التي وردت», and the cap falls on a sentence end (or the last whitespace)
+inside the limit. Paragraphs end at a blank line; internal line breaks are
+copied as line feeds. Glossary indexes term, short explanation
 and verbatim translation-list items; its display field is terminological meaning.
 The list has no verified English-equivalent mapping. Until that contract exists,
 term cards retain abstention and the glossary link; no `term_en` is generated or
@@ -1520,3 +1523,31 @@ equivalent), and an unattested label drops the term block, never the definition.
 retrieval key only. Web: the same-meaning hadith badge has a label, long hadith
 references collapse behind «المراجع», a glossary definition is labelled
 «الجمهرة: <term>», and a fresh submission never shows an earlier question's cards.
+
+Freeze fixes (2026-10-06):
+
+- **One state per card.** A card that displays published evidence is SUPPORTED or
+  DISPUTED; a CANNOT_CONFIRM card has no evidence and no published answer, on every
+  abstain path (the card schema enforces `evidence: []` and `published_answer: null`
+  for CANNOT_CONFIRM). A misquote notice is a correction, not evidence, and stays.
+- **Title-matched publisher answer.** When a received Bayyinat record's title names
+  the asked subject (at least 60 % of the question's content words, interrogatives
+  dropped, at least two words, inflected forms counted by a shared four-letter stem),
+  the model's low confidence, evidence gap, CANNOT_CONFIRM, undetermined alignment or
+  a provider failure no longer abstains the card: the publisher's answer is shown as
+  SUPPORTED with the fixed no-explanation note instead of generated prose, and the
+  proposal's alignment (if any) only chooses the label. Without a matching title the
+  block stands. The record is still copied by ID through the gatekeeper.
+- **Labels.** A Bayyinat card is labelled «بينات: <question title>» and a glossary
+  card «الجمهرة: <term>» (the page path is the link, not the label). The published
+  answer is shown once per card: the evidence block of the same record is not repeated.
+- **Quran nominations.** The router prompt states that `proposed_quran_refs` is
+  independent of the input kind, and `"33:40"`-style strings are repaired to
+  surah/ayah pairs; a nominated ayah still resolves only in loaded KFC records.
+- **Complete questions.** NO_CHECKABLE_CLAIM is kept only when the input's subject is
+  a placeholder («هذه المسألة», «كذا»); a complete question the model marked as
+  term_lookup is checked as a question.
+- **CPU.** The scripture scan of one displayed excerpt runs once per request
+  (verify, dependencies and published answer share it), and Bayyinat excerpts are
+  capped at 400 characters; a Bayyinat card no longer scans the whole detailed answer
+  several times.

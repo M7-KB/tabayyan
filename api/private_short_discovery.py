@@ -63,7 +63,8 @@ class PrivateShortDiscovery:
                     "record_ref": row["id"],
                     "source_url": row["url"],
                     "text_ar": quote,
-                    # A glossary card is labelled by its term; other records by their page id.
-                    "ref": {"label": row["term_ar"] if "term_ar" in record else row["id"]},
+                    # A glossary card is labelled by its term, a Bayyinat card by its
+                    # question title; the page path is the link, not the label.
+                    "ref": {"label": row["term_ar"] if "term_ar" in record else row["title"]},
                 }
             )

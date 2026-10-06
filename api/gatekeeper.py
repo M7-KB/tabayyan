@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from api.deadline import DeadlineExceeded
 from api.span_detector import DetectorConfig, Record, SpanDetector
 from corpus.normalize import normalize_arabic
 from corpus.quran_binding import display_text, matching_text
@@ -102,36 +103,47 @@ class QuoteGatekeeper:
         request: SourceRequest,
         detector_config: DetectorConfig,
         received: list[ReceivedResult] | None = None,
+        base: "QuoteGatekeeper | None" = None,
     ):
         if request._used:
             raise ValueError("Source request already consumed")
         request._used = True
         self.config = detector_config
-        self.local_records = copy.deepcopy(local_records)
-        self._records = {}
         self._live = set()
         self._source_names = {}
         self._titles = {}
-        self._local_available = False
-        embedded_comparison = []
-        for record in local_records:
-            r = copy.deepcopy(record)
-            # Local records must already have passed the private artifact loader.
-            if (r.get("domain"), r.get("source_id")) not in {
-                ("quran", "kfc-mushaf"),
-                ("hadith", "sahih-bukhari"),
-                ("hadith", "hadeethenc"),
-            }:
-                continue
-            if r.get("domain") == "quran":
-                self._local_available = True
-            self._records[r["corpus_id"]] = r
-            embedded_comparison.append(Record(r["corpus_id"], r["domain"], matching_text(r)))
-            if display_text(r) != matching_text(r):
-                # Display spelling is safety knowledge, never a second matching key.
-                embedded_comparison.append(
-                    Record("display:" + r["corpus_id"], r["domain"], display_text(r))
-                )
+        if base is not None:
+            # Reuse the validated local index of an existing gatekeeper. Local
+            # records are never mutated after validation, so sharing them is
+            # safe; only this request's received records are processed below.
+            self.local_records = base.local_records
+            self._local = base._local
+            self._embedded_local = base._embedded_local
+            self._comparison_local = base._comparison_local
+            self._records = dict(self._local)
+            embedded_comparison = list(self._embedded_local)
+        else:
+            self.local_records = copy.deepcopy(local_records)
+            self._records = {}
+            embedded_comparison = []
+            for record in local_records:
+                r = copy.deepcopy(record)
+                # Local records must already have passed the private artifact loader.
+                if (r.get("domain"), r.get("source_id")) not in {
+                    ("quran", "kfc-mushaf"),
+                    ("hadith", "sahih-bukhari"),
+                    ("hadith", "hadeethenc"),
+                }:
+                    continue
+                self._records[r["corpus_id"]] = r
+                embedded_comparison.append(Record(r["corpus_id"], r["domain"], matching_text(r)))
+                if display_text(r) != matching_text(r):
+                    # Display spelling is safety knowledge, never a second matching key.
+                    embedded_comparison.append(
+                        Record("display:" + r["corpus_id"], r["domain"], display_text(r))
+                    )
+            self._local = dict(self._records)
+            self._embedded_local = tuple(embedded_comparison)
         blocked = set()
         for item in request._received if received is None else received:
             if item.request_token is not request._token:
@@ -181,20 +193,50 @@ class QuoteGatekeeper:
         # An exact twin changes the verdict even when it is never displayed.
         # Apply the same reference/grading authorization before it can veto a
         # near match. Keep every authorized local/current-request scripture row.
-        comparison = [
+        # Local authorization depends only on the local record, so it is computed
+        # once and reused by every gatekeeper derived from this one.
+        if base is None:
+            self._comparison_local = tuple(
+                Record(k, r["domain"], matching_text(r))
+                for k, r in self._local.items()
+                if r["domain"] in {"quran", "hadith"}
+                and self._base_quote(k, r["text_ar"]) is not None
+            )
+        live_comparison = [
             Record(k, r["domain"], matching_text(r))
             for k, r in self._records.items()
-            if r["domain"] in {"quran", "hadith"} and self._base_quote(k, r["text_ar"]) is not None
+            if k in self._live
+            and r["domain"] in {"quran", "hadith"}
+            and self._base_quote(k, r["text_ar"]) is not None
         ]
+        comparison = [*self._comparison_local, *live_comparison]
         self._local_available = any(
             r.domain == "quran" and r.corpus_id not in self._live for r in comparison
         )
-        self.detector = SpanDetector(comparison if self._local_available else None, detector_config)
-        # Rejected scripture still supplies unsafe-span knowledge. This index
-        # never decides claim alignment or authorizes an exact-match veto.
-        self._embedded_detector = SpanDetector(
-            embedded_comparison if self._local_available else None, detector_config
+        live_embedded = embedded_comparison[len(self._embedded_local) :]
+        if base is not None and self._local_available == base._local_available:
+            self.detector = base.detector.extend(live_comparison)
+            # Rejected scripture still supplies unsafe-span knowledge. This index
+            # never decides claim alignment or authorizes an exact-match veto.
+            self._embedded_detector = base._embedded_detector.extend(live_embedded)
+        else:
+            self.detector = SpanDetector(
+                comparison if self._local_available else None, detector_config
+            )
+            self._embedded_detector = SpanDetector(
+                embedded_comparison if self._local_available else None, detector_config
+            )
+
+    def derive(self, request: SourceRequest) -> "QuoteGatekeeper":
+        """A gatekeeper for one request that reuses this one's validated local index."""
+        return QuoteGatekeeper(
+            local_records=[], request=request, detector_config=self.config, base=self
         )
+
+    @property
+    def live_records(self) -> list[dict]:
+        """Records received in this request, in retrieval order; never local ones."""
+        return [self._records[k] for k in self._records if k in self._live]
 
     @property
     def records(self) -> list[dict]:
@@ -269,6 +311,8 @@ class QuoteGatekeeper:
         """Require each detected scripture span to have its own authorized record."""
         try:
             detection = self.scan_scripture(text)
+        except DeadlineExceeded:
+            raise
         except Exception:
             return None
         if detection.span_detector_status != "ran":

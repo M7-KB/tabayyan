@@ -2,6 +2,7 @@
 
 import re
 import unicodedata
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,7 @@ from pathlib import Path
 import yaml
 
 from api.config import TuningMetadata, load_config
+from api.deadline import DeadlineExceeded, check_deadline
 
 _VARIANTS = str.maketrans("أإآٱىة", "اااايه")
 _MARK_RANGES = (
@@ -179,22 +181,73 @@ class Detection:
         return {"force_quran_contradicts": force, "misquote_notice": notice}
 
 
+class _Lookup:
+    """Derived read-only search structures for one index tuple; never a second key."""
+
+    def __init__(self, index: tuple):
+        self.index = index
+        self.exact: dict[tuple[str, ...], int] = {}
+        self.lengths = tuple(len(target) for _, target in index)
+        postings: dict[str, list[int]] = {}
+        by_length: dict[int, list[int]] = {}
+        for position, (_, target) in enumerate(index):
+            self.exact.setdefault(target, position)
+            by_length.setdefault(len(target), []).append(position)
+            for token in set(target):
+                postings.setdefault(token, []).append(position)
+        self.postings = {token: tuple(found) for token, found in postings.items()}
+        self.by_length = {length: tuple(found) for length, found in by_length.items()}
+
+
 class SpanDetector:
-    def __init__(self, records: Sequence[Record] | None, config: DetectorConfig):
+    def __init__(
+        self,
+        records: Sequence[Record] | None,
+        config: DetectorConfig,
+        *,
+        index: tuple[tuple[Record, tuple[str, ...]], ...] | None = None,
+    ):
         self.config = config
         self.index = None
-        if records is not None:
-            index = []
-            ids = set()
-            for record in records:
-                if record.domain not in {"quran", "hadith"}:
-                    continue
-                tokens = words(record.text_ar)
-                if not tokens or not record.corpus_id or record.corpus_id in ids:
-                    raise ValueError("invalid or duplicate scripture record")
-                ids.add(record.corpus_id)
-                index.append((record, tokens))
-            self.index = tuple(index)
+        self._lookup = None
+        if index is not None:
+            # Already tokenized (record, words) pairs from another detector built
+            # with the same config; the tuple is immutable and safely shared.
+            if records is not None:
+                raise ValueError("pass records or index, not both")
+            self.index = index
+        elif records is not None:
+            self.index = self._build(records, ())
+        if self.index:
+            self._lookup = _Lookup(self.index)
+
+    @staticmethod
+    def _build(records: Sequence[Record], existing: tuple) -> tuple:
+        index = list(existing)
+        ids = {record.corpus_id for record, _ in existing}
+        for record in records:
+            if record.domain not in {"quran", "hadith"}:
+                continue
+            tokens = words(record.text_ar)
+            if not tokens or not record.corpus_id or record.corpus_id in ids:
+                raise ValueError("invalid or duplicate scripture record")
+            ids.add(record.corpus_id)
+            index.append((record, tokens))
+        return tuple(index)
+
+    def extend(self, records: Sequence[Record]) -> "SpanDetector":
+        """A detector over this index plus more records, tokenizing only the new ones."""
+        if self.index is None:
+            return SpanDetector(records, self.config)
+        if not any(record.domain in {"quran", "hadith"} for record in records):
+            return self
+        return SpanDetector(None, self.config, index=self._build(records, self.index))
+
+    def _lookup_for(self) -> _Lookup:
+        # Rebuilt only when the index tuple itself is replaced.
+        if self._lookup is None or self._lookup.index is not self.index:
+            self._lookup = _Lookup(self.index)
+        return self._lookup
 
     def classify(self, text: str, trigger: str = "A") -> Match:
         if trigger not in {"A", "B"}:
@@ -230,6 +283,63 @@ class SpanDetector:
             candidates,
             key=lambda m: (m.classification != "NEAR_MISS", m.distance, m.length_difference),
         )
+
+    def _window_match(self, tokens: tuple[str, ...], lookup: _Lookup) -> Match | None:
+        """Trigger-B classification of one window, or None when it is UNRELATED.
+
+        Returns exactly what _classify(tokens, "B") returns whenever that result
+        is VERBATIM or NEAR_MISS. Records that cannot reach the near-miss budget
+        are skipped before any edit distance is computed: a near miss within
+        budget b differs in length by at most b and keeps at least
+        len(tokens) - b window tokens unchanged, so it shares at least
+        (counted - b) of any counted window positions. Survivors are compared
+        in index order, so ties resolve exactly as the full scan resolves them.
+        """
+        n = len(tokens)
+        exact = lookup.exact.get(tokens)
+        if exact is not None:
+            return Match("VERBATIM", lookup.index[exact][0], 0, n, 0)
+        config = self.config
+        if n < config.trigger_b_min_window_tokens:
+            return None
+        budgets = {
+            m: config.budget(max(n, m))
+            for m in lookup.by_length
+            if m >= config.trigger_b_min_window_tokens
+        }
+        budgets = {m: b for m, b in budgets.items() if abs(n - m) <= b}
+        if not budgets:
+            return None
+        bound = max(budgets.values())
+        # Count only the rarest distinct window tokens, with their multiplicity.
+        rarest = sorted(set(tokens), key=lambda t: (len(lookup.postings.get(t, ())), t))
+        counted = rarest[: max(bound + 1, 12)]
+        needed = {m: sum(tokens.count(t) for t in counted) - b for m, b in budgets.items()}
+        survivors = [p for m, need in needed.items() if need <= 0 for p in lookup.by_length[m]]
+        positive = [need for need in needed.values() if need > 0]
+        if positive:
+            hits: Counter = Counter()
+            for token in counted:
+                for _ in range(tokens.count(token)):
+                    hits.update(lookup.postings.get(token, ()))
+            floor, lengths = min(positive), lookup.lengths
+            survivors.extend(
+                p for p, h in hits.items() if h >= floor and 0 < needed.get(lengths[p], 0) <= h
+            )
+        best = None
+        for position in sorted(survivors):
+            record, target = lookup.index[position]
+            m = len(target)
+            distance = word_distance(tokens, target)
+            if distance > budgets[m]:
+                continue
+            match = Match("NEAR_MISS", record, distance, max(n, m), abs(n - m))
+            if best is None or (distance, match.length_difference) < (
+                best.distance,
+                best.length_difference,
+            ):
+                best = match
+        return best
 
     @staticmethod
     def _tokens(text: str) -> list[tuple[str, int, int]]:
@@ -301,13 +411,15 @@ class SpanDetector:
             for _, target in self.index
             for length in range(max(1, len(target) - 2), len(target) + 3)
         }
+        lookup = self._lookup_for()
         candidates = []
         for length in sorted(lengths):
             for i in range(len(tokens) - length + 1):
+                check_deadline()
                 window = tokens[i : i + length]
                 start, end = window[0][1], window[-1][2]
-                match = self._classify(tuple(t[0] for t in window), "B")
-                if match.classification != "UNRELATED":
+                match = self._window_match(tuple(t[0] for t in window), lookup)
+                if match is not None:
                     candidates.append(Finding(start, end, None, match))
         verbatim = [f for f in findings + candidates if f.match.classification == "VERBATIM"]
         target_lengths = {record.corpus_id: len(target) for record, target in self.index}
@@ -351,6 +463,9 @@ class SpanDetector:
             return Detection("corpus_id_unresolved")
         try:
             return Detection("ran", self._scan(text))
+        except DeadlineExceeded:
+            # The request deadline passed; stop scanning and release the CPU.
+            raise
         except TimeoutError:
             return Detection("timeout")
         except Exception:

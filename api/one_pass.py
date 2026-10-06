@@ -6,7 +6,7 @@ from time import monotonic
 
 from api.check import CheckRequest, CheckService
 from api.classifier import rule_level
-from api.deadline import request_deadline, request_progress
+from api.deadline import DeadlineExceeded, request_deadline, request_progress
 from api.diagnostics import code, record, timed
 from api.extract import ExtractionError
 from api.gatekeeper import SourceRequest
@@ -174,6 +174,8 @@ class OnePassCheckService(CheckService):
                     try:
                         cards.append(future.result())
                         continue
+                    except DeadlineExceeded:
+                        pass  # CPU-bound work stopped at the deadline; retryable.
                     except ProviderUnavailable as exc:
                         if exc.category not in {"timeout", "retry_budget"}:
                             raise

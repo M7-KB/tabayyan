@@ -7,6 +7,17 @@ from time import monotonic
 request_deadline: ContextVar[float | None] = ContextVar("request_deadline", default=None)
 
 
+class DeadlineExceeded(TimeoutError):
+    """The request deadline passed while CPU-bound work was still running."""
+
+
+def check_deadline() -> None:
+    """Raise inside long loops so work abandoned by the HTTP deadline stops promptly."""
+    deadline = request_deadline.get()
+    if deadline is not None and monotonic() >= deadline:
+        raise DeadlineExceeded
+
+
 class RequestProgress:
     """Ephemeral validated results shared with the HTTP deadline owner."""
 

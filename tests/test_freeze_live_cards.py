@@ -28,6 +28,7 @@ from tests.test_private_index_matchers import FakeEmbedder, vector
 from tests.test_private_v2_wiring import row
 from tests.test_twelve_cases import (
     FAQ_ANSWER,
+    VERSE_WORDS,
     Indexes,
     check,
     faq_received,
@@ -43,6 +44,9 @@ def harness():
 
 
 KAABA = "لماذا يعبد المسلمون الكعبة؟"
+# A nominated ayah is shown only when it shares a word with the question (or the
+# selected publisher answer); these synthetic questions carry one verse word for that.
+VERSE_WORD = VERSE_WORDS[3]
 SEAL = "من هو خاتم الأنبياء؟"
 ASR = "حكم ترك صلاة العصر؟"
 UNSPECIFIED = "هل كل المسلمين يتفقون في هذه المسألة؟"
@@ -101,8 +105,14 @@ def test_model_cannot_confirm_without_publisher_record_shows_no_evidence(harness
     with received(), model_knobs(harness, prefer=("quran",)):
         card = check(
             harness,
-            KAABA,
-            route(KAABA, kind="doubt", level="A", origin="presupposition", refs=[(1, 1)]),
+            KAABA + " " + VERSE_WORD,
+            route(
+                KAABA + " " + VERSE_WORD,
+                kind="doubt",
+                level="A",
+                origin="presupposition",
+                refs=[(1, 1)],
+            ),
             state="CANNOT_CONFIRM",
             alignment=None,
             alignment_confidence=0.0,
@@ -120,7 +130,7 @@ def test_low_confidence_without_title_match_shows_no_evidence(harness):
 def test_state_rules_abstention_clears_selected_evidence(harness):
     # Level C with scripture alone: the policy's state rules abstain after the model
     # selected a record. The card used to keep that record while CANNOT_CONFIRM.
-    text = "هل الإسلام انتشر بالسيف؟"
+    text = "هل الإسلام انتشر بالسيف؟ " + VERSE_WORD
     with received(), model_knobs(harness, prefer=("quran",)):
         card = check(
             harness,
@@ -131,7 +141,7 @@ def test_state_rules_abstention_clears_selected_evidence(harness):
 
 
 def test_alignment_undetermined_clears_selected_evidence(harness):
-    text = "هل القرآن من تأليف محمد ﷺ؟"
+    text = "هل القرآن من تأليف محمد ﷺ؟ " + VERSE_WORD
     with received(), model_knobs(harness, prefer=("quran",)):
         card = check(
             harness,
@@ -268,8 +278,14 @@ def test_nominated_ayah_reaches_the_card_for_the_seal_question(harness, caplog):
     ):
         card = check(
             harness,
-            SEAL,
-            route(SEAL, kind="doubt", level="A", origin="question_subject", refs=[(1, 1)]),
+            SEAL + " " + VERSE_WORD,
+            route(
+                SEAL + " " + VERSE_WORD,
+                kind="doubt",
+                level="A",
+                origin="question_subject",
+                refs=[(1, 1)],
+            ),
         )
     _, model = harness
     # The request summary counts the nomination and its resolution (text-free counters).

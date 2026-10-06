@@ -765,8 +765,32 @@ class Composer:
             gate["verbatim"] = "fail"
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
+        # A nominated ayah is a lookup key: it is shown only when the model cited it and
+        # its words overlap the question or the selected publisher answer. A verse with
+        # no shared word (a nomination that misses) never becomes evidence by itself.
+        if nominated_ids & set(selected_ids):
+            answers = " ".join(
+                by_id[cid].record["text_ar"]
+                for cid in selected_ids
+                if cid not in nominated_ids and by_id[cid].record.get("source_id") == "bayyinat"
+            )
+            overlapping = {r.corpus_id for r in self.retriever.candidates(claim.text_ar)}
+            overlapping |= {r.corpus_id for r in self.retriever.candidates(asked)}
+            if answers.strip():
+                overlapping |= {
+                    r.corpus_id for r in self.retriever.candidates(answers, domain="quran")
+                }
+            unrelated = [
+                cid for cid in selected_ids if cid in nominated_ids and cid not in overlapping
+            ]
+            if unrelated:
+                code("nominated_ref:no_overlap")
+                selected_ids = [cid for cid in selected_ids if cid not in unrelated]
+                card["evidence"] = [
+                    e for e in card["evidence"] if e["evidence_id"] not in unrelated
+                ]
         if not card["evidence"]:
-            return finish("NO_MATCHING_EVIDENCE")
+            return publisher_fallback("NO_MATCHING_EVIDENCE", proposal.alignment_proposal)
         # Apply this guard to every displayed glossary item, in every input path,
         # before any later finish can return selected evidence.
         for cid in selected_ids:

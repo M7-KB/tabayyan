@@ -223,20 +223,21 @@ class Router:
 
 def _repair_proposal(text: str, raw) -> RouterProposal:
     """Repair schema shape only; never infer evidence or log model values."""
+    bounded_text = text[:12000] or " "
     defaults = {
         "detected_lang": "ar" if any("\u0600" <= c <= "\u06ff" for c in text) else "en",
         "claims": [
             dict(
-                text_ar=text,
-                source_text=text,
-                span=dict(start=0, end=len(text)),
+                text_ar=bounded_text,
+                source_text=bounded_text,
+                span=dict(start=0, end=len(bounded_text)),
                 origin="question_subject" if any(c in text for c in ("?", "\u061f")) else "stated",
             )
         ],
         "level": "C",
         "level_confidence": 0.0,
         "level_d": False,
-        "premise": text,
+        "premise": bounded_text,
         "input_kind": "other",
         "search_queries": [],
         "safe_to_search": False,
@@ -265,7 +266,7 @@ def _repair_proposal(text: str, raw) -> RouterProposal:
         if len(valid) > cap:
             code("router_field:" + name)
         value[name] = valid[:cap]
-    while True:
+    for _ in range(2):
         try:
             return RouterProposal.model_validate(value)
         except ValidationError as exc:
@@ -274,6 +275,8 @@ def _repair_proposal(text: str, raw) -> RouterProposal:
                 if name in defaults:
                     code("router_field:" + name)
                     value[name] = defaults[name]
+    # A future schema/default mismatch must terminate instead of spinning.
+    return RouterProposal.model_validate(defaults)
 
 
 class _SourceAbsent(Exception):
@@ -362,13 +365,14 @@ def _whole_input_fallback(text: str, proposal: RouterProposal) -> RouterProposal
         origin = "question_subject"
     else:
         origin = "stated"
+    bounded_text = text[:12000]
     return proposal.model_copy(
         update={
             "claims": [
                 ClaimProposal(
-                    text_ar=text,
-                    source_text=text,
-                    span=Span(start=0, end=len(text)),
+                    text_ar=bounded_text,
+                    source_text=bounded_text,
+                    span=Span(start=0, end=len(bounded_text)),
                     origin=origin,
                 )
             ]

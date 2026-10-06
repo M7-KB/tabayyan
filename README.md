@@ -1291,6 +1291,8 @@ threshold (owner D2); candidate-ID, source-binding, span, confidence and alignme
 proposal gates still run. Stated quotes retain the lexical threshold.
 Router schema failures repair individual fields with conservative defaults; unknown
 topics and malformed/out-of-range Quran refs are dropped individually (owner D3).
+Repair validation has a fixed attempt cap; fallback claim and premise fields are
+bounded to 12,000 characters, including legacy claim lists joined with newlines.
 Request summary codes record fixed router field names and alignment gate outcomes,
 never model values, source text or user text. Provider failures remain distinct.
 Missing or wrong-source nominations are ignored. Level D skips this retrieval.

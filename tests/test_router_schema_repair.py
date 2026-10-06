@@ -1,6 +1,8 @@
 """Router schema resilience and strict evidence gates, using synthetic records."""
 
 import json
+import subprocess
+import sys
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +14,32 @@ from api.settings import Settings
 from tests.test_composer import claim, engine, proposal
 from tests.test_one_pass import route_proposal, service
 from tests.test_router_candidates import quran_record
+
+
+def test_oversize_default_and_legacy_claim_join_return_within_timeout():
+    # A subprocess deadline makes the original infinite loop fail this test
+    # without leaving a spinning thread behind in the test runner.
+    script = (
+        f"sys.path[:] = {sys.path!r}\n"
+        + """
+from api.router import _repair_proposal
+from api.check import CheckRequest
+from tests.test_one_pass import service
+for length in (100, 12001, 12049):
+    repaired = _repair_proposal("x" * length, {})
+    assert len(repaired.claims[0].text_ar) <= 12000
+    assert len(repaired.premise) <= 12000
+    assert repaired.claims[0].span.end <= 12000
+request = CheckRequest(claims=[dict(id=str(i), text_ar="x" * 240) for i in range(50)])
+checker, _, _ = service({})
+result = checker.check(request)
+assert result["cards"] and result["cards"][0]["state"] == "CANNOT_CONFIRM"
+"""
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", "import sys\n" + script], capture_output=True, text=True, timeout=10
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize(

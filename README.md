@@ -23,8 +23,9 @@ propagates to parallel claim workers. No input, source text, model identifier, k
 provider body or exception text appears in these events. Validation failures use
 fixed categories. Client-supplied request IDs are ignored and context resets after
 each request. A route's elapsed time is observational, not an enforced deadline:
-O4 is a 35-second server deadline (owner event
-`d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f`). Historical 503s remain unattributed without deployment
+The enforced check deadline defaults to 60 seconds via `CHECK_DEADLINE_SECONDS`
+(owner event `95cd2183a9bc20e7b241b27a8fbc7b920aacad0a744252e8b0bdd552837fa30f`,
+superseding O4's 35-second default). Historical 503s remain unattributed without deployment
 logs; these diagnostics must deploy before they can classify new live failures.
 
 `POST /api/v1/extract` accepts `{"text":"...","max_claims":10}`. Text is limited
@@ -627,8 +628,8 @@ The extract step (`web/src/api/extract.js`) is no longer called by the app. `EXT
 they can be removed.
 
 Error states each give a next step: check errors have retry and edit actions, and `PIPELINE_DEGRADED` never shows
-a partial result. Each check and re-check has a client deadline (`CHECK_DEADLINE_MS` 40 s in `config/api.js`,
-owner O4, event `d3f6a64c16cd66be3207b50eb507c50692307566724b43abc5c1a356b325ed7f`).
+a partial result. Each check and re-check has a client deadline (`CHECK_DEADLINE_MS` defaults to 65 s in `config/api.js`,
+build-time override `VITE_CHECK_DEADLINE_MS` in milliseconds).
 At that deadline it shows the retryable message «لم يكتمل التحقق، حاول مرة أخرى» and keeps the input or
 edited draft. An unfinished request is not labelled CANNOT_CONFIRM and does not imply missing evidence.
 The response may include `retryable_results` alongside validated `cards`. Each unfinished item has
@@ -1272,7 +1273,7 @@ that source and degrades health; `/health` reports fixed source statuses/counts.
 The owner-authorized pending-review mode is `ALLOW_PENDING_REVIEW=true`.
 
 Only routed doubts use Bayyinat and only routed term requests use the glossary.
-Level D skips both. Retrieval has a 3-second cap within the 35-second request
+Level D skips both. Retrieval has a 3-second cap within the configured request
 deadline; failures produce retryable unfinished results. Candidates are bound to
 the current request and still pass the existing verbatim, embedded-scripture,
 grading, alignment and confidence gates. Query embeddings are transient.
@@ -1317,12 +1318,16 @@ is unverified, and web-search citations alone do not provide raw verbatim eviden
 
 ### Check deadline and unfinished results
 
-`/check` has a 35-second orchestration deadline. Provider retries share its remaining
-budget. Completed evidence cards stay in `cards`; unfinished claims are returned in
+`/check` has a 60-second orchestration and HTTP deadline by default, configured
+with `CHECK_DEADLINE_SECONDS` (a finite positive number of seconds). Provider retries
+share its remaining budget. Completed evidence cards stay in `cards`; unfinished claims are returned in
 `retryable_results` as `{claim_id, text_ar, code: "CHECK_INCOMPLETE", retryable: true,
 message_ar}`. They have no evidence state and are never converted to CANNOT_CONFIRM.
 A routing timeout, before claims are known, returns HTTP 503 with error code
-CHECK_INCOMPLETE. The client deadline is about 40 seconds.
+CHECK_INCOMPLETE. The client defaults to 65 seconds, with build-time override
+`VITE_CHECK_DEADLINE_MS` (finite positive milliseconds; invalid values use 65000).
+Keep the client at least five seconds above the configured server deadline.
+This margin does not increase provider or retrieval budgets or relax evidence gates.
 Running synchronous operations cannot be forcibly interrupted; the response stops
 waiting at the deadline and cancels queued work. Provider calls inherit the absolute
 deadline, and late worker results are discarded without persistence.

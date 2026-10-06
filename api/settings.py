@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     tuning_path: Path = ROOT / "api/tuning.yaml"
     build_sha: str = ""
     render_git_commit: str = ""
+    check_deadline_seconds: float = Field(default=60, gt=0, allow_inf_nan=False)
     health_only: bool = False
     allow_pending_review: bool = False
     private_corpus_path: Path | None = None

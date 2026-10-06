@@ -1,5 +1,21 @@
 # Tools register
 
+## Owner collector and reference-pack revisions (2026-10-06)
+
+R1 (reference-pack translation), R2 (HadeethEnc owner collector) and R3
+(Bayyinat/glossary selectors) were prepared with Claude Sonnet 5, as recorded
+in their original material-author commit trailers; the provider identifier was
+not independently verified in this session. Codex / OpenAI (session identifies
+GPT-6; exact API model ID not exposed) applied the owner's final host, D4 and
+heading decisions, checked attribution, ran synthetic offline tests and opened
+the review PRs. Authority: Buzz planning event
+`5bea83c2bb77c7a0d48ca75c6093bd52af60935ac35470c2879bdb43fbc7d83f`.
+Supporting tools: Git/GitHub CLI, bundled Buzz CLI and its local skill,
+PowerShell, Node test runner and the existing Python 3.11/pytest workspace
+environment. No religious source content was generated, no collector was run
+against a publisher, and no outside-workspace source document was read in this
+revision session. Account/service terms were not independently verified.
+
 ## Private-index implementation log (2026-10-05)
 
 Authority: owner planning event

@@ -137,7 +137,7 @@ class LevelClassifier:
         self.confidence_min = tuning.level_confidence_min
         self.model = model
 
-    def resolve(self, floor: Level, proposal: object) -> Classification:
+    def resolve(self, floor: Level, proposal: object, *, routing: bool = False) -> Classification:
         """Validate a proposal locally and apply the policy's restrictive ratchet."""
         if floor == "D":
             return Classification(
@@ -157,9 +157,15 @@ class LevelClassifier:
             )
         if proposed.confidence < self.confidence_min:
             return Classification(
-                level=self.order[-1],
+                level=max((floor, proposed.level), key=self.order.index)
+                if routing
+                else self.order[-1],
                 level_confidence=proposed.confidence,
-                level_rationale_en="Low classification confidence; referral required",
+                level_rationale_en=(
+                    "Low routing confidence; rules and explicit model level retained"
+                    if routing
+                    else "Low classification confidence; referral required"
+                ),
                 classifier_status="low_confidence",
             )
         level = max((floor, proposed.level), key=self.order.index)

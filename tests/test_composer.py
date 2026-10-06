@@ -497,7 +497,8 @@ def test_unattested_term_label_cannot_be_generated():
     r["text_en"] = "Synthetic name"
     e = engine(proposal(term_label_ar="invented label"), [record("fixture:scripture"), r])
     card = compose(e, claim(r["text_ar"], origin="term_lookup"), kind="term", no_claim=True)
-    assert card["state"] == "CANNOT_CONFIRM"
+    # The verified definition stays as evidence; an unattested label never becomes a term.
+    assert card["state"] == "SUPPORTED" and card["evidence"]
     assert card["term"] is None
 
 

@@ -1498,3 +1498,25 @@ and 10 cite Bayyinat and cases 7, 8 and 12 cite the glossary only when the owner
 private v2 indexes are configured (`PRIVATE_SHORT_INDEX_DIR`, `PRIVATE_BAYYINAT_SHA256`,
 `PRIVATE_GLOSSARY_SHA256`, `OPENAI_MODEL_EMBED`); without them those cases ground on the
 loaded Quran and HadeethEnc records or abstain with a referral and the glossary link.
+
+### Publisher answers from the private indexes (2026-10-06, owner decision)
+
+A record received from the owner's private Bayyinat or glossary index that answers
+the asked question is the approved doubts or terminology source for it: a Bayyinat
+answer matched by title, question text and keywords (BM25 plus embedding) that the
+model selects, or a glossary record whose term the text names. Such a card is
+SUPPORTED with the publisher's «الخلاصة» (or 400-character first paragraph) as the
+published answer, or the glossary definition as evidence, at any level including C,
+without a second position and without a model alignment proposal (the proposal only
+chooses the label: CONTRADICTS for a false premise, otherwise CONFIRMS). The card
+schema's level C rule allows this only when a published answer is present. A model
+CANNOT_CONFIRM that still selects such a record does not abstain the card. Every quote
+is still copied from the record by ID through the gatekeeper; the model writes no
+definition or answer. A term card shows the glossary link block only when no
+definition is shown; its term block uses the publisher's `text_en` or the publisher's
+own English translation list item verbatim (a bare language name is not an
+equivalent), and an unattested label drops the term block, never the definition.
+«فهمنا سؤالك هكذا» shows the user's own words for questions; a router premise is a
+retrieval key only. Web: the same-meaning hadith badge has a label, long hadith
+references collapse behind «المراجع», a glossary definition is labelled
+«الجمهرة: <term>», and a fresh submission never shows an earlier question's cards.

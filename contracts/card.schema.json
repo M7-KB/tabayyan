@@ -1090,6 +1090,9 @@
             "required": [
               "level"
             ]
+          },
+          "published_answer": {
+            "type": "null"
           }
         },
         "required": [
@@ -1097,6 +1100,7 @@
         ]
       },
       "then": {
+        "description": "Level C has no single-record SUPPORTED state, except a card whose evidence is a published answer from the approved doubts source (owner decision, 2026-10-06).",
         "properties": {
           "state": {
             "enum": [

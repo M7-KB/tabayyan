@@ -175,6 +175,27 @@ describe('one-page flow: submit and results', () => {
     expect(bodies).toEqual(['نص للإعادة', 'نص للإعادة'])
   })
 
+  it('clears the previous question\'s cards when a new submission fails', async () => {
+    const user = userEvent.setup()
+    let calls = 0
+    stubApi({
+      check: () => (++calls === 1
+        ? jsonResponse(200, { cards: [card('c1', 'السؤال الأول')] })
+        : jsonResponse(503, { error: { code: 'PIPELINE_DEGRADED' } })),
+    })
+    render(<App />)
+
+    await submitText(user, 'السؤال الأول')
+    expect(await screen.findByRole('article')).toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText(strings.textLabel))
+    await submitText(user, 'السؤال الثاني')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.checkErrors.PIPELINE_DEGRADED)
+    expect(screen.queryByRole('article')).not.toBeInTheDocument()
+    expect(screen.queryByText('السؤال الأول')).not.toBeInTheDocument()
+  })
+
   it('shows the network message when the request cannot reach the API', async () => {
     const user = userEvent.setup()
     stubApi({

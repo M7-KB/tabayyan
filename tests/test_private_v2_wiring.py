@@ -230,8 +230,8 @@ def test_one_pass_copies_private_source_through_composer_gate(
         # equivalent there is no term block, only the glossary link.
         assert card["state"] == "SUPPORTED"
         assert card["evidence"][0]["quote_ar"] == matcher_type.display_text(raw)
-        assert card["term"] is None
-        assert card["glossary_link"] == "https://islamic-content.com/dictionary"
+        assert card["term"] is None  # "English" alone is a language name, not an equivalent.
+        assert "glossary_link" not in card  # The link stands in only when nothing is shown.
         return
     # A question's evidence is selected by ID from the request's validated records;
     # the lexical overlap floor applies to stated quotations only.

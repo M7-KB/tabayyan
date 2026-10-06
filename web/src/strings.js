@@ -75,10 +75,13 @@ export const strings = {
   stateLabels: {
     supported_confirms: 'يؤيده المصدر المعتمد',
     supported_contradicts: 'لا يطابق المصدر المعتمد',
+    // Local hadith path (D7): an authentic hadith of close meaning, not the user's wording.
+    supported_same_meaning: 'لم نجد لفظك حرفياً؛ هذا حديث صحيح بمعنى قريب',
     disputed: 'مسألة مختلف فيها',
     cannot_confirm: 'لا يمكن التأكد من المصادر المتاحة',
   },
   sourceTextIntro: 'النص كما ورد في المصدر:',
+  referencesHeading: 'المراجع',
   timestampFrom: 'من',
   timestampTo: 'إلى',
   explanationHeading: 'شرح مُولَّد بالذكاء الاصطناعي',

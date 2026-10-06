@@ -45,9 +45,15 @@ class PrivateShortDiscovery:
                 record = {"domain": "faq", "title_ar": row["title"]}
             else:
                 quote = GlossaryMatcher.display_text(row)
-                # List items are publisher text, not an established English equivalent.
-                # Do not synthesize text_en from language names or concatenate them.
-                record = {"domain": "glossary", "term_ar": row["term_ar"]}
+                # The translation list items are publisher text, copied verbatim; the
+                # composer may show the publisher's English item, never a translation.
+                record = {
+                    "domain": "glossary",
+                    "term_ar": row["term_ar"],
+                    "translations": [
+                        item for item in row.get("translations", []) if isinstance(item, str)
+                    ],
+                }
             if not quote.strip():
                 continue
             request.receive(
@@ -57,6 +63,7 @@ class PrivateShortDiscovery:
                     "record_ref": row["id"],
                     "source_url": row["url"],
                     "text_ar": quote,
-                    "ref": {"label": row["id"]},
+                    # A glossary card is labelled by its term; other records by their page id.
+                    "ref": {"label": row["term_ar"] if "term_ar" in record else row["id"]},
                 }
             )

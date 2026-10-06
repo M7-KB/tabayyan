@@ -224,14 +224,15 @@ def test_one_pass_copies_private_source_through_composer_gate(
     result = checker.check(CheckRequest(original_text=text))
     card = result["cards"][0]
     if kind == "term":
-        assert card["state"] == "CANNOT_CONFIRM"
-        assert card["evidence"] == [] and card["term"] is None
+        # The publisher definition is shown as evidence; without a publisher-supplied
+        # equivalent there is no term block, only the glossary link.
+        assert card["state"] == "SUPPORTED"
+        assert card["evidence"][0]["quote_ar"] == matcher_type.display_text(raw)
+        assert card["term"] is None
         assert card["glossary_link"] == "https://islamic-content.com/dictionary"
         return
-    if not quote_overlap:
-        assert card["state"] == "CANNOT_CONFIRM"
-        assert card["alignment"] != "CONFIRMS"
-        return
+    # A question's evidence is selected by ID from the request's validated records;
+    # the lexical overlap floor applies to stated quotations only.
     assert card["state"] == "SUPPORTED"
     assert card["evidence"][0]["quote_ar"] == matcher_type.display_text(raw)
     assert card["evidence"][0]["source_ref"]["url"] == raw["url"]

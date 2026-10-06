@@ -1441,3 +1441,51 @@ User wording remains input, never the displayed hadith. MCP stays disabled unles
 `ENABLE_ISLAMIC_CONTENT_MCP=true`; its endpoint still must match the allowlist.
 These are engineering gates, not a claim of live semantic accuracy; deployment
 and Nami's fabricated/weak-hadith red team remain required.
+
+## Twelve brief cases: sourced answers instead of false abstentions (2026-10-06)
+
+The one-pass check now returns the behaviour the brief's twelve cases expect
+whenever the matching approved source is loaded, and abstains honestly otherwise.
+The invariant is unchanged: every quote, grading and reference on a card is copied
+by ID from a loader-validated local record or a record received in the same request.
+
+- **Explanations are shown.** A card with evidence keeps the model's bridging
+  explanation, cut to three sentences in code, after the separation scan. If the
+  scan rejects the explanation (a reproduced source chunk, a quote marker, or an
+  incomplete scan), a fixed note replaces it and the verified evidence stays; a
+  position label or summary that fails still abstains the card. Abstaining cards
+  carry a fixed sentence that says what was not found: a hadith request states that
+  no authentic matching hadith was found and nothing is attributed; an unspecified
+  matter asks which matter is meant and asserts no agreement or disagreement; a
+  personal case gives the general information that such matters go to a qualified
+  fatwa body. None of these sentences quotes a source or states a ruling.
+- **Misquoted excerpts are corrected deterministically.** A marked quotation (quote
+  marks, ornate brackets or an attribution formula) is also compared with windows
+  inside longer records: an exact window anywhere in the index is VERBATIM, a window
+  within the ordinary word budget is a NEAR_MISS (five tokens or more). A Quran near
+  miss on the claim decides the card without a model call: the correct ayah is copied
+  by ID with its surah and ayah, the state is SUPPORTED / CONTRADICTS, and a fixed
+  sentence says the quoted wording differs and nothing is built on it. Unmarked text
+  keeps the whole-record scan.
+- **Fewer drop conditions.** The policy's state rules decide the state from verified
+  evidence; the model's proposed state is advisory except its own CANNOT_CONFIRM. The
+  lexical overlap floor applies to stated quotations only; a question's evidence is
+  selected by ID and judged by the alignment proposal and its confidence, which also
+  covers private Bayyinat candidates. The compose pool is five records. A glossary
+  record whose term or approved equivalent the text names is a candidate even without
+  lexical overlap, and a term label may equal the record's term. A glossary record
+  without a publisher-supplied equivalent still shows its definition as evidence; the
+  term block appears only with an equivalent (the card schema's term rule allows a
+  null term on such a card). The local hadith path applies the overlap floor before
+  the meaning decision.
+- **Web.** A re-check that returns some cards and some unfinished claims keeps the
+  cards instead of reporting an error.
+
+`tests/test_twelve_cases.py` drives the twelve inputs (and the misquote shape with a
+synthetic record) through the HTTP path with a scripted model and synthetic records,
+asserting state, alignment, referral, explanation, term and that every displayed quote
+equals a loaded record. No glossary or doubt text is in the public tree: cases 1-4, 9
+and 10 cite Bayyinat and cases 7, 8 and 12 cite the glossary only when the owner's
+private v2 indexes are configured (`PRIVATE_SHORT_INDEX_DIR`, `PRIVATE_BAYYINAT_SHA256`,
+`PRIVATE_GLOSSARY_SHA256`, `OPENAI_MODEL_EMBED`); without them those cases ground on the
+loaded Quran and HadeethEnc records or abstain with a referral and the glossary link.

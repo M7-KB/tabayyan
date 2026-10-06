@@ -5,7 +5,7 @@ import copy
 import pytest
 from fastapi.testclient import TestClient
 
-from api.composer import VALIDATOR, Composer
+from api.composer import SEPARATION_FALLBACK_TEXT, VALIDATOR, Composer
 from api.config import load_config
 from api.gatekeeper import QuoteGatekeeper, SourceRequest, allowed_url
 from api.main import create_app
@@ -345,8 +345,15 @@ def test_rejected_scripture_cannot_enter_any_ordinary_field(field, marked, text,
     # Even a source-backed glossary exemption cannot bypass the completed scan.
     assert not composer_with(g, p)._isolated(candidate, glossary_label_id="live:terminologyenc:one")
     card = compose_ordinary(g, p, a, field)
-    assert card["state"] == "CANNOT_CONFIRM"
-    assert card["evidence"] == [] and card["positions"] == [] and card["term"] is None
+    if field in {"explanation_ar", "explanation_en"}:
+        # Only the generated prose is rejected; the verified evidence stays and a
+        # fixed note replaces the explanation.
+        assert card["state"] == "SUPPORTED" and card["evidence"]
+        assert card["explanation_ar"] == SEPARATION_FALLBACK_TEXT[0]
+        assert card["explanation_en"] == SEPARATION_FALLBACK_TEXT[1]
+    else:
+        assert card["state"] == "CANNOT_CONFIRM"
+        assert card["evidence"] == [] and card["positions"] == [] and card["term"] is None
     assert text not in card["explanation_ar"]
     assert text not in (card["explanation_en"] or "")
 
@@ -381,8 +388,14 @@ def test_ordinary_fields_fail_closed_when_safety_scan_does_not_complete(
 
     monkeypatch.setattr(g, "scan_scripture", failing_scan)
     card = compose_ordinary(g, p, a, field)
-    assert card["state"] == "CANNOT_CONFIRM"
-    assert card["evidence"] == [] and card["positions"] == [] and card["term"] is None
+    if field in {"explanation_ar", "explanation_en"}:
+        # Unverifiable explanation prose is replaced by a fixed note; evidence stays.
+        assert card["state"] == "SUPPORTED" and card["evidence"]
+        assert card["explanation_ar"] == SEPARATION_FALLBACK_TEXT[0]
+        assert target not in (card["explanation_ar"], card["explanation_en"])
+    else:
+        assert card["state"] == "CANNOT_CONFIRM"
+        assert card["evidence"] == [] and card["positions"] == [] and card["term"] is None
 
 
 def test_duplicate_record_refs_fail_closed_even_when_seen_three_times():

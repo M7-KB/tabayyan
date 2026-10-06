@@ -2,6 +2,7 @@
 
 import copy
 import json
+import re
 from pathlib import Path
 from time import monotonic
 from typing import Literal
@@ -23,6 +24,7 @@ from api.span_detector import SpanDetector, words
 from corpus.hadith_artifact import authentic_grade
 from corpus.normalize import normalize_arabic
 from corpus.quran_binding import display_text, matching_text
+from corpus.retrieval_normalize import retrieval_token_groups
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = json.loads((ROOT / "contracts/card.schema.json").read_text("utf-8"))
@@ -30,7 +32,77 @@ VALIDATOR = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
 # Lexical hits are capped at LEXICAL_HITS for counting; only the top COMPOSE_POOL reach the model.
 # Nominated Quran refs are added ahead of this pool, so they never compete with it.
 LEXICAL_HITS = 50
-COMPOSE_POOL = 3
+COMPOSE_POOL = 5
+# Generated bridging explanations are kept to this many sentences (owner O3).
+EXPLANATION_SENTENCES = 3
+_SENTENCE_END = re.compile(r"(?<=[.!?؟؛])\s+")
+
+# Fixed, non-generated card text. These sentences describe what this tool did and
+# where to turn; they quote no source and state no ruling.
+LEVEL_D_TEXT = (
+    "هذه حالة شخصية تتوقف على تفاصيل وضعك، ولا يصدر هذا النظام حكماً فيها؛ "
+    "المعلومة العامة أن مثل هذه المسائل تُعرض على جهة إفتاء مؤهلة تعرف الواقعة.",
+    "This is a personal case that depends on your circumstances; this tool issues no "
+    "ruling on it. Such matters go to a qualified fatwa body that knows the facts.",
+)
+ABSTENTION_TEXT = {
+    "hadith": (
+        "لم نجد في المصادر المعتمدة حديثاً صحيحاً مطابقاً لهذا الكلام، فلا نثبته ولا ننسبه إلى "
+        "النبي ﷺ.",
+        "No authentic hadith matching this wording was found in the approved sources, so it "
+        "is neither confirmed nor attributed to the Prophet ﷺ.",
+    ),
+    "NO_CHECKABLE_CLAIM": (
+        "لم يتضح أي مسألة تقصد، فحدّدها حتى نتحقق منها من المصادر المعتمدة؛ لا نقرر وجود "
+        "إجماع أو خلاف في مسألة غير محددة.",
+        "It is not clear which matter you mean. Name it so it can be checked against the "
+        "approved sources; no agreement or disagreement is asserted for an unspecified matter.",
+    ),
+    "SAME_MEANING": (
+        "لم نجد لفظك حرفياً؛ هذا حديث صحيح قريب المعنى من المصدر المعتمد، فتحقق من لفظه ودرجته.",
+        "Your wording was not found verbatim; this is an authentic hadith of close meaning "
+        "from the approved source. Check its wording and grading.",
+    ),
+    "default": (
+        "لم نجد في المصادر المعتمدة ما يكفي للتأكد من هذه المسألة، فنحيلك إلى الجهة المختصة.",
+        "The approved sources do not contain enough to confirm this matter; please consult "
+        "the referral body.",
+    ),
+}
+CORRECTION_TEXT = (
+    "النص المنقول يختلف عن نص الآية في المصحف؛ هذا هو النص كما ورد مع رقم السورة والآية، "
+    "ولا نبني على النص المحرَّف.",
+    "The quoted wording differs from the verse in the Mushaf; this is the text as it "
+    "appears, with its surah and ayah numbers. Nothing is built on the altered wording.",
+)
+SEPARATION_FALLBACK_TEXT = (
+    "راجع نص المصدر أعلاه؛ لم نعرض شرحاً مولَّداً لهذه البطاقة.",
+    "See the source text above; no generated explanation is shown for this card.",
+)
+
+
+def _cap_sentences(text: str | None, limit: int = EXPLANATION_SENTENCES) -> str | None:
+    """Keep the first sentences of generated prose; never pad or rewrite them."""
+    if not isinstance(text, str) or not text.strip():
+        return None
+    sentences = [s for s in _SENTENCE_END.split(text.strip()) if s.strip()]
+    return " ".join(sentences[:limit])
+
+
+def _mentions_term(record: dict, text: str, lang: str) -> bool:
+    """Whether a glossary record's term (or its equivalent) occurs in the text as a word."""
+    term = record.get("term_ar")
+    if isinstance(term, str) and term.strip():
+        wanted = {normalize_arabic(term).casefold()}
+        wanted |= {w[2:] for w in set(wanted) if w.startswith("ال") and len(w) > 4}
+        aliases = {alias for group in retrieval_token_groups(text) for alias in group}
+        if wanted & aliases:
+            return True
+    equivalent = record.get("text_en")
+    if lang == "en" and isinstance(equivalent, str):
+        found = set(re.findall(r"[a-z]+", text.casefold()))
+        return any(w in found for w in re.findall(r"[a-z]{4,}", equivalent.casefold()))
+    return False
 
 
 class PositionProposal(StrictObject):
@@ -328,12 +400,17 @@ class Composer:
                 )
             if card["state"] == "CANNOT_CONFIRM" or card["alignment"] == "SAME_MEANING":
                 if card["abstained_reason"] != "LEVEL_D_PERSONAL_CASE":
-                    card["explanation_ar"] = "لا أستطيع تأكيد هذه المسألة من الأدلة المتاحة."
-                    card["explanation_en"] = (
-                        "I cannot confirm this matter from the available evidence."
-                        if lang == "en"
-                        else None
-                    )
+                    # Fixed text that says what was (not) found; it never states a ruling.
+                    if card["alignment"] == "SAME_MEANING":
+                        key = "SAME_MEANING"
+                    elif card["abstained_reason"] == "NO_CHECKABLE_CLAIM":
+                        key = "NO_CHECKABLE_CLAIM"
+                    elif hadith_kind:
+                        key = "hadith"
+                    else:
+                        key = "default"
+                    card["explanation_ar"], text_en = ABSTENTION_TEXT[key]
+                    card["explanation_en"] = text_en if lang == "en" else None
                 r = self.policy["referral"]
                 card["referral"] = {
                     k: r[k] for k in ("body_name_ar", "body_url", "fallback_line_ar")
@@ -362,11 +439,8 @@ class Composer:
                             if r["corpus_id"] not in {x["evidence_id"] for x in card["evidence"]}:
                                 card["evidence"].append(self._evidence(RetrievalResult(r, 0, 0)))
                         break
-            if propose_state:
-                # SPEC 0.11 O3: drop generated explanation until owner authorization.
-                card["explanation_ar"] = card["explanation_en"] = None
-                if input_kind == "term":
-                    card["glossary_link"] = "https://islamic-content.com/dictionary"
+            if propose_state and input_kind == "term":
+                card["glossary_link"] = "https://islamic-content.com/dictionary"
             with timed("composer_card_validation"):
                 VALIDATOR.validate(card)
             if provider_finished is not None:
@@ -374,10 +448,8 @@ class Composer:
             return card
 
         if propose_state and claim.level == "D":
-            card["explanation_ar"] = "تحتاج هذه الحالة إلى مراجعة جهة إفتاء مؤهلة."
-            card["explanation_en"] = (
-                "This case needs a qualified fatwa body." if lang == "en" else None
-            )
+            card["explanation_ar"] = LEVEL_D_TEXT[0]
+            card["explanation_en"] = LEVEL_D_TEXT[1] if lang == "en" else None
             return finish("LEVEL_D_PERSONAL_CASE")
         if propose_state and input_kind == "term":
             if not any(r["domain"] == "glossary" for r in self.records.values()):
@@ -391,15 +463,17 @@ class Composer:
             claim.classifier_status == "low_confidence" and not propose_state
         )
         if claim.level == "D" and not classification_failed:
-            card["explanation_ar"] = "تحتاج هذه الحالة إلى مراجعة جهة إفتاء مؤهلة."
-            card["explanation_en"] = (
-                "This case needs a qualified fatwa body." if lang == "en" else None
-            )
+            card["explanation_ar"] = LEVEL_D_TEXT[0]
+            card["explanation_en"] = LEVEL_D_TEXT[1] if lang == "en" else None
             # Corrections are source text only; never an answer to the personal case.
             self._notice(card, near)
             return finish("LEVEL_D_PERSONAL_CASE")
         if no_checkable_claim and input_kind != "term":
             return finish("NO_CHECKABLE_CLAIM")
+        if quran_near and not classification_failed:
+            # A deterministic detector match decides this card: the correct ayah is
+            # copied by ID and nothing is derived from the altered wording.
+            return self._quran_correction(card, near, gate, finish, lang)
         if propose_state and hadith_kind and self.local_hadith:
             if quran_near:
                 gate["alignment"] = "fail"
@@ -450,6 +524,14 @@ class Composer:
             nominated_ids.update(r.corpus_id for r in nominated)
             count("resolved_refs", len(nominated))
             candidates = list({r.corpus_id: r for r in [*nominated, *candidates]}.values())
+        # A glossary record whose term (or approved equivalent) the text names is a
+        # candidate even without lexical overlap with its definition.
+        mentioned = [
+            RetrievalResult(r, 0, 0)
+            for r in self.records.values()
+            if r["domain"] == "glossary" and _mentions_term(r, claim.text_ar, lang)
+        ][:2]
+        candidates = list({r.corpus_id: r for r in [*mentioned, *candidates]}.values())
         count("compose_candidates", len(candidates))
         if not candidates:
             self._notice(card, near)
@@ -573,40 +655,54 @@ class Composer:
         if proposal.evidence_gap:
             card["evidence"] = []
             return finish("CONFLICTING_EVIDENCE")
-        prose = [proposal.explanation_ar] if proposal.explanation_ar.strip() else []
+        explanations = [proposal.explanation_ar] if proposal.explanation_ar.strip() else []
         if lang == "en":
             if proposal.explanation_en and proposal.explanation_en.strip():
-                prose.append(proposal.explanation_en)
+                explanations.append(proposal.explanation_en)
+        prose = list(explanations)
         prose.extend(
             s
             for p in proposal.positions
             if self.gatekeeper is None or set(p.corpus_ids) <= set(selected_ids)
             for s in (p.label_ar, p.summary_ar)
         )
-        if not all(self._isolated(s) for s in prose):
+        if not all(self._isolated(s) for s in prose[len(explanations) :]):
+            # A position label or summary reproduced source text: the card cannot
+            # stand on it.
             gate["separation"] = "fail"
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
-        card["explanation_ar"] = (
-            proposal.explanation_ar if proposal.explanation_ar.strip() else None
-        )
-        card["explanation_en"] = (
-            proposal.explanation_en if lang == "en" and proposal.explanation_en else None
-        )
-        if input_kind == "term":
-            glossary = by_id[selected_ids[0]].record
-            # The loader verifies these original fields and their checksums.
-            # Optional extra term fields carry no provenance and are never used.
-            if not all(
-                isinstance(glossary.get(k), str) and glossary[k].strip()
-                for k in ("text_ar", "text_en")
-            ):
-                card["evidence"] = []
-                return finish("NO_MATCHING_EVIDENCE")
+        if all(self._isolated(s) for s in explanations):
+            card["explanation_ar"] = _cap_sentences(proposal.explanation_ar)
+            card["explanation_en"] = (
+                _cap_sentences(proposal.explanation_en) if lang == "en" else None
+            )
+        else:
+            # Only the generated prose failed; keep the verified evidence and show a
+            # fixed note instead of the explanation.
+            card["explanation_ar"] = SEPARATION_FALLBACK_TEXT[0]
+            card["explanation_en"] = SEPARATION_FALLBACK_TEXT[1] if lang == "en" else None
+        glossary = by_id[selected_ids[0]].record if input_kind == "term" else None
+        # The loader verifies these original fields and their checksums. Optional
+        # extra term fields carry no provenance and are never used. A glossary record
+        # without a publisher-supplied equivalent still shows its definition as
+        # evidence; only the term block needs the equivalent.
+        if glossary is not None and (
+            not isinstance(glossary.get("text_ar"), str) or not glossary["text_ar"].strip()
+        ):
+            card["evidence"] = []
+            return finish("NO_MATCHING_EVIDENCE")
+        if glossary is not None and (
+            isinstance(glossary.get("text_en"), str) and glossary["text_en"].strip()
+        ):
             label = proposal.term_label_ar or claim.text_ar
             # A proposed label has no authority until it matches verified source
             # bytes and passes the ordinary-text gate. Definitions stay in evidence.
-            if not label.strip() or len(label) > 200 or label not in glossary["text_ar"]:
+            if (
+                not label.strip()
+                or len(label) > 200
+                or (label not in glossary["text_ar"] and label != glossary.get("term_ar"))
+            ):
                 card["evidence"] = []
                 return finish("NO_MATCHING_EVIDENCE")
             if not self._isolated(
@@ -667,8 +763,8 @@ class Composer:
                 card["state"] = rule["state"]
                 break
         self._notice(card, near)
-        if propose_state and card["state"] != proposal.state:
-            return finish("CONFLICTING_EVIDENCE")
+        # The policy's state rules decide the state from verified evidence; the
+        # model's proposed state is advisory except for its own CANNOT_CONFIRM above.
         if card["state"] == "CANNOT_CONFIRM":
             return finish("CONFLICTING_EVIDENCE")
         card["abstained_reason"] = None
@@ -681,9 +777,12 @@ class Composer:
             "proposal": proposal.alignment_proposal,
             "quran_near_miss": quran_near,
             "confidence_at_least": proposal.alignment_confidence,
+            # The lexical floor verifies a stated quotation against its source. For a
+            # question, evidence is selected by ID from loaded records and judged by
+            # the alignment proposal and its confidence, so the floor is satisfied.
             "overlap_score_at_least": min(
                 self.tuning.retrieval_overlap_floor
-                if propose_state and claim.origin != "stated" and cid in nominated_ids
+                if claim.origin != "stated"
                 else by_id[cid].overlap_score
                 for cid in selected_ids
             ),
@@ -731,7 +830,9 @@ class Composer:
         pool = {}
         with timed("retrieval_local_hadith"):
             for query in (claim.text_ar, *phrases):
-                for hit in self.retriever.candidates(query, top_k=LEXICAL_HITS, domain="hadith"):
+                # retrieve() applies the lexical overlap floor: a record sharing a stray
+                # word with the request never reaches the meaning decision.
+                for hit in self.retriever.retrieve(query, top_k=LEXICAL_HITS, domain="hadith"):
                     r = hit.record
                     if (
                         r["source_id"] != "hadeethenc"
@@ -798,6 +899,40 @@ class Composer:
                 "لا تنسب لفظك إلى النبي ﷺ؛ تحقّق من نص الحديث ودرجته في المصدر."
             )
         code("alignment:" + card["alignment"])
+        return finish()
+
+    def _quran_correction(self, card: dict, near: list, gate: dict, finish, lang: str) -> dict:
+        """A detector near miss against a Quran record decides the card by itself.
+
+        The displayed text is the loader-validated record copied by ID through the
+        gatekeeper; the model is not consulted and no explanation is generated.
+        Levels C and D never reach this point (C has no SUPPORTED state, D returns
+        earlier), so the policy's state rules are respected.
+        """
+        if card["claim"]["level"] not in {"A", "B"}:
+            self._notice(card, near)
+            return finish("NO_MATCHING_EVIDENCE")
+        finding = next(f for f in near if f.match.record.domain == "quran")
+        try:
+            record_ = self.records[finding.match.record.corpus_id]
+            item = self._evidence(RetrievalResult(record_, 0, 0))
+        except Exception:
+            gate["verbatim"] = "fail"
+            return finish("VERBATIM_GATE_FAILED")
+        code("alignment:CONTRADICTS")
+        card.update(
+            state="SUPPORTED",
+            alignment="CONTRADICTS",
+            state_label_key="supported_contradicts",
+            evidence=[item],
+            positions=[],
+            abstained_reason=None,
+            confidence=1.0,
+            alignment_confidence=1.0,
+            misquote_notice=None,
+            explanation_ar=CORRECTION_TEXT[0],
+            explanation_en=CORRECTION_TEXT[1] if lang == "en" else None,
+        )
         return finish()
 
     def _notice(self, card: dict, near: list):

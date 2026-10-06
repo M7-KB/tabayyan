@@ -65,7 +65,9 @@ def test_original_only_http_and_exactly_one_router_and_compose_call():
     card = response.json()["cards"][0]
     assert card["state"] == "SUPPORTED"
     assert card["evidence"][0]["quote_ar"] == TEXT
-    assert card["explanation_ar"] is None and card["explanation_en"] is None
+    # The generated explanation is shown with the evidence; it is separate prose.
+    assert card["explanation_ar"] == proposal()["explanation_ar"]
+    assert card["explanation_en"] is None
     assert len(route_model.calls) == len(compose_model.calls) == 1
     assert "state" in compose_model.calls[0]["schema"]["required"]
 
@@ -173,19 +175,22 @@ def test_absent_source_text_discards_generated_claim_for_every_origin(origin):
 
 
 @pytest.mark.parametrize(
-    "decision",
+    "decision,state",
     [
-        proposal(state="SUPPORTED", corpus_ids=["fixture:one", "invented"]),
-        proposal(state="SUPPORTED", corpus_ids=["fixture:one", "fixture:one"]),
-        proposal(state="DISPUTED"),
-        proposal(state="CANNOT_CONFIRM"),
+        (proposal(state="SUPPORTED", corpus_ids=["fixture:one", "invented"]), "CANNOT_CONFIRM"),
+        (proposal(state="SUPPORTED", corpus_ids=["fixture:one", "fixture:one"]), "CANNOT_CONFIRM"),
+        # One verified record on level A is SUPPORTED by the policy rules, whatever
+        # state the model proposes; a proposed DISPUTED never appears.
+        (proposal(state="DISPUTED"), "SUPPORTED"),
+        (proposal(state="CANNOT_CONFIRM"), "CANNOT_CONFIRM"),
     ],
 )
-def test_state_and_id_proposals_never_override_code_gates(decision):
+def test_state_and_id_proposals_never_override_code_gates(decision, state):
     checker, _, _ = service(decision=decision)
     result = checker.check(CheckRequest(original_text=TEXT))
-    assert result["cards"][0]["state"] == "CANNOT_CONFIRM"
-    assert result["cards"][0]["referral"]
+    assert result["cards"][0]["state"] == state
+    assert result["cards"][0]["state"] != "DISPUTED"
+    assert bool(result["cards"][0]["referral"]) == (state == "CANNOT_CONFIRM")
 
 
 def test_original_text_preserves_restrictive_client_context():

@@ -1182,9 +1182,17 @@
         ]
       },
       "then": {
+        "description": "A term card shows the glossary definition as evidence; the term block is present only when the publisher record supplies an equivalent.",
         "properties": {
           "term": {
-            "$ref": "#/$defs/term"
+            "anyOf": [
+              {
+                "$ref": "#/$defs/term"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       }

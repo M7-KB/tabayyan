@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from jsonschema import ValidationError
 
 from api.check import CheckRequest
-from api.composer import VALIDATOR, Composer
+from api.composer import ABSTENTION_TEXT, VALIDATOR, Composer
 from api.diagnostics import Summary, summary
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.main import create_app
@@ -162,7 +162,8 @@ def test_d7_uses_local_grade_and_verbatim_copy_with_referral(grade):
     assert card["evidence"][0]["quote_ar"] == TEXT
     assert card["evidence"][0]["grading"]["grade_ar"] == grade
     assert card["evidence"][0]["source_url"] == row()["url"]
-    assert card["explanation_ar"] is card["explanation_en"] is None
+    # A fixed note explains the meaning-only match; nothing generated is shown.
+    assert (card["explanation_ar"], card["explanation_en"]) == ABSTENTION_TEXT["SAME_MEANING"]
     assert len(model.calls) == 1
     assert set(model.calls[0]["schema"]["properties"]) == {"corpus_id", "meaning", "confidence"}
 

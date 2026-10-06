@@ -130,8 +130,10 @@ export default function App() {
     try {
       const request = buildCheckRequest({ originalText: text })
       const result = await postCheck(request, { baseUrl: API_BASE_URL, signal: attempt.signal })
-      if (result.retryable_results?.length) throw new ApiError('CHECK_INCOMPLETE')
-      if (result.cards.length === 0) throw new ApiError('PIPELINE_DEGRADED')
+      // A partial result still carries finished cards; only an empty result is an error.
+      if (result.cards.length === 0) {
+        throw new ApiError(result.retryable_results?.length ? 'CHECK_INCOMPLETE' : 'PIPELINE_DEGRADED')
+      }
       if (attemptRef.current !== attempt) return false
       setCheck((prev) => ({ ...prev, cards: replaceCard(prev.cards, index, result.cards) }))
       setRecheck(null)

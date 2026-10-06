@@ -1,5 +1,7 @@
 """Bayyinat question-title and similar-phrasing hybrid candidate index."""
 
+import re
+
 from api.private_index_search import PrivateIndexMatcher
 
 
@@ -22,4 +24,4 @@ class BayyinatMatcher(PrivateIndexMatcher):
         if row["summary"].strip():
             return row["summary"]
         # Copy an original span; do not summarize or append generated ellipses.
-        return row["detailed_answer"].split("\n", 1)[0][:400]
+        return re.split(r"\r?\n[ \t]*\r?\n", row["detailed_answer"], maxsplit=1)[0][:400]

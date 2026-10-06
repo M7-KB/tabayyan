@@ -1271,9 +1271,12 @@ Level D skips both. Retrieval has a 3-second cap within the 35-second request
 deadline; failures produce retryable unfinished results. Candidates are bound to
 the current request and still pass the existing verbatim, embedded-scripture,
 grading, alignment and confidence gates. Query embeddings are transient.
+Private candidates retain the measured lexical overlap floor; only resolved
+router Quran references receive the existing D2 question exception.
 Bayyinat indexes title, question, keywords and detailed answer; display copies
-the summary unchanged, or the first line/paragraph of the detailed answer up to
-400 characters with no added ellipsis. Glossary indexes term, short explanation
+the summary unchanged, or the first paragraph of the detailed answer up to
+400 characters with no added ellipsis. Paragraphs end at a blank line; internal
+line breaks are copied unchanged. Glossary indexes term, short explanation
 and verbatim translation-list items; its display field is terminological meaning.
 The list has no verified English-equivalent mapping. Until that contract exists,
 term cards retain abstention and the glossary link; no `term_en` is generated or

@@ -377,15 +377,22 @@ class Composer:
         candidates = hits[:COMPOSE_POOL]
         nominated_ids = set()
         # Private-index ranking ran before binding these validated source results.
-        # Their titles/questions may match even when the copied answer does not.
-        private_candidates = [
-            RetrievalResult(r, 0, 0)
+        # Keep the measured quote overlap; private rank grants no D2 exemption.
+        private_records = [
+            r
             for r in self.records.values()
             if r.get("source_id") in {"bayyinat", "jamhara-glossary"}
             and "source_ref" in r
             and (input_kind != "term" or r["domain"] == "glossary")
         ][:5]
-        nominated_ids.update(r.corpus_id for r in private_candidates)
+        private_lexical = (
+            {r.corpus_id: r for r in self.retriever.candidates(claim.text_ar)}
+            if private_records
+            else {}
+        )
+        private_candidates = [
+            private_lexical.get(r["corpus_id"], RetrievalResult(r, 0, 0)) for r in private_records
+        ]
         candidates = list({r.corpus_id: r for r in [*private_candidates, *candidates]}.values())
         # Model nominations are lookup keys only, never evidence or confidence.
         # Resolve solely in already loader-validated local KFC records.

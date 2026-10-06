@@ -78,6 +78,22 @@ def test_bayyinat_fallback_is_exact_first_paragraph_with_400_character_cap():
     assert BayyinatMatcher.display_text(raw) == raw["summary"]
 
 
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_bayyinat_first_paragraph_keeps_internal_lines_and_stops_at_blank_line(newline):
+    raw = row()
+    raw["summary"] = ""
+    first = newline.join(["First original line", "Second original line"])
+    raw["detailed_answer"] = first + newline + " \t" + newline + "Next paragraph"
+    assert BayyinatMatcher.display_text(raw) == first
+
+
+def test_bayyinat_single_paragraph_keeps_all_lines_until_character_cap():
+    raw = row()
+    raw["summary"] = ""
+    raw["detailed_answer"] = "First original line\n" + "ح" * 450
+    assert BayyinatMatcher.display_text(raw) == raw["detailed_answer"][:400]
+
+
 def test_long_private_fields_bound_embedding_input_without_changing_display(tmp_path):
     raw = row()
     raw["detailed_answer"] = "س" * 6000
@@ -188,12 +204,17 @@ def test_new_index_configuration_is_opt_in():
         ("term", "jamhara-glossary", GlossaryMatcher),
     ],
 )
-def test_one_pass_copies_private_source_through_composer_gate(kind, source, matcher_type):
+@pytest.mark.parametrize("quote_overlap", [True, False])
+def test_one_pass_copies_private_source_through_composer_gate(
+    kind, source, matcher_type, quote_overlap
+):
     text = "مكتب تجريبي"
     routed = route_proposal(text, input_kind=kind, proposed_quran_refs=[{"surah": 1, "ayah": 1}])
     routed["claims"][0]["origin"] = "term_lookup" if kind == "term" else "question_subject"
     checker, _, _ = service(routed)
     raw = row(source)
+    if quote_overlap:
+        raw["summary" if source == "bayyinat" else "terminological_meaning"] = text
     key = "live:" + source + ":" + raw["id"]
     checker.composer = composer_with(gate(), proposal(state="SUPPORTED", corpus_ids=[key]))
     matcher = matcher_type((raw,), [vector()], FakeEmbedder())
@@ -206,6 +227,10 @@ def test_one_pass_copies_private_source_through_composer_gate(kind, source, matc
         assert card["state"] == "CANNOT_CONFIRM"
         assert card["evidence"] == [] and card["term"] is None
         assert card["glossary_link"] == "https://islamic-content.com/dictionary"
+        return
+    if not quote_overlap:
+        assert card["state"] == "CANNOT_CONFIRM"
+        assert card["alignment"] != "CONFIRMS"
         return
     assert card["state"] == "SUPPORTED"
     assert card["evidence"][0]["quote_ar"] == matcher_type.display_text(raw)

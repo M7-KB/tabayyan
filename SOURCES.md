@@ -291,3 +291,29 @@ same exact source block. Wrapper prose, search titles and attributions are not
 religious evidence. The gatekeeper retains every source's own identity.
 Dedicated Byenah and general IslamEnc tools were not in the hosted tool list;
 their content is not silently inferred from library metadata.
+
+## Owner-collected HadeethEnc private index (2026-10-06)
+
+Owner M7md reports collection and upload to the private repository
+`M7-KB/tabayyan-private-data`, at `hadeethenc/hadeethenc.jsonl` and
+`hadeethenc/manifest.json`. Version: `2026-10-06`; records: **3,574**;
+categories: **493**; failures: **0**; JSONL bytes: **10,302,934**.
+Reported JSONL SHA-256:
+`1e0a79c49b0287a6ea33826dde1996bd465c81490f59c0050444b6241f9b2ae6`.
+Evidence: owner planning event
+`1718bd0397313be307099ca44830465471d3d46e785b9afa0c64ff74451ae833`
+(2026-10-06 06:36:02 UTC). These are owner-reported artifact metadata;
+this documentation update did not fetch private files or independently verify
+record counts, manifest contents or the checksum.
+
+Source: HadeethEnc (`https://hadeethenc.com/`); official API documentation:
+https://github.com/islamhouse-dev/hadith-api . Licence scope remains the
+owner-authorized challenge-app use described above: matched verbatim hadith
+with its source, reference, publisher grading and visible link. No bulk display,
+download or public redistribution of the dataset. Underlying-text redistribution
+terms remain **pending**; the API documentation is not a publisher licence grant.
+The owner's new index instruction supersedes the earlier item-adapter no-local-corpus
+restriction only for this private artifact and the requested V3 integration.
+It does not establish that the index is loaded in the deployed runtime; V3 must
+verify the reported SHA-256 at startup before use. No private corpus text or raw
+HTML is added to the public repository.

@@ -278,7 +278,7 @@ describe('one-page flow: client deadline', () => {
   })
 
   it('shows the timeout past the deadline, keeps the input text, and offers retry', async () => {
-    expect(CHECK_DEADLINE_MS).toBe(40_000)
+    expect(CHECK_DEADLINE_MS).toBe(65_000)
     const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) })
     stubApi({ check: hangUntilAborted })
     render(<App />)
@@ -319,7 +319,7 @@ describe('one-page flow: client deadline', () => {
     if (outcome === 'failure') {
       await act(async () => retry.resolve(jsonResponse(503, { error: { code: 'CHECK_INCOMPLETE' } })))
     } else if (outcome === 'timeout') {
-      await act(async () => { vi.advanceTimersByTime(40_000) })
+      await act(async () => { vi.advanceTimersByTime(CHECK_DEADLINE_MS) })
     } else {
       await user.click(screen.getByRole('button', { name: strings.checkCancel }))
     }
@@ -370,7 +370,7 @@ describe('one-page flow: client deadline', () => {
     stubApi({ check: () => late.promise.then(() => jsonResponse(200, { cards: [card('c1')] })) })
     render(<App />)
     await submitText(user, 'نص طويل')
-    await act(async () => { vi.advanceTimersByTime(40_000) })
+    await act(async () => { vi.advanceTimersByTime(CHECK_DEADLINE_MS) })
     expect(screen.getByRole('alert')).toHaveTextContent('لم يكتمل التحقق، حاول مرة أخرى')
     await act(async () => { late.resolve() })
     expect(screen.queryByRole('article')).not.toBeInTheDocument()

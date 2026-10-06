@@ -22,7 +22,7 @@ class OnePassCheckService(CheckService):
         corpus_version,
         connector=None,
         search_phrases=None,
-        deadline_seconds=35,
+        deadline_seconds=60,
         private_indexes=None,
     ):
         super().__init__(

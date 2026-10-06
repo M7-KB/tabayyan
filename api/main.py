@@ -206,14 +206,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         token = request_id.set(uuid4().hex)
         summary_token = summary.set(Summary())
         started = monotonic()
-        deadline_token = request_deadline.set(started + 35 if stage == "check" else None)
+        deadline_token = request_deadline.set(
+            started + settings.check_deadline_seconds if stage == "check" else None
+        )
         progress = RequestProgress()
         progress_token = request_progress.set(progress if stage == "check" else None)
         outcome = "unhandled_failure"
         try:
             try:
                 result = (
-                    await asyncio.wait_for(call_next(request), timeout=35)
+                    await asyncio.wait_for(
+                        call_next(request), timeout=settings.check_deadline_seconds
+                    )
                     if stage == "check"
                     else await call_next(request)
                 )
@@ -282,6 +286,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             local_hadith=settings.private_hadith_path is not None,
                         ),
                         corpus_version=app.state.corpus_version,
+                        deadline_seconds=settings.check_deadline_seconds,
                         private_indexes=app.state.private_indexes,
                         connector=DefaultDiscovery(
                             mcp=IslamicContentConnector()

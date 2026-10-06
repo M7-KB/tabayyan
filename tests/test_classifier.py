@@ -183,6 +183,14 @@ def test_tuning_controls_confidence_floor(tmp_path):
         "حكم أبي",
         "حكم والدي",
         "حكم والدتي",
+        "my father is sick, may I fast on his behalf?",
+        "forcing my son to pray",
+        "my sister wants to remove her hijab, what should I do",
+        "my brother smokes, should I cut him off",
+        "أجبر ابني على الصلاة",
+        "أختي تريد خلع الحجاب ماذا أفعل",
+        "أخي يدخن هل أقاطعه",
+        "أبي مريض هل أصوم عنه",
     ],
 )
 def test_first_person_family_cases_force_referral(text):
@@ -209,7 +217,7 @@ def test_family_reference_alone_still_requires_model_classification(text):
     assert classifier(Model(failure=True)).classify(text, context=text).level == "D"
 
 
-@pytest.mark.parametrize("text", ["حكم أخي", "عقد أختي", "ميراث أمي"])
+@pytest.mark.parametrize("text", ["حكم أخي", "عقد أختي", "ميراث أمي", "أجبر ابني", "أختي تريد"])
 @pytest.mark.parametrize("prefix", ["", "و", "بال", "لل"])
 @pytest.mark.parametrize("invisible", ["", "\u200d"])
 def test_family_case_guard_keeps_clitic_and_invisible_handling(text, prefix, invisible):

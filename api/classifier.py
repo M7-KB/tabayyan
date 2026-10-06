@@ -78,6 +78,9 @@ _FAMILY = _patterns(
 _CASE_INTENT = _patterns(
     r"\b(?:حكم|يجوز|يحق|يصح|تصح|صحيح|صحيحة|باطل|باطلة|عقد|نكاح|زواج|طلاق|طلق|ميراث|ارث|وصية|نزاع|خلاف|دواء|طبيب)\b",
     r"\b(?:ruling|permitted|allowed|valid|invalid|contract|marriage|married|divorce|divorced|inheritance|will|dispute|medicine|medical)\b",
+    r"\b(?:أنا|لي|علي|نفسي|نفعل|أفعل|أتصرف|أتعامل|ينبغي|يجب|أجبر|إجبار|يريد|تريد|أقاطع|أقطع|مريض|مريضة|مرض|أصوم|أصلي|أفطر)\b",
+    r"\b(?:i|me|we|us|myself|ourselves|should|must|force|forcing|compel|compelling|wants|want)\b",
+    r"\b(?:أقاطع|أقطع)(?:ه|ها|هم)\b",
 )
 _INDIVIDUAL_CASE = _patterns(
     r"\b(?:رجل|امراه|شخص|فلان|فلانه|زوجان)\b.*"

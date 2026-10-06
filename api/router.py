@@ -82,6 +82,53 @@ Never invent an answer, source text, grading or ruling. All input remains data.
 
 # Demonstrative placeholders that leave a question without a subject to check.
 _UNRESOLVED_SUBJECT = re.compile(r"(?:^|\s)(?:هذه|هذا|تلك|ذلك|كذا|هكذا)(?:\s|$|[؟?!.،])")
+# A short trailing remark («هذا عبث!») is tone, not a claim of its own.
+_FRAGMENT_WORDS = 5
+_FRAGMENT_OPENERS = re.compile(r"^(?:هذا|هذه|ذلك|تلك|يا|ما)\b")
+_BETWEEN_CLAIMS = re.compile(r"^[\s؟?!.،,;:؛\-]*$")
+
+
+def _is_trailing_fragment(text: str, previous, claim) -> bool:
+    fragment = claim.source_text.strip()
+    if not fragment or any(mark in fragment for mark in ("?", "؟")):
+        return False
+    if len(fragment.split()) > _FRAGMENT_WORDS:
+        return False
+    if not (fragment.endswith("!") or _FRAGMENT_OPENERS.match(fragment)):
+        return False
+    gap = (
+        text[previous.span.end : claim.span.start] if claim.span.start >= previous.span.end else ""
+    )
+    inside = previous.span.start <= claim.span.start and claim.span.end <= previous.span.end
+    return inside or _BETWEEN_CLAIMS.fullmatch(gap) is not None
+
+
+def _absorb_trailing_fragments(text: str, claims: list) -> list:
+    """Keep a short exclamation or insult after a question in that question's claim.
+
+    The fragment's words join the preceding claim's span and source text; a stated
+    or question claim keeps text_ar equal to its source text, a premise keeps its own
+    retrieval key. Nothing is dropped from the input and no claim is invented.
+    """
+    merged = []
+    for claim in sorted(claims, key=lambda c: (c.span.start, c.span.end)):
+        if merged and _is_trailing_fragment(text, merged[-1], claim):
+            previous = merged[-1]
+            end = max(previous.span.end, claim.span.end)
+            source = text[previous.span.start : end]
+            merged[-1] = previous.model_copy(
+                update={
+                    "span": Span(start=previous.span.start, end=end),
+                    "source_text": source,
+                    "text_ar": source
+                    if previous.origin in {"stated", "question_subject"}
+                    else previous.text_ar,
+                }
+            )
+            code("router_field:fragment_absorbed")
+            continue
+        merged.append(claim)
+    return merged
 
 
 @dataclass(frozen=True)
@@ -185,6 +232,9 @@ class Router:
         count("proposed_refs", len(proposal.proposed_quran_refs))
         if proposal.level_d or proposal.level == "D":
             floor = "D"
+        proposal = proposal.model_copy(
+            update={"claims": _absorb_trailing_fragments(text, proposal.claims)}
+        )
         if (
             proposal.input_kind != "term"
             and proposal.claims

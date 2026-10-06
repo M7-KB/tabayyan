@@ -97,7 +97,7 @@ def test_composition_is_parallel_and_output_keeps_source_order():
     assert all(c["state"] == "SUPPORTED" for c in result["cards"])
 
 
-@pytest.mark.parametrize("mode", ["rule", "flag", "model", "client", "low_confidence"])
+@pytest.mark.parametrize("mode", ["rule", "flag", "model", "client"])
 def test_restrictive_routes_skip_retrieval_and_composition(mode):
     text = "Can I change my marriage contract?" if mode == "rule" else TEXT
     value = route_proposal(text)
@@ -105,8 +105,6 @@ def test_restrictive_routes_skip_retrieval_and_composition(mode):
         value["level_d"] = True
     elif mode == "model":
         value["level"] = "D"
-    elif mode == "low_confidence":
-        value["level_confidence"] = 0.1
     checker, router_model, compose_model = service(value)
 
     class Forbidden:
@@ -124,13 +122,13 @@ def test_restrictive_routes_skip_retrieval_and_composition(mode):
     assert len(router_model.calls) == (0 if mode == "rule" else 1)
 
 
-def test_invalid_router_confidence_abstains_without_http_failure():
+def test_invalid_router_confidence_repairs_and_keeps_evidence_gates():
     value = route_proposal()
     value["level_confidence"] = float("nan")
     checker, _, compose_model = service(value)
     result = checker.check(CheckRequest(original_text=TEXT))
-    assert result["cards"][0]["state"] == "CANNOT_CONFIRM"
-    assert not compose_model.calls
+    assert result["cards"][0]["state"] == "SUPPORTED"
+    assert len(compose_model.calls) == 1
 
 
 @pytest.mark.parametrize("mutation", ["span", "source", "duplicate", "term"])
@@ -504,13 +502,10 @@ def test_hadeethenc_flag_follows_router_kind_only(kind, hadith):
     assert seen == [hadith]
 
 
-def test_low_classifier_confidence_pins_level_d_and_drops_nominated_ref():
-    """Pins the current policy: a low router level confidence forces level D.
-
-    The Quran nomination is still counted as proposed, but restriction clears it
-    before compose, so no model call and no resolved reference. Changing this rule
-    is an owner decision; this test makes the current behaviour visible.
-    """
+@pytest.mark.parametrize("decision_confidence,state", [(0.9, "SUPPORTED"), (0.1, "CANNOT_CONFIRM")])
+def test_low_router_confidence_keeps_nominated_ref_and_independent_evidence_gate(
+    decision_confidence, state
+):
     from api.diagnostics import Summary, summary
 
     question = "من هو خاتم الأنبياء؟"
@@ -521,7 +516,16 @@ def test_low_classifier_confidence_pins_level_d_and_drops_nominated_ref():
         proposed_quran_refs=[{"surah": 33, "ayah": 40}],
     )
     value["claims"][0]["origin"] = "question_subject"
-    checker, _, compose_model = service(value)
+    from tests.test_router_candidates import quran_record
+
+    checker, _, _ = service(value)
+    checker.composer = engine(
+        records=[quran_record()],
+        value=proposal(
+            state="SUPPORTED", corpus_ids=["quran:33:40"], confidence=decision_confidence
+        ),
+    )
+    compose_model = checker.composer.model
     metrics = Summary()
     token = summary.set(metrics)
     try:
@@ -529,9 +533,27 @@ def test_low_classifier_confidence_pins_level_d_and_drops_nominated_ref():
     finally:
         summary.reset(token)
     card = result["cards"][0]
-    assert card["state"] == "CANNOT_CONFIRM"
-    assert card["abstained_reason"] == "LEVEL_D_PERSONAL_CASE"
-    assert compose_model.calls == []
+    assert card["state"] == state
+    assert card["claim"]["level"] == "A"
+    assert len(compose_model.calls) == 1
     assert metrics.counts["proposed_refs"] == 1
-    assert "resolved_refs" not in metrics.counts
+    assert metrics.counts["resolved_refs"] == 1
     assert "classifier:low_confidence" in metrics.codes
+
+
+@pytest.mark.parametrize("restriction", ["model", "flag", "premise"])
+def test_low_router_confidence_cannot_erase_explicit_or_premise_level_d(restriction):
+    value = route_proposal(level_confidence=0.1, proposed_quran_refs=[{"surah": 33, "ayah": 40}])
+    if restriction == "model":
+        value["level"] = "D"
+    elif restriction == "flag":
+        value["level_d"] = True
+    else:
+        value["claims"][0].update(text_ar="Is my marriage valid?", origin="presupposition")
+    checker, _, compose_model = service(value)
+    route = checker.router.route(TEXT)
+    assert route.extracted.claims[0].level == "D"
+    assert route.quran_refs == route.queries == ()
+    result = checker.check(CheckRequest(original_text=TEXT))
+    assert result["cards"][0]["abstained_reason"] == "LEVEL_D_PERSONAL_CASE"
+    assert compose_model.calls == []

@@ -170,7 +170,7 @@ class Router:
         if proposal.level_d or proposal.level == "D":
             floor = "D"
         classification = self.classifier.resolve(
-            floor, {"level": proposal.level, "confidence": proposal.level_confidence}
+            floor, {"level": proposal.level, "confidence": proposal.level_confidence}, routing=True
         )
         detection = self.detector.detect(text)
         claims = []
@@ -179,9 +179,8 @@ class Router:
             level = self.classifier.resolve(
                 max((classification.level, rule_level(proposed.text_ar)), key="ABCD".index),
                 {"level": proposal.level, "confidence": proposal.level_confidence},
+                routing=True,
             )
-            if classification.classifier_status in {"unavailable", "low_confidence"}:
-                level = classification
             claims.append(
                 ExtractedClaim(
                     **level.model_dump(),

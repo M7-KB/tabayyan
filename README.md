@@ -144,6 +144,12 @@ with any level-D claim skips source dispatch and composition inference. Empty in
 returns 400; invalid shapes return 422; router/infrastructure failures return 503.
 
 The router owns topic selection: `search_queries` contains at most three closed
+topic IDs. Under owner D1, low router confidence preserves the more restrictive
+of the rule floor and explicit model level, plus nominations and queries. Only
+deterministic personal-case rules or explicit model D / `level_d` restrict routing.
+The composer still requires independent evidence confidence and all source gates.
+
+The router's topic vocabulary contains at most three closed
 `Topic` IDs and `safe_to_search` must be true. Code maps IDs through `TOPIC_QUERIES`
 and rejects any full input or claim that appears in the built query. Unknown topics
 authorize no source call. No free-text query is sent. Proposed Quran references and

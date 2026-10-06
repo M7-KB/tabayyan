@@ -324,7 +324,11 @@ class Composer:
         if detection.span_detector_status != self.policy["span_detector"]["required_status"]:
             gate["span_detector"] = "fail"
             return finish(self.policy["span_detector"]["failure_reason"])
-        classification_failed = claim.classifier_status in {"unavailable", "low_confidence"}
+        # One-pass routing confidence does not establish evidence confidence.
+        # D1 keeps candidates; the independent decision/source gates below still apply.
+        classification_failed = claim.classifier_status == "unavailable" or (
+            claim.classifier_status == "low_confidence" and not propose_state
+        )
         if claim.level == "D" and not classification_failed:
             card["explanation_ar"] = "تحتاج هذه الحالة إلى مراجعة جهة إفتاء مؤهلة."
             card["explanation_en"] = (

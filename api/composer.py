@@ -90,6 +90,9 @@ def _cap_sentences(text: str | None, limit: int = EXPLANATION_SENTENCES) -> str 
 
 
 _ENGLISH_ITEM = re.compile(r"english|الإنجليزية|الانجليزية|إنجليزي|انجليزي", re.IGNORECASE)
+# The ordinary-text gate rejects any field that carries quotation marks, so an item
+# written with them can never be shown as the term block; it is not selected.
+_QUOTE_MARKS = set("«»\"'“”")
 
 
 def _english_item(items: object) -> str | None:
@@ -97,12 +100,16 @@ def _english_item(items: object) -> str | None:
 
     An item that is only a language name (the publisher lists languages without an
     equivalent) is not an equivalent: the item must carry Latin-script text beyond
-    the language label itself.
+    the language label itself. An item written with quotation marks is skipped: the
+    card keeps its definition and shows no term block instead of failing the gate.
     """
     if not isinstance(items, list):
         return None
     for item in items:
         if not isinstance(item, str) or not _ENGLISH_ITEM.search(item):
+            continue
+        if _QUOTE_MARKS & set(item):
+            code("term_block:quoted_item_skipped")
             continue
         remainder = _ENGLISH_ITEM.sub("", item)
         if len(re.findall(r"[A-Za-z]", remainder)) >= 2:
@@ -186,6 +193,36 @@ def _title_matches(question: str, record: dict) -> bool:
         return False
     matched = sum(1 for group in content if _alias_shared(group, title_aliases))
     return matched / len(content) >= TITLE_MATCH_FLOOR
+
+
+def _resolve_cited_ids(cited: list[str], candidates) -> list[str]:
+    """Map each cited ID onto the one offered record it unambiguously names.
+
+    The model is asked to copy corpus_id. A copy of the same offered record's
+    record_ref, its URL, or its ID without the "live:" prefix names that record and
+    is mapped back to its corpus_id. Anything else, a repeat included, is left as it
+    is and fails the verbatim gate: only offered records can ever be cited, once.
+    """
+    aliases: dict[str, set[str]] = {}
+    for result in candidates:
+        record = result.record
+        ref = record.get("source_ref") if isinstance(record.get("source_ref"), dict) else {}
+        keys = {
+            record["corpus_id"],
+            record["corpus_id"].removeprefix("live:"),
+            record.get("record_ref"),
+            ref.get("record_ref"),
+            record.get("source_url"),
+            ref.get("url"),
+        }
+        for key in keys:
+            if isinstance(key, str) and key:
+                aliases.setdefault(key, set()).add(record["corpus_id"])
+    resolved = []
+    for cid in cited:
+        targets = aliases.get(cid.strip(), set()) if isinstance(cid, str) else set()
+        resolved.append(next(iter(targets)) if len(targets) == 1 else cid)
+    return resolved
 
 
 class PositionProposal(StrictObject):
@@ -612,12 +649,23 @@ class Composer:
             and (_title_matches(asked, r.record) or _title_matches(claim.text_ar, r.record))
         ]
         count("bayyinat_title_matches", len(title_matched))
+        # Likewise the glossary record of the very term a term request names: its
+        # definition is shown (without a term block) when the model's confidence or a
+        # provider failure would otherwise abstain the card.
+        if input_kind == "term":
+            title_matched = [
+                r
+                for r in private_candidates
+                if r.record.get("domain") == "glossary"
+                and _publisher_answer(r.record, claim.text_ar, lang)
+            ]
 
         def publisher_fallback(reason, alignment_proposal=None):
             for result in title_matched:
                 try:
                     item = self._evidence(result)
                 except Exception:
+                    code("verbatim:fallback_copy")
                     gate["verbatim"] = "fail"
                     continue
                 code("publisher_fallback:" + reason)
@@ -705,6 +753,23 @@ class Composer:
         card["confidence"] = proposal.confidence
         card["alignment_confidence"] = proposal.alignment_confidence
         by_id = {r.corpus_id: r for r in candidates}
+        # A cited ID is a key into the offered records only. An alias of one offered
+        # record (its record_ref, URL or unprefixed ID) and a repeat are mapped back to
+        # its corpus_id; anything else still fails the gate below.
+        cited = _resolve_cited_ids(proposal.corpus_ids, candidates)
+        if cited != proposal.corpus_ids:
+            code("cited_ids:repaired")
+            proposal = proposal.model_copy(
+                update={
+                    "corpus_ids": cited,
+                    "positions": [
+                        p.model_copy(
+                            update={"corpus_ids": _resolve_cited_ids(p.corpus_ids, candidates)}
+                        )
+                        for p in proposal.positions
+                    ],
+                }
+            )
         if propose_state and (
             len(set(proposal.corpus_ids)) != len(proposal.corpus_ids)
             or any(
@@ -719,6 +784,7 @@ class Composer:
                 for cid in position.corpus_ids
             )
         ):
+            code("verbatim:cited_ids")
             gate["verbatim"] = "fail"
             return finish("VERBATIM_GATE_FAILED")
         # The model's CANNOT_CONFIRM stands unless it still selected a publisher answer
@@ -739,6 +805,7 @@ class Composer:
                 for cid in proposal.corpus_ids
             )
         ):
+            code("verbatim:cited_ids")
             gate["verbatim"] = "fail"
             return finish("VERBATIM_GATE_FAILED")
         selected_ids = []
@@ -749,6 +816,7 @@ class Composer:
                         raise ValueError("Unbound source")
                     item = self._evidence(by_id[cid])
                 except Exception:
+                    code("verbatim:evidence_copy")
                     gate["verbatim"] = "fail"
                     continue
                 selected_ids.append(cid)
@@ -758,10 +826,12 @@ class Composer:
                 selected_ids = proposal.corpus_ids
                 card["evidence"] = [self._evidence(by_id[cid]) for cid in selected_ids]
         except (KeyError, ValueError, TypeError):
+            code("verbatim:evidence_copy")
             gate["grading"] = gate["verbatim"] = "fail"
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
         except Exception:
+            code("verbatim:evidence_copy")
             gate["verbatim"] = "fail"
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
@@ -802,6 +872,7 @@ class Composer:
                 definition_scan.span_detector_status
                 != self.policy["span_detector"]["required_status"]
             ):
+                code("verbatim:definition_scan")
                 gate["separation"] = "fail"
                 card["evidence"] = []
                 return finish("VERBATIM_GATE_FAILED")
@@ -810,6 +881,7 @@ class Composer:
             ):
                 # Glossary evidence has no loader-verified hadith grading. A grade
                 # on the comparison record cannot authorize this embedded quote.
+                code("verbatim:definition_hadith")
                 gate["grading"] = "fail"
                 card["evidence"] = []
                 return finish("VERBATIM_GATE_FAILED")
@@ -831,6 +903,7 @@ class Composer:
         if not all(self._isolated(s) for s in prose[len(explanations) :]):
             # A position label or summary reproduced source text: the card cannot
             # stand on it.
+            code("verbatim:positions_prose")
             gate["separation"] = "fail"
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
@@ -883,6 +956,7 @@ class Composer:
                 ) or not self._isolated(
                     glossary["text_en"], glossary_label_id=glossary["corpus_id"]
                 ):
+                    code("verbatim:term_block")
                     gate["separation"] = "fail"
                     card["evidence"] = []
                     return finish("VERBATIM_GATE_FAILED")
@@ -1012,6 +1086,7 @@ class Composer:
                             self._evidence(RetrievalResult(self.records[correct], 0, 0))
                         )
                     except Exception:
+                        code("verbatim:correction_record")
                         card["evidence"] = []
                         gate["verbatim"] = "fail"
                         return finish("VERBATIM_GATE_FAILED")
@@ -1070,11 +1145,13 @@ class Composer:
             return finish("LOW_CONFIDENCE")
         selected = next((h for h in candidates if h.corpus_id == decision.corpus_id), None)
         if selected is None or selected.record != self.records.get(decision.corpus_id):
+            code("verbatim:hadith_record")
             card["gate_report"]["verbatim"] = "fail"
             return finish("VERBATIM_GATE_FAILED")
         try:
             item = self._evidence(selected)
         except Exception:
+            code("verbatim:hadith_copy")
             card["gate_report"]["grading"] = card["gate_report"]["verbatim"] = "fail"
             return finish("VERBATIM_GATE_FAILED")
         # An exact source substring determines only the label; never copies user text.
@@ -1111,6 +1188,7 @@ class Composer:
             record_ = self.records[finding.match.record.corpus_id]
             item = self._evidence(RetrievalResult(record_, 0, 0))
         except Exception:
+            code("verbatim:quran_correction")
             gate["verbatim"] = "fail"
             return finish("VERBATIM_GATE_FAILED")
         code("alignment:CONTRADICTS")

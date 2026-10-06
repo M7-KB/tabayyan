@@ -4,6 +4,9 @@ their question, and glossary cards pass the verbatim gate repeatably.
 Record texts are synthetic placeholder words; only the brief's public inputs are real.
 """
 
+import json
+import logging
+
 import pytest
 
 from api.composer import SEPARATION_FALLBACK_TEXT
@@ -14,7 +17,9 @@ from tests.test_twelve_cases import (
     FAQ_ANSWER,
     GLOSSARY_RULE,
     VERSE_WORDS,
+    Indexes,
     check,
+    glossary_received,
     harness_client,
     quotes_are_copied,
     route,
@@ -198,3 +203,98 @@ def test_glossary_question_passes_five_times_in_a_row(harness):
         assert card["gate_report"]["verbatim"] == "pass"
         assert card["evidence"][0]["quote_ar"] == GLOSSARY_RULE
         assert card["term"]["term_ar"] == "التوحيد"
+
+
+@pytest.mark.parametrize("alias", ["strip_live", "url"])
+def test_an_alias_of_an_offered_record_is_mapped_back_to_it(harness, alias):
+    with model_knobs(harness, cite_alias=alias):
+        card = check(
+            harness,
+            TERM,
+            route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
+            term_label="التوحيد",
+        )
+    assert card["state"] == "SUPPORTED" and card["gate_report"]["verbatim"] == "pass"
+    assert [e["quote_ar"] for e in card["evidence"]] == [GLOSSARY_RULE]
+
+
+@pytest.mark.parametrize("alias", ["invented", "duplicate"])
+def test_an_id_naming_no_offered_record_still_fails_the_gate(harness, caplog, alias):
+    with (
+        caplog.at_level(logging.INFO, logger="api.diagnostics"),
+        model_knobs(harness, cite_alias=alias),
+    ):
+        card = check(
+            harness,
+            TERM,
+            route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
+        )
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["abstained_reason"] == "VERBATIM_GATE_FAILED" and card["evidence"] == []
+    assert "verbatim:cited_ids" in caplog.text
+
+
+def test_quoted_translation_item_is_not_selected_so_the_definition_still_shows(harness, caplog):
+    record = glossary_received("التوحيد", "", 606)
+    del record["text_en"]
+    record["translations"] = ['English: "Monotheism"', "Français: Monothéisme"]
+    original = Indexes.discover
+    Indexes.discover = lambda self, text, request, *, kind, level, timeout: request.receive(record)
+    try:
+        with caplog.at_level(logging.INFO, logger="api.diagnostics"):
+            card = check(
+                harness,
+                TERM,
+                route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
+                term_label="التوحيد",
+            )
+    finally:
+        Indexes.discover = original
+    # The quoted item never reaches the ordinary-text gate; the verified definition shows.
+    assert card["state"] == "SUPPORTED" and card["gate_report"]["verbatim"] == "pass"
+    assert card["evidence"][0]["quote_ar"] == GLOSSARY_RULE
+    assert card["term"] is None
+    assert "Monotheism" not in json.dumps(card, ensure_ascii=False)
+    assert "term_block:quoted_item_skipped" in caplog.text
+
+
+def test_quoted_text_en_still_fails_closed_and_is_named_in_the_log(harness, caplog):
+    record = glossary_received("التوحيد", 'English: "Monotheism"', 707)
+    original = Indexes.discover
+    Indexes.discover = lambda self, text, request, *, kind, level, timeout: request.receive(record)
+    try:
+        with caplog.at_level(logging.INFO, logger="api.diagnostics"):
+            card = check(
+                harness,
+                TERM,
+                route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
+                term_label="التوحيد",
+            )
+    finally:
+        Indexes.discover = original
+    # The gate is unchanged: a marked equivalent field fails the card. The request
+    # summary now names the check that fired.
+    assert card["state"] == "CANNOT_CONFIRM"
+    assert card["abstained_reason"] == "VERBATIM_GATE_FAILED" and card["evidence"] == []
+    assert "verbatim:term_block" in caplog.text
+
+
+def test_low_confidence_on_the_named_term_still_shows_its_definition(harness):
+    with model_knobs(harness, confidence=0.2):
+        card = check(
+            harness,
+            TERM,
+            route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
+        )
+    assert card["state"] == "SUPPORTED" and card["abstained_reason"] is None
+    assert card["evidence"][0]["quote_ar"] == GLOSSARY_RULE
+    assert card["explanation_ar"] == SEPARATION_FALLBACK_TEXT[0]
+    assert card["term"] is None
+    other = "ما معنى الزكاة؟"  # no received record names this term: the block stands
+    with model_knobs(harness, confidence=0.2):
+        card = check(
+            harness,
+            other,
+            route(other, kind="term", level="A", origin="term_lookup", no_claim=True),
+        )
+    assert card["state"] == "CANNOT_CONFIRM" and card["evidence"] == []

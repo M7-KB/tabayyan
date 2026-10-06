@@ -138,6 +138,9 @@ class Scripted:
         self.error = None
         # When set, every offered record of these domains is cited, in offer order.
         self.cite = None
+        # How the cited IDs are written: exact (None), "strip_live", "url", "duplicate"
+        # or "invented" (an ID that names no offered record).
+        self.cite_alias = None
         self.calls = []
         self.records_seen = []
 
@@ -160,6 +163,15 @@ class Scripted:
             if self.cite is not None
             else [chosen["corpus_id"]]
         )
+        if self.cite_alias == "strip_live":
+            cited = [c.removeprefix("live:") for c in cited]
+        elif self.cite_alias == "url":
+            by_id = {r["corpus_id"]: r for r in records}
+            cited = [by_id[c]["source_url"] for c in cited]
+        elif self.cite_alias == "duplicate":
+            cited = cited + cited
+        elif self.cite_alias == "invented":
+            cited = ["live:jamhara-glossary:/dictionary/word/999"]
         return {
             "state": self.state,
             "corpus_ids": cited,

@@ -233,6 +233,17 @@ The following answers supersede the open O1-O5 items above. The record is event 
 - **No user or source text in logs.** User text, source text, keys and tokens never appear in chat, logs or reports.
 - **Religious-content decisions** go to the owner, not a specialist.
 
+### 0.14 Owner decisions D1–D6 (2026-10-06 morning; replaces earlier task lists)
+
+- **D1. Low confidence never forces level D.** Level D comes only from the deterministic rule floor or an explicit model D / `level_d`. Nominations and queries are kept. This replaces the level-confidence rule that cleared Quran nominations before compose (the 33:40 drop).
+- **D2. Router-proposed Quran refs.** A ref proposed by the router, resolved by ID and cited by the composer, passes without the lexical overlap gate. Verse text is still copied by code by ID. `overlap_score` stays for stated-quote claims.
+- **D3. Router schema problems never fail the request.** Log the failing field name, text-free. Drop unknown `search_queries` topics and out-of-range refs, then continue.
+- **D4. Private indexes** are built by the owner from official APIs under their terms: Qur'an (done), HadeethEnc, Bayyinat (`bayenat.net`), glossary (`islamic-content.com`). Each uses the same loader pattern as the Qur'an artifact.
+- **D5. MCP adapter is off by default** (env var) until it completes inside its budget. The network HadeethEnc path stays only as a fallback when the local file is absent.
+- **D6. Display rules.**
+  - Bayyinat record: title, question text, «الخلاصة» when present, keywords, and the detailed answer for indexing only. Display «الخلاصة» verbatim with a link. If absent, display the first paragraph of the detailed answer, capped at 400 characters, with a link.
+  - Glossary: display «المعنى الاصطلاحي» verbatim with a link. Index «الشرح المختصر» only. Translations come from the list.
+
 ---
 
 ## 1. Scope

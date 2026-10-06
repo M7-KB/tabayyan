@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 from api.check import CheckRequest
 from api.classifier import LevelClassifier, LevelProposal
-from api.composer import Composer, DecisionProposal
+from api.composer import Composer, DecisionProposal, HadithMeaningProposal
 from api.config import load_config
 from api.deadline import RequestProgress, request_deadline, request_progress
 from api.diagnostics import (
@@ -43,6 +43,8 @@ from api.retrieval import BM25Retriever
 from api.router import Router, RouterProposal
 from api.settings import Settings
 from api.span_detector import DetectorConfig, Record, SpanDetector
+from corpus.hadith_artifact import VERSION as HADITH_VERSION
+from corpus.hadith_artifact import load_hadith_artifact
 from corpus.private_artifact import load_private_corpus
 from corpus.quran_binding import matching_text
 from corpus.validate import CorpusValidationError
@@ -75,6 +77,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         records, corpus_version = [], None
         corpus_status = "disabled" if settings.health_only else "not_configured"
         corpus_error = None
+        hadith_records = []
+        hadith_status = "disabled" if settings.health_only else "not_configured"
+        hadith_error = None
         if not settings.health_only:
             settings.require_key()
             policy, tuning = load_config(settings.content_policy_path, settings.tuning_path)
@@ -91,12 +96,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     logger.warning("Private corpus unavailable: %s", corpus_error)
                 else:
                     corpus_status = "loaded"
+            if settings.private_hadith_path is not None:
+                try:
+                    hadith_records = load_hadith_artifact(settings.private_hadith_path)
+                except CorpusValidationError as exc:
+                    hadith_status, hadith_error = "unavailable", str(exc)
+                    logger.warning("Private hadith unavailable: %s", hadith_error)
+                else:
+                    hadith_status = "loaded"
         app.state.policy = policy
         app.state.tuning = tuning
         app.state.corpus = records
         app.state.corpus_version = corpus_version
         app.state.corpus_status = corpus_status
         app.state.corpus_error = corpus_error
+        app.state.hadith_records = hadith_records
+        app.state.hadith_status = hadith_status
+        app.state.hadith_error = hadith_error
         # One connection pool shared across models and requests; never stores request data.
         with httpx.Client(trust_env=False) as provider_client:
             app.state.provider_client = provider_client
@@ -111,6 +127,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     asyncio.to_thread(warm, app, False, DecisionProposal.model_json_schema()),
                     asyncio.to_thread(warm, app, True, ExtractionProposal.model_json_schema()),
                     asyncio.to_thread(warm, app, False, LevelProposal.model_json_schema()),
+                    *(
+                        [
+                            asyncio.to_thread(
+                                warm, app, False, HadithMeaningProposal.model_json_schema()
+                            )
+                        ]
+                        if settings.private_hadith_path is not None
+                        else []
+                    ),
                 )
             yield
 
@@ -187,7 +212,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if service is None:
                     reason = model_adapter(app)
                     gatekeeper = QuoteGatekeeper(
-                        local_records=app.state.corpus,
+                        local_records=[*app.state.corpus, *app.state.hadith_records],
                         request=SourceRequest(),
                         detector_config=DetectorConfig.from_files(
                             settings.content_policy_path, settings.tuning_path
@@ -207,19 +232,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         router=router,
                         composer=Composer(
                             model=reason,
-                            retriever=BM25Retriever(app.state.corpus, app.state.tuning),
+                            retriever=BM25Retriever(gatekeeper.records, app.state.tuning),
                             detector=detector,
-                            records=app.state.corpus,
+                            records=gatekeeper.records,
                             policy_path=settings.content_policy_path,
                             tuning_path=settings.tuning_path,
                             gatekeeper=gatekeeper,
+                            local_hadith=settings.private_hadith_path is not None,
                         ),
                         corpus_version=app.state.corpus_version,
                         connector=DefaultDiscovery(
                             mcp=IslamicContentConnector()
-                            if settings.islamic_content_mcp_url
+                            if settings.enable_islamic_content_mcp
+                            and settings.islamic_content_mcp_url
                             else None,
-                            hadeethenc=HadeethEncDiscovery(),
+                            hadeethenc=HadeethEncDiscovery()
+                            if settings.private_hadith_path is None
+                            else None,
                         ),
                     )
                     # Store only services/indexes, never request data or result cards.
@@ -300,6 +329,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             and app.state.corpus_status == "loaded"
             and bool(app.state.corpus)
             and app.state.corpus_error is None
+            and app.state.hadith_error is None
             and app.state.policy is not None
             and app.state.tuning is not None
             and bool(settings.openai_model_extract.strip())
@@ -314,6 +344,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "corpus_items": len(app.state.corpus),
             "corpus_status": app.state.corpus_status,
             "corpus_error": app.state.corpus_error,
+            "hadith_status": app.state.hadith_status,
+            "hadith_error": app.state.hadith_error,
+            "hadith_items": len(app.state.hadith_records),
+            "hadith_version": HADITH_VERSION if app.state.hadith_status == "loaded" else None,
             "pending_review_items": pending_items,
             "allow_pending_review": settings.allow_pending_review,
             "policy_version": app.state.policy.policy_version if app.state.policy else None,

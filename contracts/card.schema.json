@@ -119,6 +119,7 @@
       "enum": [
         "CONFIRMS",
         "CONTRADICTS",
+        "SAME_MEANING",
         null
       ]
     },
@@ -131,6 +132,7 @@
       "enum": [
         "supported_confirms",
         "supported_contradicts",
+        "supported_same_meaning",
         "disputed",
         "cannot_confirm"
       ]
@@ -190,6 +192,9 @@
       },
       "minItems": 2,
       "maxItems": 2
+    },
+    "hadith_caution_ar": {
+      "const": "لا تنسب لفظك إلى النبي ﷺ؛ تحقّق من نص الحديث ودرجته في المصدر."
     },
     "misquote_notice": {
       "anyOf": [
@@ -879,6 +884,38 @@
   "allOf": [
     {
       "if": {
+        "properties": {"alignment": {"const": "SAME_MEANING"}},
+        "required": ["alignment"]
+      },
+      "then": {
+        "required": ["hadith_caution_ar"],
+        "properties": {
+          "state": {"const": "SUPPORTED"},
+          "state_label_key": {"const": "supported_same_meaning"},
+          "referral": {"$ref": "#/$defs/referral"},
+          "misquote_notice": {"type": "null"},
+          "evidence": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "allOf": [
+                {"$ref": "#/$defs/evidence"},
+                {"required": ["corpus_id"], "properties": {
+                  "domain": {"const": "hadith"},
+                  "source_id": {"const": "hadeethenc"},
+                  "corpus_id": {"pattern": "^hadeethenc:[1-9][0-9]{0,7}$"},
+                  "grading": {"type": "object", "properties": {
+                    "grade_ar": {"enum": ["صحيح", "حسن", "[صحيح]", "[حسن]"]}
+                  }}
+                }}
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
         "properties": {
           "state": {
             "const": "SUPPORTED"
@@ -893,7 +930,8 @@
           "alignment": {
             "enum": [
               "CONFIRMS",
-              "CONTRADICTS"
+              "CONTRADICTS",
+              "SAME_MEANING"
             ]
           },
           "abstained_reason": {

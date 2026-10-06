@@ -208,3 +208,12 @@ resolved PR #109 documentation conflicts and recorded owner-reported HadeethEnc
 private-index metadata. Tools: local Buzz CLI skill, Git/GitHub CLI, PowerShell,
 Node test runner, Python/pytest and Ruff. No collector or source request, private
 artifact fetch, or product-model API call was made.
+
+## Local hadith integration and D1 routing (2026-10-06)
+
+Codex / OpenAI (session identifies GPT-6; exact API identifier unavailable)
+implemented owner D1/D4/D5/D7 with synthetic nonreligious fixtures. Tools: local
+Buzz CLI skill, Git/GitHub CLI, PowerShell, Python 3.11, pytest and Ruff.
+Runtime model identifiers remain environment-only (OPENAI_MODEL_EXTRACT and
+OPENAI_MODEL_REASON). No publisher requests, collectors, private-source reads or
+model API calls were executed. Source permissions remain in SOURCES.md.

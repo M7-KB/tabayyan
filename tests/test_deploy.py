@@ -35,6 +35,10 @@ def test_health_only_without_artifacts_or_config(tmp_path, monkeypatch):
             "corpus_items": 0,
             "corpus_status": "disabled",
             "corpus_error": None,
+            "hadith_status": "disabled",
+            "hadith_error": None,
+            "hadith_items": 0,
+            "hadith_version": None,
             "pending_review_items": 0,
             "allow_pending_review": False,
             "policy_version": None,
@@ -77,10 +81,14 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
         "python -m pip install . && mkdir -p corpus/private && curl -fsSL "
     )
     assert "Authorization: Bearer $PRIVATE_DATA_TOKEN" in build_command
-    assert build_command.endswith(
+    assert (
         "https://api.github.com/repos/M7-KB/tabayyan-private-data/contents/"
         "quran-kfc-v30-20261005.jsonl.xz"
-    )
+    ) in build_command
+    assert "-o data/private/hadeethenc.jsonl" in build_command
+    assert "contents/hadeethenc/hadeethenc.jsonl" in build_command
+    assert "-o data/private/manifest.json" in build_command
+    assert build_command.endswith("contents/hadeethenc/manifest.json")
     assert service["startCommand"] == (
         "uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log"
     )
@@ -90,6 +98,8 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
         "PYTHON_VERSION",
         "PRIVATE_DATA_TOKEN",
         "PRIVATE_CORPUS_PATH",
+        "PRIVATE_HADITH_PATH",
+        "ENABLE_ISLAMIC_CONTENT_MCP",
         "ALLOW_PENDING_REVIEW",
         "OPENAI_API_KEY",
         "OPENAI_MODEL_EXTRACT",
@@ -98,7 +108,12 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
     assert all(
         set(variable) == {"key", "sync"} and variable["sync"] is False
         for variable in service["envVars"]
+        if variable["key"] != "ENABLE_ISLAMIC_CONTENT_MCP"
     )
+    assert next(v for v in service["envVars"] if v["key"] == "ENABLE_ISLAMIC_CONTENT_MCP") == {
+        "key": "ENABLE_ISLAMIC_CONTENT_MCP",
+        "value": "false",
+    }
 
 
 def test_build_sha_falls_back_to_render_commit(monkeypatch):

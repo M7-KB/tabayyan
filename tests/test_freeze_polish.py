@@ -4,7 +4,6 @@ their question, and glossary cards pass the verbatim gate repeatably.
 Record texts are synthetic placeholder words; only the brief's public inputs are real.
 """
 
-import json
 import logging
 
 import pytest
@@ -80,8 +79,10 @@ def test_cited_nomination_without_overlap_is_not_shown(harness, text):
     quotes_are_copied(card)
 
 
-def test_cited_nomination_overlapping_the_publisher_answer_is_shown(harness):
-    answer = faq_titled(SWORD)
+def test_cited_nomination_sharing_a_word_only_with_the_answer_is_not_shown(harness):
+    # Overlap is measured against the question alone: a Bayyinat answer (or title)
+    # that happens to share a word with the verse does not make the verse evidence.
+    answer = faq_titled("ألم ينتشر الإسلام بالسيف؟")
     answer["text_ar"] = FAQ_ANSWER + " " + VERSE_WORDS[5]
     with received(answer), model_knobs(harness, cite=("faq", "quran")):
         card = check(
@@ -90,7 +91,7 @@ def test_cited_nomination_overlapping_the_publisher_answer_is_shown(harness):
             route(SWORD, kind="doubt", level="A", origin="question_subject", refs=[(1, 1)]),
         )
     assert card["state"] == "SUPPORTED"
-    assert {e["domain"] for e in card["evidence"]} == {"faq", "quran"}
+    assert [e["domain"] for e in card["evidence"]] == ["faq"]
 
 
 def test_only_an_unrelated_nomination_cited_falls_back_to_the_matching_answer(harness):
@@ -172,6 +173,12 @@ def test_a_second_question_or_a_long_remark_is_not_absorbed():
     text = "لماذا يمنع الإسلام الاجتهاد؟ " + remark
     checker, _, _ = service(two_claims(text, "question_subject", remark))
     assert len(checker.router.route(text).extracted.claims) == 2
+    # «ما» opens a question, not a remark: a second term question stays its own claim.
+    second = "ما معنى التوحيد"
+    text = "هل الأعمال بالنيات؟ " + second
+    checker, _, _ = service(two_claims(text, "question_subject", second))
+    claims = checker.router.route(text).extracted.claims
+    assert len(claims) == 2 and claims[1].text_ar == second
 
 
 def test_hostile_question_yields_one_card_over_http(harness):
@@ -234,49 +241,43 @@ def test_an_id_naming_no_offered_record_still_fails_the_gate(harness, caplog, al
     assert "verbatim:cited_ids" in caplog.text
 
 
-def test_quoted_translation_item_is_not_selected_so_the_definition_still_shows(harness, caplog):
+def test_quoted_publisher_equivalent_is_shown_verbatim(harness):
+    # The term block is source text: the publisher's own quotation marks pass the gate.
     record = glossary_received("التوحيد", "", 606)
     del record["text_en"]
     record["translations"] = ['English: "Monotheism"', "Français: Monothéisme"]
     original = Indexes.discover
     Indexes.discover = lambda self, text, request, *, kind, level, timeout: request.receive(record)
     try:
-        with caplog.at_level(logging.INFO, logger="api.diagnostics"):
-            card = check(
-                harness,
-                TERM,
-                route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
-                term_label="التوحيد",
-            )
+        card = check(
+            harness,
+            TERM,
+            route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
+            term_label="التوحيد",
+        )
     finally:
         Indexes.discover = original
-    # The quoted item never reaches the ordinary-text gate; the verified definition shows.
     assert card["state"] == "SUPPORTED" and card["gate_report"]["verbatim"] == "pass"
     assert card["evidence"][0]["quote_ar"] == GLOSSARY_RULE
-    assert card["term"] is None
-    assert "Monotheism" not in json.dumps(card, ensure_ascii=False)
-    assert "term_block:quoted_item_skipped" in caplog.text
+    assert card["term"]["term_ar"] == "التوحيد"
+    assert card["term"]["term_en"] == 'English: "Monotheism"'
 
 
-def test_quoted_text_en_still_fails_closed_and_is_named_in_the_log(harness, caplog):
+def test_quoted_text_en_field_is_shown_verbatim(harness):
     record = glossary_received("التوحيد", 'English: "Monotheism"', 707)
     original = Indexes.discover
     Indexes.discover = lambda self, text, request, *, kind, level, timeout: request.receive(record)
     try:
-        with caplog.at_level(logging.INFO, logger="api.diagnostics"):
-            card = check(
-                harness,
-                TERM,
-                route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
-                term_label="التوحيد",
-            )
+        card = check(
+            harness,
+            TERM,
+            route(TERM, kind="term", level="A", origin="term_lookup", no_claim=True),
+            term_label="التوحيد",
+        )
     finally:
         Indexes.discover = original
-    # The gate is unchanged: a marked equivalent field fails the card. The request
-    # summary now names the check that fired.
-    assert card["state"] == "CANNOT_CONFIRM"
-    assert card["abstained_reason"] == "VERBATIM_GATE_FAILED" and card["evidence"] == []
-    assert "verbatim:term_block" in caplog.text
+    assert card["state"] == "SUPPORTED"
+    assert card["term"]["term_en"] == 'English: "Monotheism"'
 
 
 def test_low_confidence_on_the_named_term_still_shows_its_definition(harness):

@@ -728,8 +728,13 @@ and `classifier_status`: `rule_forced`, `model_validated`, `low_confidence` or `
 The composer must check status before level-D personal-case policy: low confidence or
 unavailable classification keeps the restrictive state but must not tell a user that their
 question was a personal fatwa. T-502 owns that integration; this utility does not make cards.
-First-person family/possessive cues and Arabic ability/possession framings force D,
-including English relative possessives.
+First-person family references (including English relative possessives) force D
+when combined with case or ruling intent, such as contract validity, inheritance,
+a private dispute, explicit first-person framing, advice requests or intervention
+in a relative's conduct. A family reference alone still receives model classification;
+general ethics and hadith questions are not forced to D by that word alone.
+Arabic ability/possession framings and explicit personal worship/contract cues
+continue to force D. Missing or uncertain model classification still refers.
 It does not establish authenticity, retrieve sources or choose a card state.
 
 Provider adapters implement the shared `api/model.py` `StructuredModel.complete_json` interface:

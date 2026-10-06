@@ -177,12 +177,20 @@ def test_tuning_controls_confidence_floor(tmp_path):
         "هل يحق لامي نصيب من الارث؟",
         "Is my brother's marriage contract valid?",
         "Is my sister’s contract valid?",
-        "أختي",
-        "ابنتي",
-        "أمي",
-        "أبي",
-        "والدي",
-        "والدتي",
+        "حكم أختي",
+        "حكم ابنتي",
+        "حكم أمي",
+        "حكم أبي",
+        "حكم والدي",
+        "حكم والدتي",
+        "my father is sick, may I fast on his behalf?",
+        "forcing my son to pray",
+        "my sister wants to remove her hijab, what should I do",
+        "my brother smokes, should I cut him off",
+        "أجبر ابني على الصلاة",
+        "أختي تريد خلع الحجاب ماذا أفعل",
+        "أخي يدخن هل أقاطعه",
+        "أبي مريض هل أصوم عنه",
     ],
 )
 def test_first_person_family_cases_force_referral(text):
@@ -191,6 +199,30 @@ def test_first_person_family_cases_force_referral(text):
     assert result.level == "D"
     assert result.classifier_status == "rule_forced"
     assert model.calls == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["أخي", "أختي", "التعاون مع أخي", "مساعدة أمي", "Kindness to my brother"],
+)
+def test_family_reference_alone_still_requires_model_classification(text):
+    assert rule_level(text) == "A"
+    model = Model()
+    assert classifier(model).classify(text, context=text).level == "A"
+    assert len(model.calls) == 1
+    assert (
+        classifier(Model({"level": "D", "confidence": 0.9})).classify(text, context=text).level
+        == "D"
+    )
+    assert classifier(Model(failure=True)).classify(text, context=text).level == "D"
+
+
+@pytest.mark.parametrize("text", ["حكم أخي", "عقد أختي", "ميراث أمي", "أجبر ابني", "أختي تريد"])
+@pytest.mark.parametrize("prefix", ["", "و", "بال", "لل"])
+@pytest.mark.parametrize("invisible", ["", "\u200d"])
+def test_family_case_guard_keeps_clitic_and_invisible_handling(text, prefix, invisible):
+    text = " ".join(invisible.join(prefix + word) for word in text.split())
+    assert rule_level(text) == "D"
 
 
 def test_original_context_is_required():

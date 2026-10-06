@@ -6,7 +6,7 @@ import { PositionsList } from './PositionsList.jsx'
 import { PublishedAnswer } from './PublishedAnswer.jsx'
 import { ReferralBlock } from './ReferralBlock.jsx'
 import { ScriptureBlock } from './ScriptureBlock.jsx'
-import { StateBadge } from './StateBadge.jsx'
+import { StateBadge, badgeLabelKey } from './StateBadge.jsx'
 import { UnderstoodClaim } from './UnderstoodClaim.jsx'
 
 // One evidence card. Scripture, generated explanation and the user's own text each sit in their own
@@ -19,8 +19,8 @@ export function ClaimCard({ card, recheck = null, onRecheck }) {
   const isCannotConfirm = card.state === 'CANNOT_CONFIRM'
 
   return (
-    <article className="claim-card" aria-label={strings.stateLabels[labelKey]}>
-      <StateBadge labelKey={labelKey} />
+    <article className="claim-card" aria-label={strings.stateLabels[badgeLabelKey(labelKey, claim.origin)]}>
+      <StateBadge labelKey={labelKey} origin={claim.origin} />
 
       <UnderstoodClaim claim={claim} recheck={recheck} onRecheck={onRecheck} />
 

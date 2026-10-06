@@ -52,6 +52,8 @@ describe('product strings', () => {
       supported_same_meaning: 'لم نجد لفظك حرفياً؛ هذا حديث صحيح بمعنى قريب',
       disputed: 'مسألة مختلف فيها',
       cannot_confirm: 'لا يمكن التأكد من المصادر المتاحة',
+      answer_from_source: 'جواب من مصدر معتمد',
+      correction_from_source: 'تصحيح من مصدر معتمد',
     })
     expect(strings.sourceTextIntro).toBe('النص كما ورد في المصدر:')
   })

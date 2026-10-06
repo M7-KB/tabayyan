@@ -1245,6 +1245,8 @@ D4 permits one owner-run fetch, stored only in the private repo, with verbatim
 fields and attribution to HadeethEnc.com; it supersedes the earlier collection
 restriction in [SOURCES.md](SOURCES.md#hadeethenc-owner-run-private-index-2026-10-06-decision-d4).
 Agents do not run it. Inspect the report and empty-field counts before handoff.
+Pagination ambiguity or a non-string item field makes the manifest partial. Resume
+recovers an interrupted final JSONL append; corruption earlier in the file is refused.
 
 The [measured source/API spike](docs/CONNECTOR_SPIKE_20261005.md) records two OpenAI
 calls and bounded direct probes, endpoint shapes, one-sample local latency and terms

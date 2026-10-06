@@ -27,7 +27,7 @@ const sha = value => createHash('sha256').update(value).digest('hex');
 const numeric = (a, b) => Number(a) - Number(b);
 const str = value => (typeof value === 'string' ? value : '');
 const coded = (reason, retryable) => Object.assign(new Error(reason), { reason, retryable });
-const REPORTED = /^(network_error|not_json|bad_json|page_too_large|unexpected_shape|id_mismatch|missing_hadeeth|page_limit|too_many_categories|http_\d{3})$/;
+const REPORTED = /^(network_error|redirect_refused|not_json|bad_json|page_too_large|unexpected_shape|id_mismatch|missing_hadeeth|page_limit|page_short|page_repeated|pagination_mismatch|too_many_categories|non_string_(title|hadeeth|attribution|grade|reference|explanation)|http_\d{3})$/;
 const reasonOf = error => (REPORTED.test(error.reason ?? '') ? error.reason : 'fetch_or_parse_failure');
 
 /** Only allowlisted endpoints, Arabic language and numeric parameters reach the network. */
@@ -88,9 +88,10 @@ export class Api {
   async once(url) {
     let response;
     try {
-      response = await this.fetchFn(url, { redirect: 'error', signal: AbortSignal.timeout(TIMEOUT_MS),
+      response = await this.fetchFn(url, { redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS),
         headers: { Accept: 'application/json', 'User-Agent': 'TabayyanOwnerCollector/1.0' } });
     } catch { throw coded('network_error', true); }
+    if (response.status >= 300 && response.status < 400) throw coded('redirect_refused', false);
     if (!response.ok) throw coded(`http_${response.status}`, response.status === 429 || response.status >= 500);
     if (!/application\/json/i.test(response.headers.get('content-type') ?? '')) throw coded('not_json', false);
     const body = await readBounded(response);
@@ -110,7 +111,9 @@ const idOf = row => {
 };
 
 async function listCategory(api, category, items) {
-  let previous = null;
+  const seenPages = new Set();
+  const listedIds = new Set();
+  let expectedTotal = null; let expectedLast = null;
   for (let page = 1; page <= MAX_LIST_PAGES; page += 1) {
     const payload = await api.get('lists', { language: 'ar', category_id: category,
       page: String(page), per_page: String(PER_PAGE) });
@@ -118,15 +121,45 @@ async function listCategory(api, category, items) {
     const ids = [];
     for (const row of list) {
       const id = idOf(row);
-      if (!id) continue;
+      if (!id) throw coded('unexpected_shape', false);
       ids.push(id);
       if (!items[id]) items[id] = { title: str(row.title), categories: [] };
       if (!items[id].categories.includes(category)) items[id].categories.push(category);
     }
     const key = ids.join(',');
+    if (ids.length && (seenPages.has(key) || ids.some(id => listedIds.has(id)) ||
+      new Set(ids).size !== ids.length)) throw coded('page_repeated', false);
+    seenPages.add(key);
+    ids.forEach(id => listedIds.add(id));
+    const total = payload?.total ?? payload?.meta?.total;
     const last = payload?.last_page ?? payload?.meta?.last_page;
-    if (list.length < PER_PAGE || key === previous || (Number.isInteger(last) && page >= last)) return;
-    previous = key;
+    for (const value of [total, last]) {
+      if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) {
+        throw coded('pagination_mismatch', false);
+      }
+    }
+    if (total !== undefined) {
+      if (expectedTotal !== null && expectedTotal !== total) throw coded('pagination_mismatch', false);
+      expectedTotal = total;
+    }
+    if (last !== undefined) {
+      if (last < 1 || (expectedLast !== null && expectedLast !== last)) throw coded('pagination_mismatch', false);
+      expectedLast = last;
+    }
+    if (expectedTotal !== null && listedIds.size > expectedTotal) throw coded('pagination_mismatch', false);
+    const atLast = expectedLast !== null && page === expectedLast;
+    const atTotal = expectedTotal !== null && listedIds.size === expectedTotal;
+    if (atLast || atTotal) {
+      if ((expectedTotal !== null && !atTotal) || (expectedLast !== null && !atLast)) {
+        throw coded('pagination_mismatch', false);
+      }
+      return;
+    }
+    if (list.length < PER_PAGE) {
+      // A nonempty short page is not proof of exhaustion; servers may cap page size.
+      if (list.length === 0 && expectedTotal === null && expectedLast === null) return;
+      throw coded('page_short', false);
+    }
   }
   throw coded('page_limit', false);
 }
@@ -153,10 +186,15 @@ export async function fetchItem(api, id, entry) {
   const payload = await api.get('one', { language: 'ar', id });
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw coded('unexpected_shape', false);
   if (String(payload.id) !== id) throw coded('id_mismatch', false);
+  for (const field of ['title', 'hadeeth', 'attribution', 'grade', 'reference', 'explanation']) {
+    if (payload[field] !== undefined && typeof payload[field] !== 'string') {
+      throw coded(`non_string_${field}`, false);
+    }
+  }
   if (!str(payload.hadeeth).trim()) throw coded('missing_hadeeth', false);
   return {
     id,
-    title: str(payload.title) || entry.title,
+    title: str(payload.title),
     hadeeth: payload.hadeeth,
     attribution: str(payload.attribution),
     grade: str(payload.grade),
@@ -182,7 +220,25 @@ async function completedIds(jsonlPath) {
   let text;
   try { text = await readFile(jsonlPath, 'utf8'); }
   catch (error) { if (error.code === 'ENOENT') return new Set(); throw error; }
-  return new Set(text.split('\n').filter(Boolean).map(line => JSON.parse(line).id));
+  const lines = text.split('\n');
+  const records = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!lines[index]) continue;
+    let record;
+    try { record = JSON.parse(lines[index]); }
+    catch {
+      // Only an unterminated final append is recoverable; earlier corruption is refused.
+      if (index !== lines.length - 1 || text.endsWith('\n')) throw new Error('resume_invalid_jsonl');
+      break;
+    }
+    if (!record || typeof record.id !== 'string' || !NUMBER.test(record.id)) throw new Error('resume_invalid_record');
+    records.push(record);
+  }
+  // Normalize the tail before appending, retaining every valid record and its field values.
+  const temporary = `${jsonlPath}.resume.tmp`;
+  await writeFile(temporary, records.map(record => JSON.stringify(record) + '\n').join(''));
+  await rename(temporary, jsonlPath);
+  return new Set(records.map(record => record.id));
 }
 
 async function finalizeOutput(jsonlPath) {

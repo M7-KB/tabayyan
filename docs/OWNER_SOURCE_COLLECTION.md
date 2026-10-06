@@ -115,6 +115,10 @@ Get-Content -LiteralPath (Join-Path $hadeethOutput 'manifest.json')
 
 Interrupted or partial run (exit 2): resume the same directory. Discovery is kept in
 `manifest.json` so listing calls are not repeated. Completed IDs come from the JSONL file.
+An incomplete final JSONL append is discarded before resume, and its item is fetched
+again. Malformed interior lines are refused without changing the file. A category
+pagination failure remains visible on resume; inspect its reason and use a new run
+after resolving the API pagination shape.
 
 ```powershell
 node tools/source-collector/collect-hadeethenc.mjs --owner-run --output $hadeethOutput --resume
@@ -128,6 +132,13 @@ grade, reference, explanation, categories, url), sorted by ID; `manifest.json`
 (SHA-256, byte length, count, empty-field counts); `report.json` (reason codes only,
 no text). Existing directories are never overwritten. Output stays under ignored
 `data/private/` and must never be committed.
+
+Pagination checks `total` and `last_page` metadata when present. Repeated or overlapping
+pages, inconsistent counts, and short pages before the declared end produce a partial
+manifest with a category reason. A nonempty short page without end metadata also fails
+closed (`page_short`); it is not treated as proof of exhaustion. Non-string item text
+fields produce a text-free `non_string_<field>` failure and the item is refused rather
+than coerced. Redirects produce `redirect_refused` and are never followed or retried.
 
 Response shapes for `categories/roots` and paging metadata come from the official
 API documentation, which was not fetched here. The collector accepts a bare list or

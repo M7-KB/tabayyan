@@ -35,8 +35,8 @@ def test_nominated_33_40_reaches_candidates_without_lexical_overlap():
     result = checker.check(CheckRequest(original_text=question))
     sent = json.loads(composer.model.calls[0]["data"]["records"])
     assert sent[0]["corpus_id"] == "quran:33:40"
-    assert result["cards"][0]["state"] == "CANNOT_CONFIRM"
-    assert result["cards"][0]["abstained_reason"] == "ALIGNMENT_UNDETERMINED"
+    assert result["cards"][0]["state"] == "SUPPORTED"
+    assert result["cards"][0]["alignment"] == "CONFIRMS"
     assert result["cards"][0]["evidence"][0]["quote_ar"] == record["aya_text_unicode"]
     assert result["cards"][0]["evidence"][0]["retrieval_score"] == 0
 

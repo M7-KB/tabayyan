@@ -1285,8 +1285,14 @@ The router's proposed_quran_refs are resolved only by verse key in loader-valida
 local KFC records and added to each claim's candidates, even without BM25 overlap.
 Each claim sends its nominations plus the top `COMPOSE_POOL` (three) lexical hits to
 compose; the top fifty hits are counted for diagnostics only.
-Nominations without lexical overlap have retrieval score zero and never authorize a quote or state: normal
-candidate-ID, source-binding, span, confidence and alignment gates still run.
+Nominations retain their measured retrieval score. For non-stated question cards, a
+resolved KFC nomination cited by the composer skips only the lexical alignment
+threshold (owner D2); candidate-ID, source-binding, span, confidence and alignment
+proposal gates still run. Stated quotes retain the lexical threshold.
+Router schema failures repair individual fields with conservative defaults; unknown
+topics and malformed/out-of-range Quran refs are dropped individually (owner D3).
+Request summary codes record fixed router field names and alignment gate outcomes,
+never model values, source text or user text. Provider failures remain distinct.
 Missing or wrong-source nominations are ignored. Level D skips this retrieval.
 For a single question_subject, code retains the full original input, including
 context before and after the question mark. Valid complete spans are never shortened.

@@ -42,7 +42,7 @@
   --c-gold: #8c6d28;
   --c-send: #6a5ae0;
   --c-on-send: #ffffff;
-  --radius-card: 0.75rem;
+  --radius-card: 1rem;
   --radius-pill: 999px;
 
   font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
@@ -251,12 +251,25 @@ main {
   background: var(--c-surface);
   border: 1px solid var(--c-control-border);
   border-radius: var(--radius-card);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 4%);
+}
+
+.input-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.composer:focus-within {
+  border-color: var(--c-focus);
 }
 
 .composer textarea {
   margin: 0;
-  padding: 1rem;
-  min-height: 7rem;
+  padding: 1.125rem;
+  min-height: 8rem;
+  font-size: 1.125rem;
+  line-height: 1.8;
   border: none;
   border-radius: var(--radius-card) var(--radius-card) 0 0;
   background: transparent;
@@ -265,22 +278,20 @@ main {
 
 .composer-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  border-top: 1px solid var(--c-control-border);
+  padding: 0.5rem 0.875rem 0.875rem;
 }
 
 .send-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  gap: 0.625rem;
   min-height: 44px;
   margin: 0;
-  padding: 0;
-  border-radius: 50%;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-pill);
   color: var(--c-on-send);
   background: var(--c-send);
 }
@@ -318,7 +329,7 @@ main {
 
 .privacy-row {
   margin-top: 1rem;
-  border: 1px solid var(--c-control-border);
+  border: 1px solid var(--c-border);
   border-radius: var(--radius-card);
   background: var(--c-surface);
 }
@@ -331,6 +342,8 @@ main {
   padding: 0.5rem 1rem;
   cursor: pointer;
   list-style: none;
+  font-size: 0.875rem;
+  line-height: 1.7;
 }
 
 .privacy-row summary::-webkit-details-marker {
@@ -470,6 +483,19 @@ button:disabled {
   margin-top: 0.75rem;
 }
 
+.review-actions button,
+.results-actions button {
+  margin-top: 0;
+}
+
+.results {
+  margin-top: 2rem;
+}
+
+.results > h2 {
+  margin-bottom: 0;
+}
+
 .understood-edit textarea {
   display: block;
   width: 100%;
@@ -477,9 +503,27 @@ button:disabled {
 }
 
 /* Staged progress for one check (U1). The stages are indicative; a done stage is marked by text, not color alone. */
+.check-progress {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+}
+
+.check-progress > p:first-child {
+  margin-top: 0;
+  font-weight: 500;
+}
+
 .check-stages {
   margin: 0.75rem 0 0;
   padding-inline-start: 1.25rem;
+}
+
+.check-stages li {
+  padding: 0.375rem 0.25rem;
+  color: var(--c-muted);
 }
 
 .check-stages li.done::before {
@@ -488,6 +532,7 @@ button:disabled {
 
 .check-stages li.active {
   font-weight: 600;
+  color: var(--c-text);
 }
 
 /* Breakpoints. The rules above are the 375px mobile baseline; these widen the reading column on desktop. */

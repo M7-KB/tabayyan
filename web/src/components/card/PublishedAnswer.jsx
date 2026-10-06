@@ -16,12 +16,10 @@ export function PublishedAnswer({ answer }) {
   const host = hostOf(answer.url)
   return (
     <section className="published-answer" data-role="published-answer" aria-label={strings.publishedAnswerHeading}>
-      <h3>{strings.publishedAnswerHeading}</h3>
-      {host && (
-        <p className="source-chip" dir="ltr">
-          {host}
-        </p>
-      )}
+      <div className="published-heading">
+        <h3>{strings.publishedAnswerHeading}</h3>
+        {host && <p className="source-chip" dir="ltr">{host}</p>}
+      </div>
       <h4 className="published-title" lang="ar" dir="rtl">
         {answer.title_ar}
       </h4>

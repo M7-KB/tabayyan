@@ -14,7 +14,7 @@ export const strings = {
   textLabel: 'الادعاء أو السؤال المراد التحقق منه',
   textPlaceholder: 'اكتب الادعاء أو السؤال هنا…',
   textEmptyHint: 'اكتب الادعاء أو السؤال لتتمكن من الإرسال.',
-  textSubmit: 'إرسال',
+  textSubmit: 'تحقّق',
 
   // Example chips: a short label and the approved text it fills into the composer. These are owner-reviewed
   // items. The list stays empty until the owner supplies the approved texts, and no chip row is shown meanwhile.
@@ -89,6 +89,8 @@ export const strings = {
   timestampFrom: 'من',
   timestampTo: 'إلى',
   explanationHeading: 'شرح مُولَّد بالذكاء الاصطناعي',
+  // Exact fixed backend fallback; other explanations retain the generated-text label.
+  noGeneratedExplanation: 'راجع نص المصدر أعلاه؛ لم نعرض شرحاً مولَّداً لهذه البطاقة.',
   scriptureLabel: 'نص من المصدر',
   sourceLink: 'المصدر',
   quoteSourceNote: 'النصوص منقولة من مصادرها المعتمدة كما هي، مع الرابط للتحقق.',

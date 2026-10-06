@@ -23,7 +23,7 @@ export function ScriptureBlock({ item }) {
       ? `${item.source_name_ar}${Object.keys(hadithRef.short).length ? ` · ${formatRef(hadithRef.short)}` : ''}`
       : `${item.source_name_ar}${item.ref ? ` · ${formatRef(item.ref)}` : ''}`
   return (
-    <section className="scripture-block" data-role="scripture" aria-label={strings.scriptureLabel}>
+    <section className="scripture-block" data-role="scripture" data-domain={item.domain} aria-label={strings.scriptureLabel}>
       <p className="source-meta">{sourceMeta}</p>
       {showGrading && (
         <p className="grading">

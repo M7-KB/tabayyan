@@ -337,6 +337,42 @@ delete liveEvidence.corpus_id
 const liveCard = { ...supportedConfirms, evidence: [liveEvidence] }
 
 describe('published answer block (SPEC.md §0.5, §0.8)', () => {
+  it('presents the publisher answer before supplementary evidence without changing either text', () => {
+    const { container } = render(<ClaimCard card={withAnswer} />)
+    const answer = container.querySelector('[data-role="published-answer"]')
+    const scripture = container.querySelector('[data-role="scripture"]')
+    expect(answer.compareDocumentPosition(scripture) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(answer).toHaveTextContent(syntheticAnswer.excerpt_ar)
+    expect(scripture).toHaveTextContent(supportedConfirms.evidence[0].quote_ar)
+  })
+
+  it('presents the fixed no-explanation fallback as a note, separate from source text', () => {
+    const textEn = 'See the source text above; no generated explanation is shown for this card.'
+    const { container } = render(<ClaimCard card={{
+      ...withAnswer,
+      explanation_ar: strings.noGeneratedExplanation,
+      explanation_en: textEn,
+      misquote_notice: null,
+    }} />)
+    const note = screen.getByRole('note')
+    expect(note).toHaveTextContent(strings.noGeneratedExplanation)
+    expect(note).toHaveTextContent(textEn)
+    expect(within(note).queryByRole('heading')).toBeNull()
+    expect(screen.queryByText(strings.explanationHeading)).toBeNull()
+    expect(note.closest('[data-role="scripture"], [data-role="published-answer"]')).toBeNull()
+    expect(container.querySelector('[data-role="published-answer"]')).toHaveTextContent(syntheticAnswer.excerpt_ar)
+  })
+
+  it('keeps the AI label on explanations that are not the exact fixed fallback', () => {
+    render(<ClaimCard card={{
+      ...withAnswer,
+      explanation_ar: strings.noGeneratedExplanation + ' توضيح إضافي.',
+      misquote_notice: null,
+    }} />)
+    expect(screen.getByRole('heading', { name: strings.explanationHeading })).toBeInTheDocument()
+    expect(screen.queryByRole('note')).toBeNull()
+  })
+
   it('uses fixtures that validate against the card contract', () => {
     expect(validateCard(withAnswer)).toBe(true)
     expect(validateCard(liveCard)).toBe(true)

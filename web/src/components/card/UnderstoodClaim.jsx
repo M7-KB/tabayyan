@@ -10,7 +10,7 @@ export function UnderstoodClaim({ claim, recheck = null, onRecheck }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputId = useId()
-  const checking = recheck?.status === 'checking'
+  const checking = recheck?.status === 'loading'
 
   function startEdit() {
     setDraft(claim.text_ar)
@@ -26,7 +26,14 @@ export function UnderstoodClaim({ claim, recheck = null, onRecheck }) {
 
   return (
     <section className="claim-block" data-role="user-text" aria-label={strings.understoodHeading}>
-      <h3>{strings.understoodHeading}</h3>
+      <div className="claim-heading">
+        <h3>{strings.understoodHeading}</h3>
+        {!editing && onRecheck && (
+          <button type="button" className="edit-claim-button" onClick={startEdit} disabled={checking}>
+            {strings.understoodEdit}
+          </button>
+        )}
+      </div>
 
       {!editing && (
         <>
@@ -38,13 +45,6 @@ export function UnderstoodClaim({ claim, recheck = null, onRecheck }) {
               {strings.timestampFrom} {formatSeconds(claim.time_span.start_s)} {strings.timestampTo}{' '}
               {formatSeconds(claim.time_span.end_s)}
             </p>
-          )}
-          {onRecheck && (
-            <div className="review-actions">
-              <button type="button" onClick={startEdit} disabled={checking}>
-                {strings.understoodEdit}
-              </button>
-            </div>
           )}
         </>
       )}

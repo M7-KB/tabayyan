@@ -20,6 +20,25 @@ def quran_record():
     return record
 
 
+def test_general_family_question_reaches_router_model_instead_of_rule_d():
+    text = "التعاون مع أخي"
+    checker, model, _ = service(route_proposal(text, input_kind="hadith"))
+    route = checker.router.route(text)
+    assert len(model.calls) == 1
+    assert route.kind == "hadith"
+    assert route.extracted.claims[0].level == "A"
+    assert route.safe_to_search
+
+
+def test_family_case_still_short_circuits_router_model():
+    text = "عقد أخي"
+    checker, model, _ = service(route_proposal(text, input_kind="hadith"))
+    route = checker.router.route(text)
+    assert model.calls == []
+    assert route.extracted.claims[0].level == "D"
+    assert not route.safe_to_search
+
+
 def test_nominated_33_40_reaches_candidates_without_lexical_overlap():
     question = "من هو خاتم الأنبياء؟"
     record = quran_record()

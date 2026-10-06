@@ -65,12 +65,19 @@ def _patterns(*patterns: str) -> tuple[re.Pattern, ...]:
 # These are conservative routing cues, not a complete linguistic classifier.
 _PERSONAL = _patterns(
     r"\b(?:زواجي|زوجي|زوجتي|عقدي|صلاتي|صيامي|طلاقي|ميراثي|معاملتي|بلدي)\b",
-    r"\b(?:أخي|أختي|ابني|ابنتي|أمي|أبي|والدي|والدتي|وصيتي|عندي|أقدر)\b",
+    r"\b(?:وصيتي|عندي|أقدر)\b",
     r"\b(?:يجوز لي|يحق لي|هل علي|هل انا|في دوله)\b",
     r"\b(?:my|our)\s+(?:marriage|wife|husband|contract|prayer|fast|divorce|inheritance)\b",
+    r"\b(?:may i|can i|must i|am i|in my country)\b",
+)
+_FAMILY = _patterns(
+    r"\b(?:أخي|أختي|ابني|ابنتي|أمي|أبي|والدي|والدتي)\b",
     r"\b(?:my|our)\s+(?:brother|sister|son|daughter|mother|father|parent|child)"
     r"(?:['’]s)?\b",
-    r"\b(?:may i|can i|must i|am i|in my country)\b",
+)
+_CASE_INTENT = _patterns(
+    r"\b(?:حكم|يجوز|يحق|يصح|تصح|صحيح|صحيحة|باطل|باطلة|عقد|نكاح|زواج|طلاق|طلق|ميراث|ارث|وصية|نزاع|خلاف|دواء|طبيب)\b",
+    r"\b(?:ruling|permitted|allowed|valid|invalid|contract|marriage|married|divorce|divorced|inheritance|will|dispute|medicine|medical)\b",
 )
 _INDIVIDUAL_CASE = _patterns(
     r"\b(?:رجل|امراه|شخص|فلان|فلانه|زوجان)\b.*"
@@ -116,6 +123,13 @@ answer, religious text, sources, grading or evidence state. Return only level an
 def rule_level(text: str) -> Level:
     """Return a minimum level; unmatched text still requires model classification."""
     key = _routing_key(text)
+    # A family word also occurs in general ethics and hadith questions. It
+    # establishes a personal-case floor only alongside case/ruling intent.
+    # Unmatched text still receives the model's restrictive classification.
+    if any(pattern.search(key) for pattern in _FAMILY) and any(
+        pattern.search(key) for pattern in _CASE_INTENT
+    ):
+        return "D"
     for patterns, level in (
         ((*_PERSONAL, *_INDIVIDUAL_CASE, *_JUDGMENT), "D"),
         (_SENSITIVE, "C"),

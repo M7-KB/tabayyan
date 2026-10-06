@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from time import monotonic
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from api.classifier import INSTRUCTIONS as LEVEL_INSTRUCTIONS
 from api.classifier import LevelClassifier, rule_level
-from api.diagnostics import count, record
+from api.diagnostics import code, count, record
 from api.extract import (
     INSTRUCTIONS as EXTRACTION_INSTRUCTIONS,
 )
@@ -116,12 +116,13 @@ class Router:
         proposal = None
         for attempt in range(2):
             try:
-                proposal = RouterProposal.model_validate(
+                proposal = _repair_proposal(
+                    text,
                     self.model.complete_json(
                         instructions=INSTRUCTIONS,
                         data={"text": text},
                         schema=RouterProposal.model_json_schema(),
-                    )
+                    ),
                 )
             except ProviderUnavailable as exc:
                 record("router_validation", exc.category, started)
@@ -220,6 +221,64 @@ class Router:
         )
 
 
+def _repair_proposal(text: str, raw) -> RouterProposal:
+    """Repair schema shape only; never infer evidence or log model values."""
+    bounded_text = text[:12000] or " "
+    defaults = {
+        "detected_lang": "ar" if any("\u0600" <= c <= "\u06ff" for c in text) else "en",
+        "claims": [
+            dict(
+                text_ar=bounded_text,
+                source_text=bounded_text,
+                span=dict(start=0, end=len(bounded_text)),
+                origin="question_subject" if any(c in text for c in ("?", "\u061f")) else "stated",
+            )
+        ],
+        "level": "C",
+        "level_confidence": 0.0,
+        "level_d": False,
+        "premise": bounded_text,
+        "input_kind": "other",
+        "search_queries": [],
+        "safe_to_search": False,
+        "proposed_quran_refs": [],
+    }
+    if not isinstance(raw, dict):
+        code("router_field:object")
+        raw = {}
+    value = {k: v for k, v in raw.items() if k in defaults}
+    if any(k not in defaults for k in raw):
+        code("router_field:extra")
+    for name, cap in (("search_queries", 3), ("proposed_quran_refs", 5)):
+        items = value.get(name)
+        if not isinstance(items, list):
+            continue
+        valid = []
+        for item in items:
+            try:
+                if name == "search_queries":
+                    RouterProposal.model_validate({**defaults, name: [item]})
+                    valid.append(item)
+                else:
+                    valid.append(QuranRef.model_validate(item).model_dump())
+            except ValidationError:
+                code("router_field:" + name)
+        if len(valid) > cap:
+            code("router_field:" + name)
+        value[name] = valid[:cap]
+    for _ in range(2):
+        try:
+            return RouterProposal.model_validate(value)
+        except ValidationError as exc:
+            fields = {e["loc"][0] for e in exc.errors() if e["loc"]}
+            for name in sorted(fields):
+                if name in defaults:
+                    code("router_field:" + name)
+                    value[name] = defaults[name]
+    # A future schema/default mismatch must terminate instead of spinning.
+    return RouterProposal.model_validate(defaults)
+
+
 class _SourceAbsent(Exception):
     """A proposed source_text does not occur in the input."""
 
@@ -306,13 +365,14 @@ def _whole_input_fallback(text: str, proposal: RouterProposal) -> RouterProposal
         origin = "question_subject"
     else:
         origin = "stated"
+    bounded_text = text[:12000]
     return proposal.model_copy(
         update={
             "claims": [
                 ClaimProposal(
-                    text_ar=text,
-                    source_text=text,
-                    span=Span(start=0, end=len(text)),
+                    text_ar=bounded_text,
+                    source_text=bounded_text,
+                    span=Span(start=0, end=len(bounded_text)),
                     origin=origin,
                 )
             ]

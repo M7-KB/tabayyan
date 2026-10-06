@@ -185,3 +185,10 @@ and provenance metadata were printed; no source religious text persisted. This
 is author-executed workstation transport evidence, not deployed accuracy or a
 pipeline evaluation. The ten held-out inputs were sent only by DM to Nami,
 not used to tune the implementation, run against the pipeline or put in this repo.
+
+## Router reference gates and schema repair (2026-10-06)
+
+Codex / OpenAI (session identifies GPT-6; exact API model identifier unavailable)
+implemented owner D2/D3 with synthetic engineering fixtures. Tools: local Buzz CLI
+skill, Git/GitHub CLI, PowerShell, Python 3.11, pytest, Ruff and Node test runner.
+No collectors, source downloads, model API calls or private source reads were run.

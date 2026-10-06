@@ -12,7 +12,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import Field
 
 from api.config import load_config
-from api.diagnostics import count, record, timed
+from api.diagnostics import code, count, record, timed
 from api.extract import ExtractedClaim, StrictObject
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
 from api.model import StructuredModel
@@ -342,6 +342,7 @@ class Composer:
         )
         count("lexical_hits_capped", len(hits))
         candidates = hits[:COMPOSE_POOL]
+        nominated_ids = set()
         # Model nominations are lookup keys only, never evidence or confidence.
         # Resolve solely in already loader-validated local KFC records.
         if input_kind != "term" and quran_refs:
@@ -358,6 +359,7 @@ class Composer:
                     nominated.append(
                         lexical.get(candidate["corpus_id"], RetrievalResult(candidate, 0, 0))
                     )
+            nominated_ids = {r.corpus_id for r in nominated}
             count("resolved_refs", len(nominated))
             candidates = list({r.corpus_id: r for r in [*nominated, *candidates]}.values())
         count("compose_candidates", len(candidates))
@@ -591,7 +593,12 @@ class Composer:
             "proposal": proposal.alignment_proposal,
             "quran_near_miss": quran_near,
             "confidence_at_least": proposal.alignment_confidence,
-            "overlap_score_at_least": min(by_id[cid].overlap_score for cid in selected_ids),
+            "overlap_score_at_least": min(
+                self.tuning.retrieval_overlap_floor
+                if propose_state and claim.origin != "stated" and cid in nominated_ids
+                else by_id[cid].overlap_score
+                for cid in selected_ids
+            ),
         }
         for rule in self.policy["alignment_rules"]:
             applies = True
@@ -604,6 +611,7 @@ class Composer:
                     else alignment_facts[k] == v
                 )
             if applies:
+                code("alignment:" + (rule["result"] or "UNDETERMINED"))
                 if rule["result"] is None:
                     gate["alignment"] = "fail"
                     return finish(rule["abstained_reason"])

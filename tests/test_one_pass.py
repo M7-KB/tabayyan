@@ -124,13 +124,12 @@ def test_restrictive_routes_skip_retrieval_and_composition(mode):
     assert len(router_model.calls) == (0 if mode == "rule" else 1)
 
 
-def test_unparseable_router_output_fails_before_compose():
+def test_invalid_router_confidence_abstains_without_http_failure():
     value = route_proposal()
     value["level_confidence"] = float("nan")
     checker, _, compose_model = service(value)
-    with pytest.raises(ExtractionError) as caught:
-        checker.check(CheckRequest(original_text=TEXT))
-    assert caught.value.code == "PIPELINE_DEGRADED"
+    result = checker.check(CheckRequest(original_text=TEXT))
+    assert result["cards"][0]["state"] == "CANNOT_CONFIRM"
     assert not compose_model.calls
 
 

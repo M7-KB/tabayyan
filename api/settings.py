@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     private_short_index_dir: Path | None = None
     private_bayyinat_sha256: str = ""
     private_glossary_sha256: str = ""
+    # Owner decision: load a source whose collection run did not finish (page cap).
+    private_short_index_allow_partial: bool = False
     corpus_manifest_path: Path = ROOT / "corpus/manifest.json"
     islamic_content_mcp_url: str = "https://mcp.islamiccontent.org/mcp"
     enable_islamic_content_mcp: bool = False

@@ -1,6 +1,7 @@
 """Synthetic v2 field wiring, source binding and retained safety boundaries."""
 
 import asyncio
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +14,7 @@ from api.main import create_app
 from api.private_short_discovery import PrivateShortDiscovery
 from api.settings import Settings
 from api.span_detector import DetectorConfig
+from corpus.short_indexes import AUTHORITY_EVENT
 from tests.test_composer import POLICY, TUNING, proposal
 from tests.test_gatekeeper import composer_with, gate, local
 from tests.test_one_pass import route_proposal, service
@@ -260,7 +262,33 @@ def test_invalid_configured_handoff_is_unavailable_without_embedding(tmp_path, m
         assert app.state.private_indexes.bayyinat is None
 
 
+def write_manifest(directory, status="complete", source="bayyinat"):
+    """Owner build manifest with one source entry; the loader itself is patched out."""
+    name, host = (
+        ("bayyinat.jsonl", "bayenat.net")
+        if source == "bayyinat"
+        else ("glossary.jsonl", "islamic-content.com")
+    )
+    manifest = {
+        "format_version": 2,
+        "complete": status == "complete",
+        "authority_event": AUTHORITY_EVENT,
+        "files": [
+            {
+                "file": name,
+                "source_host": host,
+                "sha256": "a" * 64,
+                "bytes": 1,
+                "records": 1,
+                "status": status,
+            }
+        ],
+    }
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
 def test_http_startup_wires_validated_matcher_into_check_service(tmp_path, monkeypatch):
+    write_manifest(tmp_path)
     matcher = BayyinatMatcher((row(),), [vector()], FakeEmbedder())
 
     async def build(cls, directory, digest, embedder, **kwargs):
@@ -291,3 +319,70 @@ def test_http_startup_wires_validated_matcher_into_check_service(tmp_path, monke
         response = client.post("/api/v1/check", json={"original_text": "عقدي"})
         assert response.status_code == 200
         assert app.state.checker.private_indexes.bayyinat is matcher
+
+
+@pytest.mark.parametrize("status", ["complete", "partial"])
+def test_health_reports_partial_sources_with_their_counts(tmp_path, monkeypatch, status):
+    write_manifest(tmp_path, status)
+    matcher = BayyinatMatcher((row(),), [vector()], FakeEmbedder())
+    seen = {}
+
+    async def build(cls, directory, digest, embedder, **kwargs):
+        seen.update(kwargs)
+        return matcher
+
+    monkeypatch.setattr(BayyinatMatcher, "from_private_files", classmethod(build))
+    app = create_app(
+        Settings(
+            openai_api_key="inert",
+            openai_schema_warmup=False,
+            private_short_index_dir=tmp_path,
+            private_bayyinat_sha256="a" * 64,
+            private_short_index_allow_partial=True,
+        )
+    )
+    with TestClient(app) as client:
+        health = client.get("/health").json()
+    assert seen["allow_partial"] is True
+    assert health["private_index_status"]["bayyinat"] == (
+        "loaded" if status == "complete" else "partial"
+    )
+    assert health["private_index_status"]["glossary"] == "not_configured"
+    assert health["private_index_items"]["bayyinat"] == 1
+    assert app.state.private_indexes.bayyinat is matcher
+    assert app.state.private_indexes.glossary is None
+
+
+def test_each_source_loads_independently(tmp_path, monkeypatch):
+    write_manifest(tmp_path, source="jamhara-glossary")
+    matcher = GlossaryMatcher(({**row("jamhara-glossary")},), [vector()], FakeEmbedder())
+
+    async def build(cls, directory, digest, embedder, **kwargs):
+        return matcher
+
+    async def broken(cls, directory, digest, embedder, **kwargs):
+        raise RuntimeError("synthetic failure")
+
+    monkeypatch.setattr(GlossaryMatcher, "from_private_files", classmethod(build))
+    monkeypatch.setattr(BayyinatMatcher, "from_private_files", classmethod(broken))
+    app = create_app(
+        Settings(
+            openai_api_key="inert",
+            openai_schema_warmup=False,
+            private_short_index_dir=tmp_path,
+            private_glossary_sha256="b" * 64,
+            private_bayyinat_sha256="c" * 64,
+        )
+    )
+    with TestClient(app) as client:
+        health = client.get("/health").json()
+    assert health["private_index_status"] == {"bayyinat": "unavailable", "glossary": "loaded"}
+    assert health["private_index_items"]["glossary"] == 1
+    assert app.state.private_indexes.glossary is matcher
+
+
+def test_partial_env_opt_in_is_explicit(monkeypatch):
+    monkeypatch.delenv("PRIVATE_SHORT_INDEX_ALLOW_PARTIAL", raising=False)
+    assert Settings(openai_api_key="inert").private_short_index_allow_partial is False
+    monkeypatch.setenv("PRIVATE_SHORT_INDEX_ALLOW_PARTIAL", "true")
+    assert Settings(openai_api_key="inert").private_short_index_allow_partial is True

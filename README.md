@@ -1302,6 +1302,15 @@ The complete-manifest, scoped-permission, checksum and review gates run before
 startup embeddings. A configured invalid artifact or embedding failure disables
 that source and degrades health; `/health` reports fixed source statuses/counts.
 The owner-authorized pending-review mode is `ALLOW_PENDING_REVIEW=true`.
+Completeness is per source: the owner assembles the directory with
+`tools/source-collector/build-short-index.mjs --glossary RUN [--bayyinat RUN] --output DIR`,
+which verifies each JSONL against its run manifest and writes one manifest listing only
+the two files with per-source `status`. A `partial` source (a run stopped at its page
+cap) loads only with `PRIVATE_SHORT_INDEX_ALLOW_PARTIAL=true`, and `/health` reports it
+as `partial` with its count; each source loads independently of the other. The Render
+build fetches `short-index/{manifest.json,glossary.jsonl,bayyinat.jsonl}` from the private
+data repository into `data/private/short-index/` (missing files are reported, not fatal),
+so `PRIVATE_SHORT_INDEX_DIR=/opt/render/project/src/data/private/short-index`.
 
 Only routed doubts use Bayyinat and only routed term requests use the glossary.
 Level D skips both. Retrieval has a 3-second cap within the configured request

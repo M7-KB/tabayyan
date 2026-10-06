@@ -62,6 +62,48 @@ def _string(value: object, *, optional: bool = False) -> bool:
     )
 
 
+def _manifest_entry(directory: Path, source_id: str, expected_format_version: int) -> dict:
+    """The validated manifest entry for one source file, with its traversal status.
+
+    Completeness is per source: an entry carries ``status`` ``complete`` or
+    ``partial`` (written by the owner's build-short-index tool). A manifest without
+    per-entry status falls back to the run-level ``complete`` flag.
+    """
+    name, host, _ = _CONFIG[source_id]
+    manifest = json.loads(
+        _read(directory / "manifest.json", 4 * 1024 * 1024), object_pairs_hook=_object
+    )
+    _require(
+        isinstance(manifest, dict)
+        and type(manifest.get("format_version")) is int
+        and manifest.get("format_version") == expected_format_version
+        and isinstance(manifest.get("complete"), bool)
+        and manifest.get("authority_event") == AUTHORITY_EVENT,
+        "Private index owner manifest required",
+    )
+    files = manifest.get("files")
+    _require(isinstance(files, list), "Private index manifest files required")
+    matching = [item for item in files if isinstance(item, dict) and item.get("file") == name]
+    _require(len(matching) == 1, "Private index manifest entry must be unique")
+    entry = dict(matching[0])
+    status = entry.get("status", "complete" if manifest["complete"] else "partial")
+    _require(status in {"complete", "partial"}, "Private index source status invalid")
+    _require(entry.get("source_host") == host, "Private index checksum or source mismatch")
+    entry["status"] = status
+    return entry
+
+
+def short_index_status(directory: Path, source_id: str, *, expected_format_version: int = 2) -> str:
+    """``complete`` or ``partial`` for one source, read from the owner manifest only."""
+    _require(source_id in _CONFIG, "Unknown private short-index source")
+    try:
+        return _manifest_entry(directory, source_id, expected_format_version)["status"]
+    except CorpusValidationError:
+        raise
+    except (OSError, ValueError, UnicodeError, RecursionError, TypeError, AttributeError):
+        raise CorpusValidationError("Private short-index validation failed") from None
+
+
 def load_short_index(
     directory: Path,
     source_id: str,
@@ -71,11 +113,13 @@ def load_short_index(
     allow_pending_review: bool = False,
     owner_review_event: str | None = None,
     expected_format_version: int = 1,
+    allow_partial: bool = False,
 ) -> tuple[dict, ...]:
     """Validate the whole file or return nothing; source text is copied unchanged.
 
     expected_sha256 must come from the owner's trusted handoff, not computed by
-    the caller from the file being loaded. A complete R1 manifest is also required.
+    the caller from the file being loaded. The source's manifest entry must be
+    complete unless the owner opted into a partial source with allow_partial.
     Scoped display permission is distinct from unrestricted redistribution.
     Returned records are candidates, not quote/embedded-scripture authorization.
     """
@@ -107,22 +151,11 @@ def load_short_index(
             and source.get("owner_authority_event") == AUTHORITY_EVENT,
             "Private index scoped source permission required",
         )
-        manifest = json.loads(
-            _read(directory / "manifest.json", 4 * 1024 * 1024), object_pairs_hook=_object
-        )
+        entry = _manifest_entry(directory, source_id, expected_format_version)
         _require(
-            isinstance(manifest, dict)
-            and type(manifest.get("format_version")) is int
-            and manifest.get("format_version") == expected_format_version
-            and manifest.get("complete") is True
-            and manifest.get("authority_event") == AUTHORITY_EVENT,
-            "Private index complete owner manifest required",
+            entry["status"] == "complete" or allow_partial is True,
+            "Private index source is partial; owner opt-in required",
         )
-        files = manifest.get("files")
-        _require(isinstance(files, list), "Private index manifest files required")
-        matching = [item for item in files if isinstance(item, dict) and item.get("file") == name]
-        _require(len(matching) == 1, "Private index manifest entry must be unique")
-        entry = matching[0]
         data = _read(directory / name, 32 * 1024 * 1024)
         _require(
             hashlib.sha256(data).hexdigest() == expected_sha256

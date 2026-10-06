@@ -45,3 +45,12 @@ API, change startup config, fetch files, or enable live sources by itself.
 Owner action: run R1, inspect skipped/failure reasons and sample short fields,
 then hand off the private directory, both JSONL hashes and review status. Live
 files were not available during development, so corpus coverage remains pending.
+
+## Per-source completeness (2026-10-06)
+
+The loader reads completeness per source from the manifest entry's `status`
+(`complete` or `partial`), as written by `tools/source-collector/build-short-index.mjs`;
+a manifest without entry status falls back to its run-level `complete` flag. A partial
+source loads only with `allow_partial=True` (`PRIVATE_SHORT_INDEX_ALLOW_PARTIAL=true`
+in Render). `short_index_status(directory, source_id)` returns the status for health.
+The trusted SHA-256, byte count, record count, host, field and URL checks are unchanged.

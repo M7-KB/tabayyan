@@ -24,7 +24,16 @@ services:
       -o data/private/manifest.json
       https://api.github.com/repos/M7-KB/tabayyan-private-data/contents/hadeethenc/manifest.json &&
       echo "1e0a79c49b0287a6ea33826dde1996bd465c81490f59c0050444b6241f9b2ae6  data/private/hadeethenc.jsonl" |
-      sha256sum -c - && sha256sum data/private/hadeethenc.jsonl
+      sha256sum -c - && sha256sum data/private/hadeethenc.jsonl &&
+      mkdir -p data/private/short-index &&
+      for name in manifest.json glossary.jsonl bayyinat.jsonl; do
+      curl -fsSL -H "Authorization: Bearer $PRIVATE_DATA_TOKEN"
+      -H "Accept: application/vnd.github.raw"
+      -o "data/private/short-index/$name"
+      "https://api.github.com/repos/M7-KB/tabayyan-private-data/contents/short-index/$name"
+      || { rm -f "data/private/short-index/$name"; echo "short-index/$name not present"; };
+      done &&
+      sha256sum data/private/short-index/*.jsonl || true
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log
     healthCheckPath: /health
     envVars:
@@ -49,4 +58,14 @@ services:
       - key: OPENAI_MODEL_EXTRACT
         sync: false
       - key: OPENAI_MODEL_REASON
+        sync: false
+      - key: OPENAI_MODEL_EMBED
+        sync: false
+      - key: PRIVATE_SHORT_INDEX_DIR
+        sync: false
+      - key: PRIVATE_BAYYINAT_SHA256
+        sync: false
+      - key: PRIVATE_GLOSSARY_SHA256
+        sync: false
+      - key: PRIVATE_SHORT_INDEX_ALLOW_PARTIAL
         sync: false

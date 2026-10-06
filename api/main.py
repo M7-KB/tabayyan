@@ -51,6 +51,7 @@ from corpus.hadith_artifact import VERSION as HADITH_VERSION
 from corpus.hadith_artifact import load_hadith_artifact
 from corpus.private_artifact import load_private_corpus
 from corpus.quran_binding import matching_text
+from corpus.short_indexes import short_index_status
 from corpus.validate import CorpusValidationError
 
 logger = logging.getLogger(__name__)
@@ -128,20 +129,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     if not digest:
                         continue
                     try:
+                        # Each source loads on its own: a missing or failing one
+                        # never affects the other. A partial source loads only
+                        # under the owner's PRIVATE_SHORT_INDEX_ALLOW_PARTIAL opt-in
+                        # and is reported as "partial".
                         matcher = await matcher_type.from_private_files(
                             settings.private_short_index_dir,
                             digest,
                             embedder,
                             allow_pending_review=settings.allow_pending_review,
                             expected_format_version=2,
+                            allow_partial=settings.private_short_index_allow_partial,
+                        )
+                        status = short_index_status(
+                            settings.private_short_index_dir, matcher_type.source_id
                         )
                     except Exception:
                         index_status[name] = "unavailable"
                         logger.warning("Private short index unavailable: source=%s", name)
                     else:
                         setattr(private_indexes, name, matcher)
-                        index_status[name] = "loaded"
+                        index_status[name] = "loaded" if status == "complete" else "partial"
                         index_counts[name] = len(matcher._records)
+                        logger.info(
+                            "Private short index %s: source=%s records=%d",
+                            index_status[name],
+                            name,
+                            index_counts[name],
+                        )
         app.state.policy = policy
         app.state.tuning = tuning
         app.state.corpus = records

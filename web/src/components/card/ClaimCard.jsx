@@ -24,7 +24,11 @@ export function ClaimCard({ card, recheck = null, onRecheck }) {
 
       <UnderstoodClaim claim={claim} recheck={recheck} onRecheck={onRecheck} />
 
-      {isCannotConfirm && <p className="abstain">{strings.cannotConfirmBody}</p>}
+      {isCannotConfirm && (
+        <p className="abstain">
+          {claim.origin && claim.origin !== 'stated' ? strings.cannotConfirmQuestionBody : strings.cannotConfirmBody}
+        </p>
+      )}
 
       {isDisputed && <PositionsList positions={card.positions} evidenceById={evidenceById} />}
 

@@ -140,10 +140,16 @@ def _mentions_term(record: dict, text: str, lang: str) -> bool:
         aliases = {alias for group in retrieval_token_groups(text) for alias in group}
         if wanted & aliases:
             return True
+    # A private record carries its equivalent as a publisher translation list item.
     equivalent = record.get("text_en")
+    if not isinstance(equivalent, str) or not equivalent.strip():
+        equivalent = _english_item(record.get("translations"))
     if lang == "en" and isinstance(equivalent, str):
         found = set(re.findall(r"[a-z]+", text.casefold()))
-        return any(w in found for w in re.findall(r"[a-z]{4,}", equivalent.casefold()))
+        return any(
+            w in found
+            for w in re.findall(r"[a-z]{4,}", _ENGLISH_ITEM.sub("", equivalent).casefold())
+        )
     return False
 
 

@@ -1585,3 +1585,26 @@ Last fixes before the freeze (2026-10-06):
 - **Card polish.** Slightly larger block spacing, badge and body line heights, a
   theme-aware note colour and word wrapping for long labels on narrow screens; RTL,
   the AI notice and the block separation are unchanged.
+
+Final fixes before the code freeze (2026-10-06):
+
+- **Nominated verses need a content word of the question.** Overlap is measured
+  against the question only (the Bayyinat answer and its title are not consulted:
+  «ألم ...» normalizes onto the one-word verse «الم», 2:1), on words of more than two
+  letters that are not function words or interrogatives («من، ما، هل، هو، هي، في، على،
+  عن، إلى، لا، أن، إن، كان، الم، ألم، أليس، لماذا، كيف»), by search alias on both sides.
+- **The term block is source text.** The record's term and the publisher's English
+  equivalent (a `text_en` field or a translation list item, quotation marks included)
+  are validated like a quote: the scripture scan must complete, a quoted span that
+  matches no record is the publisher's punctuation, and any verbatim span must be a
+  whole authorized record; rejected scripture and an incomplete scan still fail
+  closed. An unattested proposed label falls back to the publisher's own term. An
+  English term question matches a private glossary record by its translation item.
+- **Router.** «ما» is not a fragment opener: «هل الأعمال بالنيات؟ ما معنى التوحيد» stays
+  two claims.
+- **Web.** A CANNOT_CONFIRM card on a question says the question could not be answered
+  from the approved sources, instead of «هذا الادعاء».
+- **Left as is.** A concrete consensus question («هل كل المسلمين يتفقون في وجوب
+  الزكاة؟») abstains with a referral unless an approved source received in the request
+  states the position: the brief forbids asserting unproven consensus and the
+  approved sources carry no consensus register, so the honest abstain stands.

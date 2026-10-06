@@ -103,6 +103,8 @@ export const strings = {
   positionsHeading: 'المواقف المختلفة، بلا ترتيب',
   misquoteHeading: 'ملاحظة: نص قريب من نص في المصدر',
   cannotConfirmBody: 'لم نجد في المصادر المعتمدة ما يكفي للتأكد من هذا الادعاء.',
+  // Shown instead of cannotConfirmBody when the input was a question, not an assertion.
+  cannotConfirmQuestionBody: 'لم نجد في المصادر المعتمدة ما يكفي للإجابة عن هذا السؤال.',
   referralHeading: 'جهة مرجعية للفتوى',
   readyQuestionHeading: 'سؤال جاهز للطرح',
   termHeading: 'المصطلح',

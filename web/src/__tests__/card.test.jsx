@@ -508,6 +508,21 @@ describe('hadith and glossary presentation (live-case fixes)', () => {
     }
   })
 
+  it.each(['question_subject', 'presupposition', 'term_lookup'])(
+    'says the question could not be answered, not «الادعاء», on a %s claim that cannot confirm',
+    (origin) => {
+      const card = { ...cannotConfirm, misquote_notice: null, claim: { ...cannotConfirm.claim, origin } }
+      render(<ClaimCard card={card} />)
+      expect(screen.getByText(strings.cannotConfirmQuestionBody)).toBeInTheDocument()
+      expect(screen.queryByText(strings.cannotConfirmBody)).not.toBeInTheDocument()
+    },
+  )
+
+  it('keeps «الادعاء» wording on a stated claim that cannot confirm', () => {
+    render(<ClaimCard card={{ ...cannotConfirm, misquote_notice: null }} />)
+    expect(screen.getByText(strings.cannotConfirmBody)).toBeInTheDocument()
+  })
+
   it('renders no evidence block on a card that cannot confirm', () => {
     const { container } = render(<ClaimCard card={{ ...cannotConfirm, misquote_notice: null }} />)
     expect(container.querySelector('[data-role="scripture"]')).toBeNull()

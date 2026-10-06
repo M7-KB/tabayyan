@@ -158,3 +158,29 @@ def test_equivalent_carrying_record_text_still_fails_closed(harness):
         Indexes.discover = original
     assert card["state"] == "CANNOT_CONFIRM"
     assert card["abstained_reason"] == "VERBATIM_GATE_FAILED" and card["evidence"] == []
+
+
+# Priority 2: an English term question reaches the glossary's publisher answer.
+
+
+def test_english_term_question_matches_the_glossary_record_by_its_translation_item(harness):
+    text = "What does Tawhid mean in Islam?"
+    record = glossary_received("التوحيد", "", 1001)
+    del record["text_en"]
+    record["translations"] = ["English: Tawhid (monotheism)", "Français: Tawhid"]
+    original = Indexes.discover
+    Indexes.discover = lambda self, text, request, *, kind, level, timeout: request.receive(record)
+    try:
+        # Low model confidence: only a record that answers the question by itself survives.
+        with model_knobs(harness, confidence=0.2):
+            card = check(
+                harness,
+                text,
+                route(text, kind="term", level="A", origin="term_lookup", lang="en", no_claim=True),
+            )
+    finally:
+        Indexes.discover = original
+    assert card["claim"]["lang"] == "en"
+    assert card["state"] == "SUPPORTED"
+    assert card["evidence"][0]["quote_ar"] == GLOSSARY_RULE
+    assert card["explanation_en"]

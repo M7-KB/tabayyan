@@ -9,7 +9,7 @@ from corpus.short_indexes import AUTHORITY_EVENT, load_short_index
 from corpus.validate import CorpusValidationError
 
 
-def handoff(tmp_path, source="bayyinat", rows=None):
+def handoff(tmp_path, source="bayyinat", rows=None, version=1):
     name, host = (
         ("bayyinat.jsonl", "bayenat.net")
         if source == "bayyinat"
@@ -43,7 +43,7 @@ def handoff(tmp_path, source="bayyinat", rows=None):
     digest = hashlib.sha256(data).hexdigest()
     (tmp_path / name).write_bytes(data)
     manifest = {
-        "format_version": 1,
+        "format_version": version,
         "complete": True,
         "authority_event": AUTHORITY_EVENT,
         "files": [
@@ -177,3 +177,87 @@ def test_unrelated_encoded_parent_and_separator_paths_rejected(tmp_path, source,
     digest, registry, _ = handoff(tmp_path, source, rows)
     with pytest.raises(CorpusValidationError):
         load_short_index(tmp_path, source, digest, sources_path=registry, allow_pending_review=True)
+
+
+def v2_row(source):
+    if source == "bayyinat":
+        return {
+            "id": "/ar/category/sample/1?lang=ar",
+            "url": "https://bayenat.net/ar/category/sample/1?lang=ar",
+            "title": "سؤال عينة",
+            "question_text": "نص سؤال عينة.",
+            "summary": "",
+            "keywords": [],
+            "detailed_answer": "جواب عينة & دقيق.",
+        }
+    return {
+        "id": "/dictionary/word/1?lang=ar",
+        "url": "https://islamic-content.com/dictionary/word/1?lang=ar",
+        "term_ar": "مصطلح عينة",
+        "terminological_meaning": "معنى عينة.",
+        "short_explanation": "",
+        "linguistic_definition": "",
+        "definition": "",
+        "translations": ["English: Sample equivalent"],
+    }
+
+
+@pytest.mark.parametrize("source", ["bayyinat", "jamhara-glossary"])
+def test_v2_handoff_preserves_owner_fields_and_requires_explicit_version(tmp_path, source):
+    digest, registry, rows = handoff(tmp_path, source, [v2_row(source)], version=2)
+    assert load_short_index(
+        tmp_path,
+        source,
+        digest,
+        sources_path=registry,
+        allow_pending_review=True,
+        expected_format_version=2,
+    ) == tuple(rows)
+    with pytest.raises(CorpusValidationError):
+        load_short_index(tmp_path, source, digest, sources_path=registry, allow_pending_review=True)
+
+
+@pytest.mark.parametrize(
+    "source,field,value",
+    [
+        ("bayyinat", "detailed_answer", ""),
+        ("bayyinat", "question_text", "English text with ع"),
+        ("bayyinat", "summary", 7),
+        ("bayyinat", "keywords", "sample"),
+        ("jamhara-glossary", "translations", {"English": "Sample"}),
+        ("jamhara-glossary", "translations", [7]),
+        ("jamhara-glossary", "terminological_meaning", "English text"),
+    ],
+)
+def test_v2_invalid_record_is_refused(tmp_path, source, field, value):
+    row = v2_row(source)
+    row[field] = value
+    digest, registry, _ = handoff(tmp_path, source, [row], version=2)
+    with pytest.raises(CorpusValidationError):
+        load_short_index(
+            tmp_path,
+            source,
+            digest,
+            sources_path=registry,
+            allow_pending_review=True,
+            expected_format_version=2,
+        )
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/question/1?lang=ar", "/ar/categories/sample?lang=ar", "/ar/category/sample/1?lang=en"],
+)
+def test_v2_unapproved_route_or_language_is_refused(tmp_path, path):
+    row = v2_row("bayyinat")
+    row.update(id=path, url="https://bayenat.net" + path)
+    digest, registry, _ = handoff(tmp_path, rows=[row], version=2)
+    with pytest.raises(CorpusValidationError):
+        load_short_index(
+            tmp_path,
+            "bayyinat",
+            digest,
+            sources_path=registry,
+            allow_pending_review=True,
+            expected_format_version=2,
+        )

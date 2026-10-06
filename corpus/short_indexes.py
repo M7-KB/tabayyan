@@ -18,6 +18,19 @@ _FIELDS = {
     "bayyinat": {"id", "url", "title", "similar_phrasings", "short_answer", "keywords", "category"},
     "jamhara-glossary": {"id", "url", "term_ar", "definition_short", "translations"},
 }
+_V2_FIELDS = {
+    "bayyinat": {"id", "url", "title", "question_text", "summary", "keywords", "detailed_answer"},
+    "jamhara-glossary": {
+        "id",
+        "url",
+        "term_ar",
+        "terminological_meaning",
+        "short_explanation",
+        "linguistic_definition",
+        "definition",
+        "translations",
+    },
+}
 
 
 def _require(condition: bool, reason: str) -> None:
@@ -57,6 +70,7 @@ def load_short_index(
     sources_path: Path = ROOT / "corpus/approved_sources.json",
     allow_pending_review: bool = False,
     owner_review_event: str | None = None,
+    expected_format_version: int = 1,
 ) -> tuple[dict, ...]:
     """Validate the whole file or return nothing; source text is copied unchanged.
 
@@ -67,6 +81,10 @@ def load_short_index(
     """
     _require(source_id in _CONFIG, "Unknown private short-index source")
     _require(
+        type(expected_format_version) is int and expected_format_version in {1, 2},
+        "Private index unsupported format version",
+    )
+    _require(
         isinstance(expected_sha256, str) and bool(_HEX.fullmatch(expected_sha256)),
         "Private index trusted checksum required",
     )
@@ -76,6 +94,9 @@ def load_short_index(
         "Private index owner review required",
     )
     name, host, short_field = _CONFIG[source_id]
+    if expected_format_version == 2:
+        short_field = "question_text" if source_id == "bayyinat" else "terminological_meaning"
+    fields = _V2_FIELDS if expected_format_version == 2 else _FIELDS
     try:
         source = read_sources(sources_path).get(source_id, {})
         _require(
@@ -92,7 +113,7 @@ def load_short_index(
         _require(
             isinstance(manifest, dict)
             and type(manifest.get("format_version")) is int
-            and manifest.get("format_version") == 1
+            and manifest.get("format_version") == expected_format_version
             and manifest.get("complete") is True
             and manifest.get("authority_event") == AUTHORITY_EVENT,
             "Private index complete owner manifest required",
@@ -117,7 +138,7 @@ def load_short_index(
             _require(bool(line.strip()), "Private index blank row")
             row = json.loads(line, object_pairs_hook=_object)
             _require(
-                isinstance(row, dict) and row.keys() == _FIELDS[source_id],
+                isinstance(row, dict) and row.keys() == fields[source_id],
                 "Private index fields mismatch",
             )
             _require(
@@ -148,6 +169,53 @@ def load_short_index(
             )
             _require(row["id"] not in identities, "Private index duplicate identity")
             identities.add(row["id"])
+            if expected_format_version == 2:
+                _require(
+                    all(
+                        value == "ar" or key == "page"
+                        for key, value in parse_qsl(url.query, keep_blank_values=True)
+                    ),
+                    "Private index non-Arabic selector",
+                )
+                title_field = "title" if source_id == "bayyinat" else "term_ar"
+                required = [title_field, short_field]
+                if source_id == "bayyinat":
+                    required.append("detailed_answer")
+                    optional = ["summary"]
+                    lists = ["keywords"]
+                    path_pattern = r"/ar/category/[^/]+/[^/]+/?"
+                else:
+                    optional = ["short_explanation", "linguistic_definition", "definition"]
+                    lists = ["translations"]
+                    path_pattern = r"/dictionary/word/[^/]+/?"
+                _require(
+                    bool(re.fullmatch(path_pattern, decoded_path)),
+                    "Private index v2 source path invalid",
+                )
+                _require(
+                    all(_string(row[field]) for field in required)
+                    and all(_string(row[field], optional=True) for field in optional),
+                    "Private index v2 text invalid",
+                )
+                _require(
+                    all(
+                        len(re.findall(r"[ء-ي]", row[field]))
+                        > len(re.findall(r"[A-Za-z]", row[field]))
+                        for field in required
+                    ),
+                    "Private index v2 Arabic text required",
+                )
+                _require(
+                    all(
+                        isinstance(row[field], list)
+                        and len(row[field]) <= 200
+                        and all(_string(item) for item in row[field])
+                        for field in lists
+                    ),
+                    "Private index v2 list invalid",
+                )
+                records.append(row)
+                continue
             if source_id == "bayyinat":
                 _require(
                     bool(

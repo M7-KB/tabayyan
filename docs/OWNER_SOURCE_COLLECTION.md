@@ -30,29 +30,44 @@ Output stays under ignored `data/private/`; never force-add it to Git.
 
 ## Collection and handoff
 
-One global limiter spaces request starts at least 1 second apart. Only HTTPS
-bayenat.net pages and islamic-content.com/dictionary pages are fetched. Listings
-are followed for discovery. Bayyinat routes are restricted to question/answer,
-doubt, category/topic paths, plus the Arabic home root (`/` or `/ar/`). Only Arabic
-pages are collected: each page must declare an Arabic document language
+One global limiter spaces request starts at least 1 second apart, including each
+redirect hop. Only HTTPS pages on these paths are fetched:
+
+- bayenat.net `/ar/categories/{cat}` (listing, followed for discovery) and
+  `/ar/category/{cat}/{id}` (record);
+- islamic-content.com `/dictionary/word/{id}` (record).
+
+The home pages (`https://bayenat.net/`, `/ar/`, and `https://islamic-content.com/dictionary`)
+are seeds for discovery only; links to them are never queued. Other paths are refused.
+Redirects are followed only when same-host and allowlisted, at most 3 per request.
+Cross-host, out-of-allowlist or further redirects fail the page as `redirect_refused`
+or `too_many_redirects`.
+
+Only Arabic pages are collected: each page must declare an Arabic document language
 (`<html lang="ar…">`) whatever its URL. Undeclared or non-Arabic pages are not
-followed and yield no record. Language prefixes other than `/ar` are refused. Each record also needs a letter majority: more Arabic than Latin letters in its title and short text (glossary: term and short definition). A declared `lang` alone is not enough. Unknown route shapes
-are refused and require a parser/route update from owner-supplied HTML.
-Assets, unrelated dictionary paths, authentication
-pages, arbitrary query parameters and redirects are refused. No retries or
-anti-bot workarounds. Each request has a 30-second timeout and 4 MiB body limit;
+followed and yield no record. Each record also needs a letter majority: more Arabic
+than Latin letters in its required text fields. A declared `lang` alone is not enough.
+Assets, authentication pages, arbitrary query parameters are refused. No retries
+or anti-bot workarounds. Each request has a 30-second timeout and 4 MiB body limit;
 the crawl stops at 10,000 pages (`--max-pages` overrides). This tool is never
 an API/build/startup dependency. Agents must not run live collection.
 
-- `bayyinat.jsonl`: id, url, title, similar_phrasings, short_answer, keywords,
-  category. Optional missing metadata stays empty, never inferred.
-- `glossary.jsonl`: id, url, term_ar, definition_short, translations.
-  Missing publisher translations stay empty, never machine-translated.
+- `bayyinat.jsonl`: id, url, title (h1 question), question_text (نص السؤال),
+  summary (الخلاصة, empty when absent), keywords (كلمات دلالية, verbatim items),
+  detailed_answer (الجواب التفصيلي, for indexing only).
+- `glossary.jsonl`: id, url, term_ar (h1), terminological_meaning (المعنى الاصطلاحي),
+  short_explanation (الشرح المختصر), linguistic_definition (التعريف اللغوي المختصر),
+  definition (التعريف), translations (verbatim bullet items under
+  ترجمة هذا المصطلح متوفرة باللغات التالية).
+  Optional fields stay empty, never inferred or machine-translated.
 - `manifest.json`: SHA-256, actual UTF-8 byte lengths and counts for JSONL and
   private HTML snapshots; authority event, timestamp, traversal status.
 - `report.json`: page URLs and collection/skip/failure reasons without page text.
 - `html/`: private publisher HTML snapshots for extraction inspection. Never
   display full pages or upload these snapshots/records to chat/public Git.
+
+Snapshots are saved before extraction checks, so refused non-Arabic pages may
+also have private HTML snapshots. They are never included as JSONL records.
 
 DOM text extraction decodes entities and standardizes HTML layout spaces/newlines.
 
@@ -64,17 +79,34 @@ No Arabic letters or diacritics are folded. Hashes include JSONL newline bytes.
 R2 must verify hashes and validate records. Records alone do not authorize UI
 evidence, embedded scripture, hadith gradings or level-D answers.
 
+## Offline re-extraction from saved snapshots (no fetching)
+
+To rebuild records from an earlier run's `html/` snapshots, pass that run's folder
+and a new output directory. Only the folder's `manifest.json` snapshot list is used;
+each file's SHA-256 is verified before extraction, and mismatches are reported and skipped.
+Saved pages without such a manifest cannot be re-extracted: they need their original URLs.
+
+```powershell
+node tools/source-collector/collect.mjs --from-html data\private\source-collection-<time> --output data\private\source-collection-<new-time>
+```
+
+## Section parsing
+
+Each field is found by its exact visible heading text (the innermost element whose
+whole text equals the label). The field's text runs over the following siblings
+until the next stop label or a heading that is not a nested label. A missing or
+duplicated heading fails the page closed with a reason such as `missing_question_text`
+or `ambiguous_summary`. Nested sub-headings (الخلاصة, مضمون الشبهة, المراجع) stay
+inside the detailed answer as text. Nothing is taken from other containers, and no
+detailed answer is substituted for a short field.
+
+The owner confirmed the real-page translations heading as ?????? ??? ??????? ?????? ??????? ???????? on 2026-10-06 (Buzz planning event `5bea83c2bb77c7a0d48ca75c6093bd52af60935ac35470c2879bdb43fbc7d83f`). The collector uses that exact label.
+
 ## Live coverage awaits the owner run
 
-No source HTML was supplied in data/raw/ when R1 was built. Tests use synthetic
-non-religious content. The extractor requires an h1 title and an explicit short
-bounded section container. Bare headings with following sibling paragraphs are
-ambiguous and refused. Containers with nested blocks or detailed headings are
-refused too. It never substitutes a detailed answer or the whole
-page. Dictionary entries must use `/dictionary/word/<id>`; supplied translations
-must be two-column publisher rows inside an explicit translations container.
-Different markup or client-rendered pages may yield no records. Exit 0 does
-not establish comprehensive source coverage.
+No source HTML was supplied in data/raw/ when R3 was built. Tests use synthetic
+non-religious content. Different markup or client-rendered pages may yield no
+records. Exit 0 does not establish comprehensive source coverage.
 
 Report only record counts and skipped/failed reason counts. If short fields are
 missing, place representative owner-saved HTML in data/raw/ with its original URL

@@ -12,6 +12,14 @@ handoff. Set `owner_review_event` to the owner's review event or explicitly use
 This does not imply that review happened. Do not compute the expected hash
 automatically from the same untrusted file you are about to load.
 
+For the owner's revised collector schema, pass `expected_format_version=2`.
+The default remains 1, so existing matcher callers refuse v2 until V5 adapts
+them explicitly. Version 2 validates the approved `/ar/category/{cat}/{id}`
+routes, Arabic selectors and required Arabic fields, returning all collector
+fields unchanged. Bayyinat's optional summary stays empty; the loader never
+substitutes its detailed answer. Glossary translations remain verbatim list
+items; the loader never infers a language mapping or English equivalent.
+
 The loader enforces complete manifests, source permissions, bounded file and
 field sizes, exact fields/types, duplicate keys/IDs, HTTPS host/path binding,
 record counts and original-byte hashes. It performs no normalization, repairs,

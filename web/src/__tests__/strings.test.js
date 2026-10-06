@@ -33,6 +33,10 @@ describe('product strings', () => {
     expect(strings.privacyLines).toContain('لا نحفظه في خوادمنا، وقد يحتفظ مزوّد الخدمة بالبيانات مؤقتاً وفق سياسته.')
   })
 
+  it('use the owner-approved input notice under the composer (owner update, 2026-10-06)', () => {
+    expect(strings.privacySummary).toBe('يُرسل نصك إلى مزوّد ذكاء اصطناعي، ولا نحفظه في خوادمنا.')
+  })
+
   it('use the source line from SPEC.md §0.7 on every quote', () => {
     expect(strings.quoteSourceNote).toBe('النصوص منقولة من مصادرها المعتمدة كما هي، مع الرابط للتحقق.')
   })

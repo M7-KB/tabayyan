@@ -187,7 +187,9 @@ export async function fetchItem(api, id, entry) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw coded('unexpected_shape', false);
   if (String(payload.id) !== id) throw coded('id_mismatch', false);
   for (const field of ['title', 'hadeeth', 'attribution', 'grade', 'reference', 'explanation']) {
-    if (payload[field] !== undefined && typeof payload[field] !== 'string') {
+    const emptyOptional = payload[field] === null &&
+      ['attribution', 'grade', 'reference', 'explanation'].includes(field);
+    if (payload[field] !== undefined && !emptyOptional && typeof payload[field] !== 'string') {
       throw coded(`non_string_${field}`, false);
     }
   }

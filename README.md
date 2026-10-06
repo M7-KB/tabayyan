@@ -1247,6 +1247,8 @@ restriction in [SOURCES.md](SOURCES.md#hadeethenc-owner-run-private-index-2026-1
 Agents do not run it. Inspect the report and empty-field counts before handoff.
 Pagination ambiguity or a non-string item field makes the manifest partial. Resume
 recovers an interrupted final JSONL append; corruption earlier in the file is refused.
+Null optional attribution, grade, reference or explanation is retained as an empty
+field and counted in the manifest; it does not authorize evidence display.
 
 The [measured source/API spike](docs/CONNECTOR_SPIKE_20261005.md) records two OpenAI
 calls and bounded direct probes, endpoint shapes, one-sample local latency and terms

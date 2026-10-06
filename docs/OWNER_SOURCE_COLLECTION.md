@@ -138,7 +138,9 @@ pages, inconsistent counts, and short pages before the declared end produce a pa
 manifest with a category reason. A nonempty short page without end metadata also fails
 closed (`page_short`); it is not treated as proof of exhaustion. Non-string item text
 fields produce a text-free `non_string_<field>` failure and the item is refused rather
-than coerced. Redirects produce `redirect_refused` and are never followed or retried.
+than coerced. Null optional attribution, grade, reference or explanation is stored
+as empty and counted in `emptyFields`; non-null non-strings are still refused.
+Redirects produce `redirect_refused` and are never followed or retried.
 
 Response shapes for `categories/roots` and paging metadata come from the official
 API documentation, which was not fetched here. The collector accepts a bare list or

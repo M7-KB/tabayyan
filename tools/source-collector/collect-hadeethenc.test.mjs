@@ -242,6 +242,29 @@ test('resume refuses malformed interior lines without changing the file', async 
   });
 });
 
+for (const field of ['attribution', 'grade', 'reference', 'explanation']) {
+  test(`null optional ${field} is empty and counted without discarding the item`, async () => {
+    await withOutput(async output => {
+      const source = oneRecord(13);
+      const { fetchFn } = fakeFetch({ 'hadeeths/one/': params => params.id === '13'
+        ? json({ ...source, [field]: null }) : null });
+      const manifest = await collectHadeethEnc({ output, api: fastApi(fetchFn) });
+      assert.equal(manifest.complete, true);
+      assert.equal(manifest.count, 23);
+      assert.equal(manifest.emptyFields[field], 1);
+      const records = (await readFile(path.join(output, 'hadeethenc.jsonl'), 'utf8'))
+        .trimEnd().split('\n').map(line => JSON.parse(line));
+      const record = records.find(row => row.id === '13');
+      assert.ok(record);
+      assert.equal(record[field], '');
+      for (const key of ['title', 'hadeeth', 'attribution', 'grade', 'reference', 'explanation']) {
+        if (key !== field) assert.equal(record[key], source[key]);
+      }
+      assert.deepEqual(JSON.parse(await readFile(path.join(output, 'report.json'), 'utf8')), []);
+    });
+  });
+}
+
 for (const field of ['title', 'hadeeth', 'attribution', 'grade', 'reference', 'explanation']) {
   test(`a non-string ${field} is reported by name and the item is refused`, async () => {
     await withOutput(async output => {

@@ -121,7 +121,9 @@ def test_optional_bad_items_keep_valid_refs_and_topics_without_logging_values():
     ],
 )
 def test_nomination_exempts_only_question_overlap(origin, confidence, alignment, state):
-    text = "Synthetic question about fruit?"
+    # One shared word: below the stated-claim overlap floor, enough for a question's
+    # nominated ayah to be shown (a nomination with no shared word is never shown).
+    text = "Synthetic question about fruit and تفاحة today?"
     record = quran_record()
     composer = engine(
         records=[record],
@@ -144,4 +146,4 @@ def test_nomination_exempts_only_question_overlap(origin, confidence, alignment,
     assert result["state"] == state
     if state == "SUPPORTED":
         assert result["evidence"][0]["quote_ar"] == record["aya_text_unicode"]
-        assert result["evidence"][0]["retrieval_score"] == 0
+        assert 0 < result["evidence"][0]["retrieval_score"]

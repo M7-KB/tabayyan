@@ -79,6 +79,10 @@ export const strings = {
     supported_same_meaning: 'لم نجد لفظك حرفياً؛ هذا حديث صحيح بمعنى قريب',
     disputed: 'مسألة مختلف فيها',
     cannot_confirm: 'لا يمكن التأكد من المصادر المتاحة',
+    // Question-origin claims (the user asked, nothing was asserted): the badge names what the
+    // source gives, never a verdict on the question's premise (owner, 2026-10-06).
+    answer_from_source: 'جواب من مصدر معتمد',
+    correction_from_source: 'تصحيح من مصدر معتمد',
   },
   sourceTextIntro: 'النص كما ورد في المصدر:',
   referencesHeading: 'المراجع',

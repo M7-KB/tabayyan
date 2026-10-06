@@ -1551,3 +1551,37 @@ Freeze fixes (2026-10-06):
   (verify, dependencies and published answer share it), and Bayyinat excerpts are
   capped at 400 characters; a Bayyinat card no longer scans the whole detailed answer
   several times.
+
+Last fixes before the freeze (2026-10-06):
+
+- **Badge wording by origin.** A question-origin claim (question_subject,
+  presupposition, term_lookup) shows «جواب من مصدر معتمد» for SUPPORTED and
+  «تصحيح من مصدر معتمد» for SUPPORTED + CONTRADICTS; stated claims and quoted verses
+  keep «يؤيده المصدر المعتمد» / «لا يطابق المصدر المعتمد». Web strings and label
+  keys only; `state_label_key`, the colour and the state logic are unchanged.
+- **Nominated verses need overlap.** An unparseable router ref is dropped, never
+  defaulted. A nominated ayah the model cites is shown only when its words overlap
+  the question or the selected Bayyinat answer (code `nominated_ref:no_overlap`
+  otherwise); a card left without evidence falls back to a title-matched publisher
+  answer or abstains.
+- **Trailing remarks.** A short exclamation or insult after a question («هذا عبث!»:
+  at most five words, no question mark, ending in «!» or opening with a
+  demonstrative) stays in the question's claim (code `router_field:fragment_absorbed`).
+- **Verbatim gate on glossary and Bayyinat cards.** The displayed excerpt is the
+  received record's own text, so the gatekeeper comparison cannot differ from it;
+  the request summary now names which check fired (`verbatim:cited_ids`,
+  `verbatim:evidence_copy`, `verbatim:definition_scan`, `verbatim:definition_hadith`,
+  `verbatim:positions_prose`, `verbatim:term_block`, `verbatim:correction_record`,
+  `verbatim:hadith_record`, `verbatim:hadith_copy`, `verbatim:quran_correction`,
+  `verbatim:fallback_copy`). A cited ID that is an alias of one offered record (its
+  record_ref, URL or ID without the `live:` prefix) is mapped back to that record
+  (`cited_ids:repaired`); a repeat or an ID naming no offered record still fails. A
+  publisher translation item written with quotation marks is not selected as the
+  equivalent (`term_block:quoted_item_skipped`), so the definition shows without a
+  term block instead of failing the gate; a quoted `text_en` field still fails closed.
+  The glossary record of the very term a term request names is shown (definition
+  only, no term block) when the model's confidence or a provider failure would
+  otherwise abstain the card, like a title-matched Bayyinat answer.
+- **Card polish.** Slightly larger block spacing, badge and body line heights, a
+  theme-aware note colour and word wrapping for long labels on narrow screens; RTL,
+  the AI notice and the block separation are unchanged.

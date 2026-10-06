@@ -136,6 +136,11 @@ class Scripted:
         self.confidence = 0.9
         self.evidence_gap = False
         self.error = None
+        # When set, every offered record of these domains is cited, in offer order.
+        self.cite = None
+        # How the cited IDs are written: exact (None), "strip_live", "url", "duplicate"
+        # or "invented" (an ID that names no offered record).
+        self.cite_alias = None
         self.calls = []
         self.records_seen = []
 
@@ -153,9 +158,23 @@ class Scripted:
         chosen = next(
             (r for domain in self.prefer for r in records if r["domain"] == domain), records[0]
         )
+        cited = (
+            [r["corpus_id"] for r in records if r["domain"] in self.cite]
+            if self.cite is not None
+            else [chosen["corpus_id"]]
+        )
+        if self.cite_alias == "strip_live":
+            cited = [c.removeprefix("live:") for c in cited]
+        elif self.cite_alias == "url":
+            by_id = {r["corpus_id"]: r for r in records}
+            cited = [by_id[c]["source_url"] for c in cited]
+        elif self.cite_alias == "duplicate":
+            cited = cited + cited
+        elif self.cite_alias == "invented":
+            cited = ["live:jamhara-glossary:/dictionary/word/999"]
         return {
             "state": self.state,
-            "corpus_ids": [chosen["corpus_id"]],
+            "corpus_ids": cited,
             "positions": [],
             "recorded_disagreement": False,
             "evidence_gap": self.evidence_gap,

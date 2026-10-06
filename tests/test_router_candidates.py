@@ -39,25 +39,30 @@ def test_family_case_still_short_circuits_router_model():
     assert not route.safe_to_search
 
 
-def test_nominated_33_40_reaches_candidates_without_lexical_overlap():
-    question = "من هو خاتم الأنبياء؟"
+def test_nominated_33_40_reaches_candidates_but_needs_overlap_to_be_shown():
     record = quran_record()
-    composer = engine(
-        records=[record], value=proposal(state="SUPPORTED", corpus_ids=["quran:33:40"])
-    )
-    routed = route_proposal(
-        question, input_kind="verse", proposed_quran_refs=[{"surah": 33, "ayah": 40}]
-    )
-    routed["claims"][0]["origin"] = "question_subject"
-    checker, _, _ = service(routed)
-    checker.composer = composer
-    result = checker.check(CheckRequest(original_text=question))
-    sent = json.loads(composer.model.calls[0]["data"]["records"])
-    assert sent[0]["corpus_id"] == "quran:33:40"
-    assert result["cards"][0]["state"] == "SUPPORTED"
-    assert result["cards"][0]["alignment"] == "CONFIRMS"
-    assert result["cards"][0]["evidence"][0]["quote_ar"] == record["aya_text_unicode"]
-    assert result["cards"][0]["evidence"][0]["retrieval_score"] == 0
+    for question, shown in (("من هو خاتم الأنبياء؟", False), ("من هو خاتم الأنبياء تفاحة؟", True)):
+        composer = engine(
+            records=[record], value=proposal(state="SUPPORTED", corpus_ids=["quran:33:40"])
+        )
+        routed = route_proposal(
+            question, input_kind="verse", proposed_quran_refs=[{"surah": 33, "ayah": 40}]
+        )
+        routed["claims"][0]["origin"] = "question_subject"
+        checker, _, _ = service(routed)
+        checker.composer = composer
+        result = checker.check(CheckRequest(original_text=question))
+        # The nomination always reaches the model, ahead of lexical hits.
+        sent = json.loads(composer.model.calls[0]["data"]["records"])
+        assert sent[0]["corpus_id"] == "quran:33:40"
+        card = result["cards"][0]
+        if shown:
+            assert card["state"] == "SUPPORTED" and card["alignment"] == "CONFIRMS"
+            assert card["evidence"][0]["quote_ar"] == record["aya_text_unicode"]
+            assert card["evidence"][0]["retrieval_score"] > 0
+        else:
+            # A cited nomination with no word in common with the question is not evidence.
+            assert card["state"] == "CANNOT_CONFIRM" and card["evidence"] == []
 
 
 def test_nominated_reference_keeps_measured_overlap_and_allows_supported():

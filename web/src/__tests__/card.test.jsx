@@ -485,6 +485,29 @@ describe('hadith and glossary presentation (live-case fixes)', () => {
     expect(container.textContent.split(answer.excerpt_ar)).toHaveLength(2)
   })
 
+  it.each([
+    ['question_subject', supportedConfirms, 'answer_from_source', 'supported_confirms'],
+    ['presupposition', supportedContradicts, 'correction_from_source', 'supported_contradicts'],
+    ['term_lookup', supportedConfirms, 'answer_from_source', 'supported_confirms'],
+  ])('names what the source gives on a %s claim instead of judging the question', (origin, base, shown, key) => {
+    const card = { ...base, claim: { ...base.claim, origin } }
+    const { container } = render(<ClaimCard card={card} />)
+    const badge = container.querySelector('.state-badge')
+    expect(badge).toHaveTextContent(strings.stateLabels[shown])
+    expect(badge).not.toHaveTextContent(strings.stateLabels[key])
+    // The state key and its colour are unchanged; only the wording differs.
+    expect(badge.dataset.state).toBe(key)
+    expect(screen.getByRole('article', { name: strings.stateLabels[shown] })).toBeInTheDocument()
+  })
+
+  it('keeps the verdict labels on stated claims and quoted verses', () => {
+    for (const [card, key] of [[supportedConfirms, 'supported_confirms'], [supportedContradicts, 'supported_contradicts']]) {
+      const { container, unmount } = render(<ClaimCard card={card} />)
+      expect(container.querySelector('.state-badge')).toHaveTextContent(strings.stateLabels[key])
+      unmount()
+    }
+  })
+
   it('renders no evidence block on a card that cannot confirm', () => {
     const { container } = render(<ClaimCard card={{ ...cannotConfirm, misquote_notice: null }} />)
     expect(container.querySelector('[data-role="scripture"]')).toBeNull()

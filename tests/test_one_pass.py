@@ -513,7 +513,8 @@ def test_low_router_confidence_keeps_nominated_ref_and_independent_evidence_gate
 ):
     from api.diagnostics import Summary, summary
 
-    question = "من هو خاتم الأنبياء؟"
+    # One word shared with the nominated record: a nomination is shown only with overlap.
+    question = "من هو خاتم الأنبياء تفاحة؟"
     value = route_proposal(
         question,
         input_kind="verse",

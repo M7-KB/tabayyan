@@ -8,13 +8,28 @@ const icons = {
   supported_same_meaning: '≈',
   disputed: '⇄',
   cannot_confirm: '?',
+  answer_from_source: '✓',
+  correction_from_source: '✕',
 }
 
-export function StateBadge({ labelKey }) {
+// A question-origin claim asserts nothing, so «يؤيده» / «لا يطابق» would read as a verdict on the
+// question's premise. Such a card names what the source gives instead. Stated claims and quoted
+// verses keep their labels. Wording only: the state, its key and its colour are unchanged.
+const questionLabels = {
+  supported_confirms: 'answer_from_source',
+  supported_contradicts: 'correction_from_source',
+}
+
+export function badgeLabelKey(labelKey, origin) {
+  return origin && origin !== 'stated' ? questionLabels[labelKey] ?? labelKey : labelKey
+}
+
+export function StateBadge({ labelKey, origin }) {
+  const shown = badgeLabelKey(labelKey, origin)
   return (
-    <p className="state-badge" data-state={labelKey}>
-      <span aria-hidden="true">{icons[labelKey]}</span>
-      <span>{strings.stateLabels[labelKey]}</span>
+    <p className="state-badge" data-state={labelKey} data-label={shown}>
+      <span aria-hidden="true">{icons[shown]}</span>
+      <span>{strings.stateLabels[shown]}</span>
     </p>
   )
 }

@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from corpus.short_indexes import AUTHORITY_EVENT, load_short_index
+from corpus.short_indexes import AUTHORITY_EVENT, load_short_index, short_index_status
 from corpus.validate import CorpusValidationError
 
 
@@ -260,4 +260,85 @@ def test_v2_unapproved_route_or_language_is_refused(tmp_path, path):
             sources_path=registry,
             allow_pending_review=True,
             expected_format_version=2,
+        )
+
+
+def with_status(tmp_path, status, *, run_complete=None):
+    """Rewrite the handoff manifest with a per-entry status (owner build-tool format)."""
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    manifest["files"][0]["status"] = status
+    if run_complete is not None:
+        manifest["complete"] = run_complete
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+@pytest.mark.parametrize("source", ["bayyinat", "jamhara-glossary"])
+def test_partial_source_loads_only_with_owner_opt_in(tmp_path, source):
+    digest, registry, rows = handoff(tmp_path, source)
+    with_status(tmp_path, "partial", run_complete=False)
+    assert short_index_status(tmp_path, source, expected_format_version=1) == "partial"
+    with pytest.raises(CorpusValidationError, match="partial"):
+        load_short_index(tmp_path, source, digest, sources_path=registry, allow_pending_review=True)
+    loaded = load_short_index(
+        tmp_path,
+        source,
+        digest,
+        sources_path=registry,
+        allow_pending_review=True,
+        allow_partial=True,
+    )
+    assert list(loaded) == rows
+
+
+def test_complete_entry_in_an_incomplete_run_manifest_loads(tmp_path):
+    digest, registry, rows = handoff(tmp_path, "jamhara-glossary")
+    with_status(tmp_path, "complete", run_complete=False)
+    assert short_index_status(tmp_path, "jamhara-glossary", expected_format_version=1) == "complete"
+    assert (
+        list(
+            load_short_index(
+                tmp_path,
+                "jamhara-glossary",
+                digest,
+                sources_path=registry,
+                allow_pending_review=True,
+            )
+        )
+        == rows
+    )
+
+
+def test_manifest_without_entry_status_falls_back_to_run_flag(tmp_path):
+    digest, registry, rows = handoff(tmp_path)
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    manifest["complete"] = False
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assert short_index_status(tmp_path, "bayyinat", expected_format_version=1) == "partial"
+    with pytest.raises(CorpusValidationError):
+        load_short_index(
+            tmp_path, "bayyinat", digest, sources_path=registry, allow_pending_review=True
+        )
+
+
+def test_partial_opt_in_never_relaxes_hash_pinning(tmp_path):
+    digest, registry, rows = handoff(tmp_path)
+    with_status(tmp_path, "partial", run_complete=False)
+    with pytest.raises(CorpusValidationError):
+        load_short_index(
+            tmp_path,
+            "bayyinat",
+            "0" * 64,
+            sources_path=registry,
+            allow_pending_review=True,
+            allow_partial=True,
+        )
+    with pytest.raises(CorpusValidationError):
+        with_status(tmp_path, "unknown")
+        load_short_index(
+            tmp_path,
+            "bayyinat",
+            digest,
+            sources_path=registry,
+            allow_pending_review=True,
+            allow_partial=True,
         )

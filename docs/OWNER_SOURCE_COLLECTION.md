@@ -90,6 +90,34 @@ Saved pages without such a manifest cannot be re-extracted: they need their orig
 node tools/source-collector/collect.mjs --from-html data\private\source-collection-<time> --output data\private\source-collection-<new-time>
 ```
 
+## Build the short-index directory the API loads
+
+Each collector run writes its own manifest with a run-level `complete` flag and
+thousands of html snapshot entries. The API loads one directory with one manifest
+that lists only the two JSONL files, so assemble it from the run directories:
+
+```powershell
+node tools/source-collector/build-short-index.mjs `
+  --glossary data\private\source-collection-<glossary-run> `
+  --bayyinat data\private\source-collection-<bayyinat-run> `
+  --output data\private\short-index
+```
+
+`--bayyinat` is optional; a glossary-only directory is valid. The tool copies the
+JSONL files, verifies each against its run manifest entry (sha256, bytes, record
+count), derives a per-source traversal status, and writes `manifest.json`
+(`format_version` 2, per-file `status` `complete` or `partial`, no snapshot entries).
+A source is `complete` when its run finished with nothing queued and every page of
+its host was collected or was a listing; a run that stopped at `--max-pages`, or a
+host with a failed page, is `partial`. The glossary run's own `complete: false`
+(bayyinat had no records in that run) does not make the glossary partial. The tool
+prints the two `PRIVATE_*_SHA256` values to enter in Render. Upload the directory's
+three files to the private data repository under `short-index/`.
+
+A partial source loads only when `PRIVATE_SHORT_INDEX_ALLOW_PARTIAL=true` is set in
+Render (owner decision); `/health` then reports that source as `partial` with its
+record count. Hash pinning is unchanged, and each source loads independently, so the
+glossary serves even while `PRIVATE_BAYYINAT_SHA256` is unset.
 ## Bayyinat question-page markup (2026-10-06)
 
 Saved question pages place «نص السؤال» as a card header whose content is the following
@@ -105,7 +133,7 @@ used. Re-run offline on the saved run, no fetching:
 node tools/source-collector/collect.mjs --from-html data\private\source-collection-<bayyinat-run> --output data\private\source-collection-<new-time>
 ```
 
-Then assemble the loader directory with `build-short-index.mjs` as described above.
+Then assemble the loader directory with `build-short-index.mjs` as described in the previous section.
 
 ## Section parsing
 

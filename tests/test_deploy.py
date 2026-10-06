@@ -94,7 +94,24 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
     from corpus.hadith_artifact import SHA256
 
     assert f'echo "{SHA256} data/private/hadeethenc.jsonl" | sha256sum -c - &&' in build_command
-    assert build_command.endswith("sha256sum data/private/hadeethenc.jsonl")
+    assert "sha256sum data/private/hadeethenc.jsonl && mkdir -p data/private/short-index" in (
+        build_command
+    )
+    # The short-index files are optional at build time: a missing file is removed and
+    # reported, and the loader fails closed per configured source at startup.
+    assert "for name in manifest.json glossary.jsonl bayyinat.jsonl; do" in build_command
+    assert '-o "data/private/short-index/$name"' in build_command
+    assert "contents/short-index/$name" in build_command
+    assert '|| { rm -f "data/private/short-index/$name";' in build_command
+    assert build_command.endswith("sha256sum data/private/short-index/*.jsonl || true")
+    keys = {item["key"] for item in service["envVars"]}
+    assert {
+        "PRIVATE_SHORT_INDEX_DIR",
+        "PRIVATE_BAYYINAT_SHA256",
+        "PRIVATE_GLOSSARY_SHA256",
+        "PRIVATE_SHORT_INDEX_ALLOW_PARTIAL",
+        "OPENAI_MODEL_EMBED",
+    } <= keys
     assert service["startCommand"] == (
         "uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log"
     )
@@ -105,6 +122,11 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
         "PRIVATE_DATA_TOKEN",
         "PRIVATE_CORPUS_PATH",
         "PRIVATE_HADITH_PATH",
+        "PRIVATE_SHORT_INDEX_DIR",
+        "PRIVATE_BAYYINAT_SHA256",
+        "PRIVATE_GLOSSARY_SHA256",
+        "PRIVATE_SHORT_INDEX_ALLOW_PARTIAL",
+        "OPENAI_MODEL_EMBED",
         "ENABLE_ISLAMIC_CONTENT_MCP",
         "ALLOW_PENDING_REVIEW",
         "OPENAI_API_KEY",

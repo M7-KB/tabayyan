@@ -1,9 +1,13 @@
+/* Spacing and type sizes are tuned for a 375px screen first; the blocks keep their own
+   borders and backgrounds so source text, the published answer and the generated
+   explanation stay visually separate (SPEC.md §6.4, G16). */
 .claim-card {
   margin-top: 1.5rem;
   padding: 1rem;
   border: 1px solid var(--c-control-border);
   border-radius: var(--radius-card);
   background: var(--c-surface);
+  overflow-wrap: anywhere;
 }
 
 .claim-card h3 {
@@ -23,6 +27,8 @@
   margin: 0;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
+  font-size: 0.95rem;
+  line-height: 1.4;
   font-weight: 700;
   border: 2px solid currentColor;
 }
@@ -48,10 +54,11 @@
 }
 
 .claim-block {
-  margin-top: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  margin-top: 1rem;
+  padding: 0.625rem 0.875rem;
   border-inline-start: 4px solid var(--c-border-strong);
   background: var(--c-claim-bg);
+  line-height: 1.8;
 }
 
 .claim-block blockquote {
@@ -65,8 +72,8 @@
 }
 
 .scripture-block {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.875rem;
   border: 1px solid var(--c-scripture-rule);
   border-radius: 0.5rem;
   background: var(--c-scripture-bg);
@@ -82,9 +89,9 @@
 }
 
 .quote-note {
-  margin: 0.25rem 0 0;
+  margin: 0.375rem 0 0;
   font-size: 0.85rem;
-  color: #4a4a4a;
+  color: var(--c-note-text);
 }
 
 .quote-en {
@@ -98,9 +105,13 @@
   font-size: 0.95rem;
 }
 
+.source-meta {
+  color: var(--c-muted);
+}
+
 .explanation-block {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.875rem;
   border-inline-start: 4px dashed var(--c-warn-rule);
   background: var(--c-warn-block-bg);
 }
@@ -111,13 +122,14 @@
 
 .explanation-block p {
   margin: 0.25rem 0;
+  line-height: 1.8;
 }
 
 .misquote-notice,
 .term-block,
 .referral-block {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.875rem;
   border: 1px solid var(--c-border);
   border-radius: 0.5rem;
 }
@@ -128,7 +140,7 @@
 }
 
 .verify {
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 }
 
 .verify summary {
@@ -151,7 +163,22 @@
     padding: 0.75rem;
   }
 
-  .scripture-block .quote {
+  .state-badge {
+    padding: 0.3rem 0.65rem;
+    font-size: 0.9rem;
+  }
+
+  .scripture-block,
+  .published-answer,
+  .explanation-block,
+  .misquote-notice,
+  .term-block,
+  .referral-block {
+    padding: 0.75rem;
+  }
+
+  .scripture-block .quote,
+  .published-excerpt {
     font-size: 1.05rem;
   }
 }
@@ -167,8 +194,8 @@
 }
 
 .published-answer {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.875rem;
   border: 1px solid var(--c-info-rule);
   border-radius: 0.5rem;
   background: var(--c-info-bg);

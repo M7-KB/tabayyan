@@ -5,6 +5,7 @@ import { strings } from '../../strings.js'
 const icons = {
   supported_confirms: '✓',
   supported_contradicts: '✕',
+  supported_same_meaning: '≈',
   disputed: '⇄',
   cannot_confirm: '?',
 }

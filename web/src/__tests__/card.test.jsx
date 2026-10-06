@@ -397,3 +397,59 @@ describe('source line on quotes (SPEC.md §0.7)', () => {
     expect(screen.queryByText(strings.quoteSourceNote)).not.toBeInTheDocument()
   })
 })
+
+describe('hadith and glossary presentation (live-case fixes)', () => {
+  const longRef = {
+    collection: 'Synthetic collection',
+    number: '7',
+    attribution: 'نسبة تجريبية طويلة إلى راوٍ تجريبي',
+    reference: 'كتاب تجريبي أول، كتاب تجريبي ثانٍ، كتاب تجريبي ثالث',
+  }
+  const sameMeaning = {
+    ...supportedConfirms,
+    alignment: 'SAME_MEANING',
+    state_label_key: 'supported_same_meaning',
+    evidence: [{ ...supportedConfirms.evidence[0], ref: longRef }],
+    hadith_caution_ar: 'لا تنسب لفظك إلى النبي ﷺ؛ تحقّق من نص الحديث ودرجته في المصدر.',
+    referral: cannotConfirm.referral,
+  }
+
+  it('labels the same-meaning hadith card instead of an empty badge', () => {
+    const { container } = render(<ClaimCard card={sameMeaning} />)
+    expect(container.querySelector('[data-state="supported_same_meaning"]')).toHaveTextContent(
+      strings.stateLabels.supported_same_meaning,
+    )
+  })
+
+  it('keeps collection and number in the source line and collapses the long references', () => {
+    const { container } = render(<ClaimCard card={sameMeaning} />)
+    const meta = container.querySelector('.source-meta')
+    expect(meta).toHaveTextContent('Synthetic collection، 7')
+    expect(meta).not.toHaveTextContent('كتاب تجريبي أول')
+    const details = container.querySelector('details.references')
+    expect(details).not.toBeNull()
+    expect(details.querySelector('summary')).toHaveTextContent(strings.referencesHeading)
+    expect(details).toHaveTextContent('كتاب تجريبي أول، كتاب تجريبي ثانٍ، كتاب تجريبي ثالث')
+    expect(details.open).toBe(false)
+    // The hadith text and grade come before the collapsed references.
+    const quote = container.querySelector('.quote')
+    expect(quote.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('labels a glossary definition as «source: term», not by its page path', () => {
+    const glossary = {
+      ...supportedConfirms,
+      evidence: [{
+        ...supportedConfirms.evidence[0],
+        domain: 'glossary',
+        source_name_ar: 'الجمهرة',
+        grading: null,
+        ref: { label: 'مصطلح تجريبي' },
+      }],
+    }
+    const { container } = render(<ClaimCard card={glossary} />)
+    expect(container.querySelector('.source-meta')).toHaveTextContent('الجمهرة: مصطلح تجريبي')
+    expect(container.querySelector('.source-meta')).not.toHaveTextContent('/dictionary')
+    expect(container.querySelector('details.references')).toBeNull()
+  })
+})

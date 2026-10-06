@@ -89,6 +89,47 @@ def _cap_sentences(text: str | None, limit: int = EXPLANATION_SENTENCES) -> str 
     return " ".join(sentences[:limit])
 
 
+_ENGLISH_ITEM = re.compile(r"english|الإنجليزية|الانجليزية|إنجليزي|انجليزي", re.IGNORECASE)
+
+
+def _english_item(items: object) -> str | None:
+    """The publisher's own English translation list item, verbatim; never a translation.
+
+    An item that is only a language name (the publisher lists languages without an
+    equivalent) is not an equivalent: the item must carry Latin-script text beyond
+    the language label itself.
+    """
+    if not isinstance(items, list):
+        return None
+    for item in items:
+        if not isinstance(item, str) or not _ENGLISH_ITEM.search(item):
+            continue
+        remainder = _ENGLISH_ITEM.sub("", item)
+        if len(re.findall(r"[A-Za-z]", remainder)) >= 2:
+            return item
+    return None
+
+
+def _publisher_answer(record: dict, text: str, lang: str) -> bool:
+    """A record received from the owner's private doubt or glossary index that answers
+    the asked question: a Bayyinat answer matched by title, question text and keywords
+    (BM25 plus embedding), or a glossary record whose term the text names.
+
+    Owner decision (2026-10-06): such a record is the approved source for the question
+    and is shown as the publisher's answer at any level, without a second position or
+    a model alignment proposal. Every quote still comes from the record by ID.
+    """
+    if "source_ref" not in record:
+        return False
+    if record.get("source_id") == "bayyinat" and record.get("domain") == "faq":
+        return True
+    return (
+        record.get("source_id") == "jamhara-glossary"
+        and record.get("domain") == "glossary"
+        and _mentions_term(record, text, lang)
+    )
+
+
 def _mentions_term(record: dict, text: str, lang: str) -> bool:
     """Whether a glossary record's term (or its equivalent) occurs in the text as a word."""
     term = record.get("term_ar")
@@ -354,7 +395,11 @@ class Composer:
             "input_kind": input_kind,
             "claim": {
                 "id": claim.id,
-                "text_ar": claim.text_ar,
+                # «فهمنا سؤالك هكذا» shows the user's own words. A router premise that
+                # restates a question as a claim is a retrieval key, never displayed.
+                "text_ar": claim.text_ar
+                if claim.origin == "stated"
+                else original[claim.span.start : claim.span.end],
                 "text_original": original[claim.span.start : claim.span.end],
                 "lang": lang,
                 "span": claim.span.model_dump(),
@@ -440,7 +485,9 @@ class Composer:
                                 card["evidence"].append(self._evidence(RetrievalResult(r, 0, 0)))
                         break
             if propose_state and input_kind == "term":
-                card["glossary_link"] = "https://islamic-content.com/dictionary"
+                # The glossary link stands in only when no definition is shown.
+                if not any(e["domain"] == "glossary" for e in card["evidence"]):
+                    card["glossary_link"] = "https://islamic-content.com/dictionary"
             with timed("composer_card_validation"):
                 VALIDATOR.validate(card)
             if provider_finished is not None:
@@ -547,7 +594,9 @@ class Composer:
                         "\nPropose state using supplied evidence only. "
                         "SUPPORTED requires evidence; "
                         "DISPUTED requires at least two sourced positions from different sources. "
-                        "Level C is never SUPPORTED. If insufficient, use CANNOT_CONFIRM."
+                        "Level C is never SUPPORTED on scripture alone; a supplied published "
+                        "answer (faq) or glossary record that addresses the question may be "
+                        "selected at any level. If insufficient, use CANNOT_CONFIRM."
                         if propose_state
                         else ""
                     ),
@@ -587,7 +636,13 @@ class Composer:
         ):
             gate["verbatim"] = "fail"
             return finish("VERBATIM_GATE_FAILED")
-        if propose_state and proposal.state == "CANNOT_CONFIRM":
+        # The model's CANNOT_CONFIRM stands unless it still selected a publisher answer
+        # from the owner's private index; that record answers the question by itself.
+        publisher_proposed = any(
+            cid in by_id and _publisher_answer(by_id[cid].record, claim.text_ar, lang)
+            for cid in proposal.corpus_ids
+        )
+        if propose_state and proposal.state == "CANNOT_CONFIRM" and not publisher_proposed:
             return finish("NO_MATCHING_EVIDENCE")
         # Reject invented IDs even when a valid ID appears alongside them.
         if self.gatekeeper is None and (
@@ -692,33 +747,46 @@ class Composer:
         ):
             card["evidence"] = []
             return finish("NO_MATCHING_EVIDENCE")
-        if glossary is not None and (
-            isinstance(glossary.get("text_en"), str) and glossary["text_en"].strip()
-        ):
-            label = proposal.term_label_ar or claim.text_ar
-            # A proposed label has no authority until it matches verified source
-            # bytes and passes the ordinary-text gate. Definitions stay in evidence.
+        # The equivalent is the publisher's: a text_en field, or the publisher's own
+        # English item from its translation list, copied verbatim. Never a translation.
+        equivalent = None
+        if glossary is not None:
+            equivalent = (
+                glossary["text_en"]
+                if isinstance(glossary.get("text_en"), str) and glossary["text_en"].strip()
+                else _english_item(glossary.get("translations"))
+            )
+        if glossary is not None and equivalent:
+            glossary = {**glossary, "text_en": equivalent}
+            # A proposed label has no authority until it matches verified source bytes
+            # (the record's own term or a span of its definition) and passes the
+            # ordinary-text gate. The publisher's term is the default label. A label
+            # that fails only drops the term block; the definition stays as evidence.
+            # term_ar is loader-validated only on records from the owner's private
+            # index; on other records it is an unverified extra field and never a label.
+            own_term = glossary.get("term_ar") if "source_ref" in glossary else None
+            label = proposal.term_label_ar or own_term or claim.text_ar
             if (
-                not label.strip()
-                or len(label) > 200
-                or (label not in glossary["text_ar"] and label != glossary.get("term_ar"))
+                label.strip()
+                and len(label) <= 200
+                and (label in glossary["text_ar"] or (own_term is not None and label == own_term))
             ):
-                card["evidence"] = []
-                return finish("NO_MATCHING_EVIDENCE")
-            if not self._isolated(
-                label, glossary_label_id=glossary["corpus_id"]
-            ) or not self._isolated(glossary["text_en"], glossary_label_id=glossary["corpus_id"]):
-                gate["separation"] = "fail"
-                card["evidence"] = []
-                return finish("VERBATIM_GATE_FAILED")
-            card["term"] = {
-                "term_ar": label,
-                "term_en": glossary["text_en"],
-                "glossary_corpus_id": glossary["corpus_id"],
-            }
-            if "source_ref" in glossary:
-                del card["term"]["glossary_corpus_id"]
-                card["term"]["source_ref"] = copy.deepcopy(glossary["source_ref"])
+                if not self._isolated(
+                    label, glossary_label_id=glossary["corpus_id"]
+                ) or not self._isolated(
+                    glossary["text_en"], glossary_label_id=glossary["corpus_id"]
+                ):
+                    gate["separation"] = "fail"
+                    card["evidence"] = []
+                    return finish("VERBATIM_GATE_FAILED")
+                card["term"] = {
+                    "term_ar": label,
+                    "term_en": glossary["text_en"],
+                    "glossary_corpus_id": glossary["corpus_id"],
+                }
+                if "source_ref" in glossary:
+                    del card["term"]["glossary_corpus_id"]
+                    card["term"]["source_ref"] = copy.deepcopy(glossary["source_ref"])
         positions = []
         used = set()
         gap = proposal.evidence_gap
@@ -762,6 +830,15 @@ class Composer:
             ):
                 card["state"] = rule["state"]
                 break
+        # A publisher answer from the owner's private index (Bayyinat answer matched to
+        # the question, or the glossary record of the asked term) is the approved
+        # doubts or terminology source for the question: it is shown as the publisher's
+        # answer at any level, without a second position (owner decision, 2026-10-06).
+        publisher = [
+            cid for cid in selected_ids if _publisher_answer(by_id[cid].record, claim.text_ar, lang)
+        ]
+        if publisher and not positions:
+            card["state"] = "SUPPORTED"
         self._notice(card, near)
         # The policy's state rules decide the state from verified evidence; the
         # model's proposed state is advisory except for its own CANNOT_CONFIRM above.
@@ -770,6 +847,16 @@ class Composer:
         card["abstained_reason"] = None
         if card["state"] == "DISPUTED":
             card.update(positions=positions, state_label_key="disputed")
+            return finish()
+        if publisher and not quran_near:
+            # The publisher's answer stands on the match, not on an alignment proposal.
+            # The proposal only chooses the label: the answer contradicts a false
+            # premise, otherwise it answers (confirms) the question.
+            card["alignment"] = (
+                "CONTRADICTS" if proposal.alignment_proposal == "CONTRADICTS" else "CONFIRMS"
+            )
+            code("alignment:" + card["alignment"])
+            card["state_label_key"] = "supported_" + card["alignment"].lower()
             return finish()
         alignment_facts = {
             "classification": "NEAR_MISS" if quran_near else None,

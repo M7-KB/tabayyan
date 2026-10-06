@@ -49,6 +49,7 @@ describe('product strings', () => {
     expect(strings.stateLabels).toEqual({
       supported_confirms: 'يؤيده المصدر المعتمد',
       supported_contradicts: 'لا يطابق المصدر المعتمد',
+      supported_same_meaning: 'لم نجد لفظك حرفياً؛ هذا حديث صحيح بمعنى قريب',
       disputed: 'مسألة مختلف فيها',
       cannot_confirm: 'لا يمكن التأكد من المصادر المتاحة',
     })

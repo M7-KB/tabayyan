@@ -97,6 +97,8 @@ export default function App() {
       cards: check?.cards, retryableResults: check?.retryableResults,
     } : {}
     setCheck({ ...retained, status: 'loading', submittedText: originalText })
+    // A fresh submission (retainResults false) replaces everything: no earlier question's
+    // cards survive loading or an error. Only a retry of the same text keeps its cards.
     const attempt = beginAttempt(CHECK_DEADLINE_MS, () => {
       setCheck({ ...retained, status: 'error', submittedText: originalText, errorCode: 'TIMEOUT' })
     })

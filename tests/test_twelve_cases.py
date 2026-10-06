@@ -128,6 +128,8 @@ class Scripted:
     def __init__(self):
         self.route = None
         self.alignment = "CONFIRMS"
+        self.alignment_confidence = 0.9
+        self.state = "SUPPORTED"
         self.prefer = ("faq", "glossary", "quran", "hadith")
         self.term_label = None
         self.calls = []
@@ -144,13 +146,13 @@ class Scripted:
             (r for domain in self.prefer for r in records if r["domain"] == domain), records[0]
         )
         return {
-            "state": "SUPPORTED",
+            "state": self.state,
             "corpus_ids": [chosen["corpus_id"]],
             "positions": [],
             "recorded_disagreement": False,
             "evidence_gap": False,
             "alignment_proposal": self.alignment,
-            "alignment_confidence": 0.9,
+            "alignment_confidence": self.alignment_confidence,
             "confidence": 0.9,
             "explanation_ar": EXPLANATION,
             "explanation_en": EXPLANATION_EN,
@@ -219,9 +221,19 @@ def harness():
         yield client, model
 
 
-def check(harness, text, routed, *, alignment="CONFIRMS", term_label=None):
+def check(
+    harness,
+    text,
+    routed,
+    *,
+    alignment="CONFIRMS",
+    term_label=None,
+    alignment_confidence=0.9,
+    state="SUPPORTED",
+):
     client, model = harness
     model.route, model.alignment, model.term_label = routed, alignment, term_label
+    model.alignment_confidence, model.state = alignment_confidence, state
     model.calls.clear()
     response = client.post("/api/v1/check", json={"original_text": text})
     assert response.status_code == 200, response.text
@@ -280,16 +292,25 @@ def test_case_2_quran_authorship_gets_grounded_introductory_answer(harness):
     quotes_are_copied(card)
 
 
-def test_case_3_spread_by_sword_is_restricted_and_referred(harness):
+def test_case_3_spread_by_sword_shows_the_publisher_answer_at_level_c(harness):
     text = "هل الإسلام انتشر بالسيف؟"
-    card = check(harness, text, route(text, kind="doubt", level="C", origin="question_subject"))
-    # Level C never becomes a sourced single answer from one record: the policy's
-    # rules need two sourced positions, so the card abstains with a referral and
-    # the user's own question ready to ask.
+    # The model follows the old level-C instinct and proposes CANNOT_CONFIRM while still
+    # selecting the matched Bayyinat answer; the match decides the card (owner decision).
+    card = check(
+        harness,
+        text,
+        route(text, kind="doubt", level="C", origin="question_subject"),
+        state="CANNOT_CONFIRM",
+        alignment=None,
+        alignment_confidence=0.0,
+    )
     assert card["claim"]["level"] == "C"
-    assert card["state"] == "CANNOT_CONFIRM" and card["alignment"] is None
-    assert card["referral"]["ready_to_ask_question_ar"].endswith(text)
-    assert card["explanation_ar"] == ABSTENTION_TEXT["default"][0]
+    assert card["state"] == "SUPPORTED" and card["alignment"] == "CONFIRMS"
+    assert card["positions"] == []  # No second position is required for a published answer.
+    assert card["published_answer"]["excerpt_ar"] == FAQ_ANSWER
+    assert card["published_answer"]["url"] == faq_received()["source_url"]
+    assert card["explanation_ar"] and capped(card["explanation_ar"])
+    assert card["referral"] is None
     quotes_are_copied(card)
 
 
@@ -352,7 +373,7 @@ def test_case_7_term_meaning_shows_definition_then_term(harness):
         "source_ref": card["evidence"][0]["source_ref"],
     }
     assert card["explanation_ar"] and capped(card["explanation_ar"])
-    assert card["glossary_link"] == "https://islamic-content.com/dictionary"
+    assert "glossary_link" not in card  # A shown definition needs no link-only block.
     quotes_are_copied(card)
 
 
@@ -391,7 +412,7 @@ def test_case_8b_glossary_without_equivalent_still_shows_definition(harness):
         Indexes.discover = original
     assert card["state"] == "SUPPORTED" and card["evidence"][0]["domain"] == "glossary"
     assert card["term"] is None  # No equivalent is inferred from language names.
-    assert card["glossary_link"] == "https://islamic-content.com/dictionary"
+    assert "glossary_link" not in card
 
 
 def test_case_9_hostile_phrasing_is_answered_on_the_real_question(harness):
@@ -468,3 +489,86 @@ def test_case_12_english_loaded_term_is_explained_from_glossary(harness):
     assert card["evidence"][0]["source_id"] == "jamhara-glossary"
     assert card["explanation_en"] and "Fourth" not in card["explanation_en"]
     quotes_are_copied(card)
+
+
+def test_understood_question_shows_the_users_words_not_the_premise(harness):
+    text = "لماذا يعبد المسلمون الكعبة؟"
+    routed = route(text, kind="doubt", level="A", origin="presupposition")
+    routed["claims"][0]["text_ar"] = "المسلمون يعبدون الكعبة"  # router premise: retrieval key only
+    card = check(harness, text, routed, alignment="CONTRADICTS")
+    assert card["claim"]["text_ar"] == text
+    assert card["claim"]["text_original"] == text
+    assert "يعبدون" not in json.dumps(card["claim"], ensure_ascii=False)
+    assert card["state"] == "SUPPORTED" and card["alignment"] == "CONTRADICTS"
+
+
+def test_glossary_definition_does_not_need_a_model_alignment(harness):
+    text = "ما معنى التوحيد؟"
+    card = check(
+        harness,
+        text,
+        route(text, kind="term", level="A", origin="term_lookup", no_claim=True),
+        term_label="التوحيد",
+        alignment=None,
+        alignment_confidence=0.0,
+    )
+    assert card["state"] == "SUPPORTED" and card["alignment"] == "CONFIRMS"
+    assert card["abstained_reason"] is None
+    assert card["evidence"][0]["quote_ar"] == GLOSSARY_RULE
+    assert card["evidence"][0]["ref"] == {"label": "/dictionary/word/101"}
+    assert card["term"]["term_ar"] == "التوحيد"
+    assert "glossary_link" not in card
+    assert card["explanation_ar"] != ABSTENTION_TEXT["default"][0]
+
+
+def test_translation_request_uses_the_publisher_english_item(harness):
+    text = "ترجم كلمة التوحيد إلى الإنجليزية؟"
+    original = Indexes.discover
+
+    def with_translation_list(self, text, request, *, kind, level, timeout):
+        record = glossary_received("التوحيد", "", 404)
+        del record["text_en"]
+        record["translations"] = ["Français: Équivalent", "English: Synthetic equivalent"]
+        request.receive(record)
+
+    Indexes.discover = with_translation_list
+    try:
+        card = check(
+            harness,
+            text,
+            route(text, kind="term", level="A", origin="term_lookup", no_claim=True),
+            alignment=None,
+            alignment_confidence=0.0,
+        )
+    finally:
+        Indexes.discover = original
+    assert card["state"] == "SUPPORTED"
+    assert card["evidence"][0]["quote_ar"] == GLOSSARY_RULE
+    # The publisher's own English list item, verbatim; the label is the record's term.
+    assert card["term"] == {
+        "term_ar": "التوحيد",
+        "term_en": "English: Synthetic equivalent",
+        "source_ref": card["evidence"][0]["source_ref"],
+    }
+
+
+def test_language_name_alone_is_not_an_equivalent(harness):
+    text = "ترجم كلمة التوحيد إلى الإنجليزية؟"
+    original = Indexes.discover
+
+    def names_only(self, text, request, *, kind, level, timeout):
+        record = glossary_received("التوحيد", "", 505)
+        del record["text_en"]
+        record["translations"] = ["English", "Français"]
+        request.receive(record)
+
+    Indexes.discover = names_only
+    try:
+        card = check(
+            harness,
+            text,
+            route(text, kind="term", level="A", origin="term_lookup", no_claim=True),
+        )
+    finally:
+        Indexes.discover = original
+    assert card["state"] == "SUPPORTED" and card["term"] is None

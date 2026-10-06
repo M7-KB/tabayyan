@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import Field
 
 from api.config import load_config
+from api.deadline import DeadlineExceeded
 from api.diagnostics import code, count, record, timed
 from api.extract import ExtractedClaim, StrictObject
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
@@ -92,6 +93,25 @@ glossary text_ar, never a definition or a scripture passage. Otherwise return nu
 """
 
 
+def _chunks_of(text: str) -> set[tuple[str, ...]]:
+    """One record's separation chunks: its words if fewer than three, else 3-grams."""
+    source_words = words(text)
+    if not source_words:
+        return set()
+    if len(source_words) < 3:
+        return {source_words}
+    return {source_words[i : i + 3] for i in range(len(source_words) - 2)}
+
+
+def _chunk_counts(records) -> dict[tuple[str, ...], int]:
+    """How many records contain each chunk; built once, reused for every card."""
+    counts: dict[tuple[str, ...], int] = {}
+    for r in records:
+        for chunk in _chunks_of(r["text_ar"]):
+            counts[chunk] = counts.get(chunk, 0) + 1
+    return counts
+
+
 def evidence_from(result: RetrievalResult) -> dict:
     """Copy only original text and provenance from a loader-validated record."""
     r = result.record
@@ -147,26 +167,43 @@ class Composer:
         self.gatekeeper = gatekeeper
         self.local_hadith = local_hadith
         self.policy_path, self.tuning_path = policy_path, tuning_path
+        self._chunks = _chunk_counts(self.records.values())
+        # The fast per-request path shares this index only when it was built over
+        # exactly the gatekeeper's validated local records, as the app does.
+        self._shares_local_index = gatekeeper is not None and self.records == gatekeeper._local
 
     def for_request(self, source_request: SourceRequest | None = None):
+        """A composer bound to one request's received records.
+
+        The validated local index, retriever postings, detector tokens and
+        separation chunks are built once and shared; only this request's
+        received records are indexed here. Every gate still runs per card.
+        """
         if self.gatekeeper is None:
             return self
-        gatekeeper = QuoteGatekeeper(
-            local_records=self.gatekeeper.local_records,
-            request=source_request or SourceRequest(),
-            detector_config=self.gatekeeper.config,
-        )
-        records = gatekeeper.records
-        return Composer(
-            model=self.model,
-            retriever=BM25Retriever(records, self.tuning),
-            detector=gatekeeper.detector,
-            records=records,
-            policy_path=self.policy_path,
-            tuning_path=self.tuning_path,
-            gatekeeper=gatekeeper,
-            local_hadith=self.local_hadith,
-        )
+        gatekeeper = self.gatekeeper.derive(source_request or SourceRequest())
+        if not self._shares_local_index:
+            records = gatekeeper.records
+            return Composer(
+                model=self.model,
+                retriever=BM25Retriever(records, self.tuning),
+                detector=gatekeeper.detector,
+                records=records,
+                policy_path=self.policy_path,
+                tuning_path=self.tuning_path,
+                gatekeeper=gatekeeper,
+                local_hadith=self.local_hadith,
+            )
+        composer = copy.copy(self)
+        composer.gatekeeper = gatekeeper
+        composer.detector = gatekeeper.detector
+        live = gatekeeper.live_records
+        if live:
+            composer.records = {**self.records, **{r["corpus_id"]: r for r in live}}
+            composer.order = {cid: i for i, cid in enumerate(composer.records)}
+            composer.retriever = self.retriever.extend(live)
+            composer._chunks = _chunk_counts(composer.records.values())
+        return composer
 
     def _evidence(self, result: RetrievalResult):
         if self.gatekeeper is None:
@@ -193,6 +230,8 @@ class Composer:
                 if self.gatekeeper is not None
                 else self.detector.detect(text)
             )
+        except DeadlineExceeded:
+            raise
         except Exception:
             return False
         if (
@@ -200,21 +239,19 @@ class Composer:
             or detection.findings
         ):
             return False
-        key = " ".join(words(text))
-        for r in self.records.values():
-            # Source-backed glossary labels/equivalents may match their own
-            # definition. The completed scripture scan and quote markers above
-            # still apply; no scripture record is exempt from either check.
-            if r["domain"] == "glossary" and r["corpus_id"] == glossary_label_id:
-                continue
-            source_words = words(r["text_ar"])
-            chunks = (
-                [source_words]
-                if len(source_words) < 3
-                else [source_words[i : i + 3] for i in range(len(source_words) - 2)]
-            )
-            if any(chunk and f" {' '.join(chunk)} " in f" {key} " for chunk in chunks):
-                return False
+        # Any record chunk (its whole text under three words, else each run of
+        # three words) occurring as consecutive words of the text fails.
+        key = words(text)
+        exempt = self.records.get(glossary_label_id) if glossary_label_id is not None else None
+        # Source-backed glossary labels/equivalents may match their own
+        # definition. The completed scripture scan and quote markers above
+        # still apply; no scripture record is exempt from either check.
+        own = _chunks_of(exempt["text_ar"]) if exempt and exempt["domain"] == "glossary" else set()
+        for size in (1, 2, 3):
+            for i in range(len(key) - size + 1):
+                chunk = key[i : i + size]
+                if self._chunks.get(chunk, 0) > (1 if chunk in own else 0):
+                    return False
         return True
 
     def compose(

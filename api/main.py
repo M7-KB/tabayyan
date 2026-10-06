@@ -178,7 +178,79 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         else []
                     ),
                 )
+            app.state.checker_index = None
+            if (
+                not settings.health_only
+                and corpus_status == "loaded"
+                and getattr(app.state, "checker", None) is None
+            ):
+                # Build the corpus index at startup so no request pays for it. A
+                # failure here leaves the lazy per-request construction in place.
+                started = monotonic()
+                try:
+                    app.state.checker_index = await asyncio.to_thread(build_index, app)
+                except Exception:
+                    logger.warning("Corpus index not prebuilt; built on first request")
+                else:
+                    logger.info(
+                        "Corpus index built: elapsed_ms=%d",
+                        round((monotonic() - started) * 1000),
+                    )
             yield
+
+    def build_index(app):
+        """Index the loaded corpus once, without constructing any provider adapter."""
+        gatekeeper = QuoteGatekeeper(
+            local_records=[*app.state.corpus, *app.state.hadith_records],
+            request=SourceRequest(),
+            detector_config=DetectorConfig.from_files(
+                settings.content_policy_path, settings.tuning_path
+            ),
+        )
+        records = gatekeeper.records
+        composer = Composer(
+            model=None,
+            retriever=BM25Retriever(records, app.state.tuning),
+            detector=gatekeeper.detector,
+            records=records,
+            policy_path=settings.content_policy_path,
+            tuning_path=settings.tuning_path,
+            gatekeeper=gatekeeper,
+            local_hadith=settings.private_hadith_path is not None,
+        )
+        return gatekeeper, composer
+
+    def build_checker(app):
+        """Bind provider adapters to the shared index; every request derives from it."""
+        reason = model_adapter(app)
+        index = getattr(app.state, "checker_index", None)
+        gatekeeper, composer = build_index(app) if index is None else index
+        composer.model = reason
+        router = Router(
+            model=model_adapter(app, router=True),
+            classifier=LevelClassifier(
+                model=reason,
+                policy_path=settings.content_policy_path,
+                tuning_path=settings.tuning_path,
+            ),
+            detector=gatekeeper.detector,
+        )
+        service = OnePassCheckService(
+            router=router,
+            composer=composer,
+            corpus_version=app.state.corpus_version,
+            deadline_seconds=settings.check_deadline_seconds,
+            private_indexes=app.state.private_indexes,
+            connector=DefaultDiscovery(
+                mcp=IslamicContentConnector()
+                if settings.enable_islamic_content_mcp and settings.islamic_content_mcp_url
+                else None,
+                hadeethenc=HadeethEncDiscovery() if settings.private_hadith_path is None else None,
+            ),
+        )
+        # Store only services/indexes, never request data or result cards.
+        app.state.checker = service
+        return service
 
     app = FastAPI(
         title="Tabayyan API",
@@ -255,51 +327,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     raise ExtractionError(400, "NO_CLAIMS")
                 service = getattr(app.state, "checker", None)
                 if service is None:
-                    reason = model_adapter(app)
-                    gatekeeper = QuoteGatekeeper(
-                        local_records=[*app.state.corpus, *app.state.hadith_records],
-                        request=SourceRequest(),
-                        detector_config=DetectorConfig.from_files(
-                            settings.content_policy_path, settings.tuning_path
-                        ),
-                    )
-                    detector = gatekeeper.detector
-                    router = Router(
-                        model=model_adapter(app, router=True),
-                        classifier=LevelClassifier(
-                            model=reason,
-                            policy_path=settings.content_policy_path,
-                            tuning_path=settings.tuning_path,
-                        ),
-                        detector=detector,
-                    )
-                    service = OnePassCheckService(
-                        router=router,
-                        composer=Composer(
-                            model=reason,
-                            retriever=BM25Retriever(gatekeeper.records, app.state.tuning),
-                            detector=detector,
-                            records=gatekeeper.records,
-                            policy_path=settings.content_policy_path,
-                            tuning_path=settings.tuning_path,
-                            gatekeeper=gatekeeper,
-                            local_hadith=settings.private_hadith_path is not None,
-                        ),
-                        corpus_version=app.state.corpus_version,
-                        deadline_seconds=settings.check_deadline_seconds,
-                        private_indexes=app.state.private_indexes,
-                        connector=DefaultDiscovery(
-                            mcp=IslamicContentConnector()
-                            if settings.enable_islamic_content_mcp
-                            and settings.islamic_content_mcp_url
-                            else None,
-                            hadeethenc=HadeethEncDiscovery()
-                            if settings.private_hadith_path is None
-                            else None,
-                        ),
-                    )
-                    # Store only services/indexes, never request data or result cards.
-                    app.state.checker = service
+                    service = build_checker(app)
                 result = service.check(request)
                 final_states(result["cards"])
                 return result

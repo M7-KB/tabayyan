@@ -254,6 +254,10 @@ and glossary evidence, and replaces affected titles with the fixed source name.
 Embedded scripture still requires an authorized own-record reference and grading.
 Generated explanations, position labels/summaries and ordinary term fields also
 use this completed safety scan; any finding or failed scan rejects ordinary text.
+The separation check then looks each run of one to three consecutive words of the
+text up in a chunk index built once per corpus (every record's 3-grams, or its whole
+text when shorter), with the same glossary self-match exemption, instead of
+re-tokenizing every record per explanation.
 Hadith beyond the local records have comparison coverage only when returned by a
 connector in the current request; this is partial coverage, not a full hadith index.
 
@@ -278,6 +282,17 @@ or ungraded hadith in a title produces a neutral source-name fallback. An excerp
 with unverified/altered scripture or ungraded hadith is dropped. Embedded hadith
 have their own source/grading shown as evidence, including on disputed cards.
 Generated explanation scans fail closed on unavailable/failed detector runs.
+
+The local index is built once. `QuoteGatekeeper.derive(request)` creates the
+request-scoped gatekeeper by sharing the validated local records, their authorization
+results and the two tokenized detector indexes, and processes only the records received
+in that request; `SpanDetector.extend` adds those records without re-tokenizing the
+corpus. Local records are never mutated after validation, so sharing them is safe, and
+every verify/dependency/published-answer gate still runs per card. At the live corpus
+size this removed about six seconds of per-request CPU (deep copies, one jsonschema
+validation per record and two full tokenization passes) from the "retrieval" stage.
+The app builds this index at startup when the private corpus loads, without touching
+the provider, so the first request does not pay for it either.
 
 Live connector fetching is not enabled by this PR. `/check` currently uses only the
 mounted local artifact; a trusted connector adapter can supply a fresh SourceRequest
@@ -338,6 +353,11 @@ minimum defaults to 1, so a full one-word or two-word lookup reaches 1.0.
 `retrieval_overlap_floor` defaults to 0.25; this is an initial engineering
 threshold, not real-corpus calibration or evidence confidence. Corpus size,
 document frequency, repetition and unrelated lengths cannot increase it.
+`BM25Retriever.extend(records)` layers a request's received records on the shared
+startup index instead of re-indexing the corpus: the base postings are shared read-only
+(a term's postings are copied only when an added record extends them), and IDF and the
+average length are computed over all records at query time, so scores, order and
+overlap equal an index built from scratch over the same records.
 Raw `retrieval_score_floor: 8.0` is retained as legacy metadata but is not enforced
 by this retriever. The lead's Oct 4 decision keeps it out of card gating until
 calibration and the corresponding SPEC/composer change. Downstream consumers
@@ -433,9 +453,20 @@ copied from the matched record. The composer must apply the detector status and 
 then validate every displayed notice/evidence quote against the original approved source,
 including source and hadith grading. Comparison equality never authorizes display.
 
+Trigger B windows use an exact prefilter before any edit distance is computed. A near
+miss within budget `b` differs in length by at most `b` and keeps at least
+`len(window) - b` window tokens, so only records of a compatible length that share enough
+of the window's rarest tokens (an inverted index over the detector's own comparison
+tokens) are compared, in index order, so tie-breaking is unchanged; verbatim matches use a
+dictionary lookup. The result equals the exhaustive scan for every window (randomized and
+fixture tests compare the two). At about 9,700 records a 7-word question dropped from
+2.4 s to under 10 ms and a 25-word explanation from 71 s to under 0.3 s. Marked spans
+(Trigger A) keep the exhaustive scan because their UNRELATED distance is reported.
+The window loop also checks the request deadline and raises `DeadlineExceeded` so a scan
+abandoned by the HTTP deadline stops instead of occupying the CPU.
+
 No model calls, logging, input storage, corpus ingestion, or HTTP endpoints are introduced.
-The scan is exhaustive for the fixture index; full-corpus performance and Trigger B
-false-positive calibration remain unmeasured until licensed data exists (T-508a).
+Trigger B false-positive calibration remains unmeasured until licensed data exists (T-508a).
 Run the full checks with `python -m pytest`, `ruff check .`, `ruff format --check .`,
 and `node --test tests/*.test.mjs`. Tests include the seven literal one-word misquotes
 and four twin pairs from Nami's probe v2, plus synthetic config, offset, Unicode, and
@@ -1330,7 +1361,12 @@ Keep the client at least five seconds above the configured server deadline.
 This margin does not increase provider or retrieval budgets or relax evidence gates.
 Running synchronous operations cannot be forcibly interrupted; the response stops
 waiting at the deadline and cancels queued work. Provider calls inherit the absolute
-deadline, and late worker results are discarded without persistence.
+deadline, and late worker results are discarded without persistence. CPU-bound stages
+cooperate: the scripture-span scan checks the deadline per window and raises
+`api.deadline.DeadlineExceeded`, which the composer's separation and embedded-quote
+scans propagate rather than swallow; the one-pass service reports such a claim as
+`CHECK_INCOMPLETE` (or a routing-stage 503), so a worker still running at the
+deadline releases the single vCPU for the next request instead of starving it.
 
 The HTTP deadline owner shares request-local progress with claim workers. Each
 validated card is registered immediately on completion. If the outer timer wins

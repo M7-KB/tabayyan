@@ -1317,3 +1317,5 @@ The three-topic cap, complete-claim overlap veto and level-D dispatch prohibitio
 remain enforced. No free-form model/user query reaches MCP.
 
 The [reference-pack translation](docs/challenge-brief.md#reference-pack-pages-815-association-platforms-and-external-sources-working-translation) records pages 8–15 of the public challenge document. It distinguishes the association books platform `byenah.com` from the Osoul Center Bayyinat web edition `bayenat.net`, which the owner-run collector targets. The owner authorized publication of the translation; the reference PDF will be supplied separately under `docs/reference/`.
+
+The [owner collection guide](docs/OWNER_SOURCE_COLLECTION.md) documents Bayyinat `/ar/categories/{cat}` and `/ar/category/{cat}/{id}` routes, exact glossary headings, bounded same-host redirects and offline `--from-html` re-extraction with snapshot hashes. Output uses the owner-approved V5 field names; it requires the corresponding V5 loader before app ingestion. The translations heading is the exact owner-confirmed publisher label.

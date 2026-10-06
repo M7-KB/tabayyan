@@ -97,7 +97,7 @@ Source: the scientific reference pack, pp. 8–15 (owner-held PDF, not reproduce
 | Terminology encyclopaedia (موسوعة المصطلحات الإسلامية) | Repeated legal terms, each with a definition and approved translations in dozens of languages; covers creed, fiqh and its principles, virtues and manners, and hadith | terminologyenc.com |
 | Central base for Islamic content in languages (القاعدة المركزية) | Approved translations: Quran texts and their meaning translations, hadith cards and explanations, encyclopaedias, terminologies and dictionaries, books and da'wa materials. Sentence-level alignment of Arabic and translation with unique identifiers and semantic embeddings; more than 30 million approved words in dozens of languages, synchronised with the association's production and publishing systems | icadb.com; integration API docs: icadb.com/api/docs |
 
-Owner clarification (2026-10-06, Buzz planning event `5bea83c2bb77c7a0d48ca75c6093bd52af60935ac35470c2879bdb43fbc7d83f`): both hosts are official and distinct. `byenah.com` is Bayan al-Islam (the association platform for books and publications). `bayenat.net` is Bayyinat / ????? ???? ??? ??????? (Osoul Center), the web edition of `dawa.center/file/7937`. The owner-run collector targets `bayenat.net`.
+Owner clarification (2026-10-06, Buzz planning event `5bea83c2bb77c7a0d48ca75c6093bd52af60935ac35470c2879bdb43fbc7d83f`): both hosts are official and distinct. `byenah.com` is Bayan al-Islam (the association platform for books and publications). `bayenat.net` is Bayyinat / بينات للرد على الشبهات (Osoul Center), the web edition of `dawa.center/file/7937`. The owner-run collector targets `bayenat.net`.
 
 ### Official platform for pilgrims (page 11)
 | Source | Content | Access (per pack) |

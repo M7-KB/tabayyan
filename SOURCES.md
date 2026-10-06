@@ -240,8 +240,9 @@ as HadeethEnc's, and drops records without grade, attribution or reference.
 
 Licence: owner-authorized matched challenge-app display with visible source and
 link, under the scope above. The official API documentation establishes the API
-shape; it is not treated as an underlying-text redistribution licence. No bulk
-fetch, download, dataset publication or response persistence is permitted.
+shape; it is not treated as an underlying-text redistribution licence. The runtime adapter does not bulk
+fetch, download, publish datasets or persist responses. The owner-run private
+collection exception below supersedes the earlier prohibition for that collection only.
 The item adapter does not create a local HadeethEnc corpus or change P-03 flags.
 
 Discovery routing authority: build event
@@ -253,6 +254,24 @@ neither titles nor metadata authorize a quote. Full Arabic item responses remain
 request-scoped, with `grading_source_id: hadeethenc`. Display permission is the
 same owner-authorized scope above; underlying-text redistribution terms remain
 uncleared. No responses are retained or added to the local corpus.
+
+## HadeethEnc owner-run private index (2026-10-06, decision D4)
+
+Owner brief of 2026-10-06 (Buzz planning event
+`d8cafdd180e6937419784562fb7b7a7789571b0f6fa6b53532009d0271273694`) asks for an owner-run
+collector, `tools/source-collector/collect-hadeethenc.mjs`, that writes a private
+`hadeethenc.jsonl` plus a manifest with SHA-256 and count. Fields are copied verbatim with
+no modification, and the owner's terms require attribution to HadeethEnc.com.
+
+Owner confirmation (Buzz planning event
+`5bea83c2bb77c7a0d48ca75c6093bd52af60935ac35470c2879bdb43fbc7d83f`, 2026-10-06,
+decision 3): D4 supersedes the 2026-10-05 HadeethEnc line above. Allowed: one
+owner-run fetch through the official API, stored only in the private repo, fields
+verbatim, attribution to HadeethEnc.com. No agent runs the collector. This exception
+does not authorize public dataset publication.
+
+Publisher terms URL: not established. The HadeethEnc terms the owner referred to are not
+recorded here, so `license_url` stays `pending`.
 
 ## Direct hosted Islamic Content MCP (2026-10-05)
 

@@ -1239,6 +1239,17 @@ coverage awaits the owner's output and page inspection. R2 loaders and R4
 matchers remain separate work. Private collection does not authorize public
 redistribution; source permission evidence remains in SOURCES.md.
 
+The [HadeethEnc owner-run command](docs/OWNER_SOURCE_COLLECTION.md#hadeethenc-owner-run-private-index-r2)
+creates JSONL plus a SHA-256/count manifest from the official API. Owner decision
+D4 permits one owner-run fetch, stored only in the private repo, with verbatim
+fields and attribution to HadeethEnc.com; it supersedes the earlier collection
+restriction in [SOURCES.md](SOURCES.md#hadeethenc-owner-run-private-index-2026-10-06-decision-d4).
+Agents do not run it. Inspect the report and empty-field counts before handoff.
+Pagination ambiguity or a non-string item field makes the manifest partial. Resume
+recovers an interrupted final JSONL append; corruption earlier in the file is refused.
+Null optional attribution, grade, reference or explanation is retained as an empty
+field and counted in the manifest; it does not authorize evidence display.
+
 The [measured source/API spike](docs/CONNECTOR_SPIKE_20261005.md) records two OpenAI
 calls and bounded direct probes, endpoint shapes, one-sample local latency and terms
 links. [TOOLS.md](TOOLS.md#bounded-connector-spike-and-quran-handoff-2026-10-05)

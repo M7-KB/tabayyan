@@ -23,12 +23,14 @@ _MARK_RANGES = (
 )
 
 
-def comparison_key(text: str) -> str:
+def comparison_key(text: str, *, fold_variants: bool = True) -> str:
     """Harden both triggers and the veto against Unicode retyping/insertion.
 
     NFKC expands presentation forms; Cf characters and Arabic marks are removed.
     Arabic-Indic decimal digits and Arabic letter variants are folded. This lossy
     comparison is independent of ar-v1 and retains no authority over source text.
+    Set fold_variants=False to retain letter identity when checking a short,
+    unmarked hit; mark and format normalization still applies.
     """
     if not isinstance(text, str):
         raise TypeError("comparison_key expects a string")
@@ -45,12 +47,15 @@ def comparison_key(text: str) -> str:
         if 0x0660 <= code <= 0x0669 or 0x06F0 <= code <= 0x06F9:
             char = str(unicodedata.decimal(char))
         chars.append(char)
-    return " ".join(unicodedata.normalize("NFKC", "".join(chars)).translate(_VARIANTS).split())
+    normalized = unicodedata.normalize("NFKC", "".join(chars))
+    if fold_variants:
+        normalized = normalized.translate(_VARIANTS)
+    return " ".join(normalized.split())
 
 
-def words(text: str) -> tuple[str, ...]:
+def words(text: str, *, fold_variants: bool = True) -> tuple[str, ...]:
     """Unicode words; punctuation delimits words rather than changing word identity."""
-    return tuple(re.findall(r"[^\W_]+", comparison_key(text)))
+    return tuple(re.findall(r"[^\W_]+", comparison_key(text, fold_variants=fold_variants)))
 
 
 def word_distance(left: Sequence[str], right: Sequence[str]) -> int:
@@ -473,6 +478,15 @@ class SpanDetector:
                 start, end = window[0][1], window[-1][2]
                 match = self._window_match(tuple(t[0] for t in window), lookup)
                 if match is not None:
+                    # A one-word hit has no surrounding scripture context. Letter
+                    # folding alone must not turn ordinary prose (an interrogative,
+                    # for example) into a quotation and an extra source dependency.
+                    # Keep marks/format normalization, but require the same letters.
+                    # Explicitly marked spans above retain the full safety scan.
+                    if match.token_count == 1 and words(
+                        text[start:end], fold_variants=False
+                    ) != words(match.record.text_ar, fold_variants=False):
+                        continue
                     candidates.append(Finding(start, end, None, match))
         verbatim = [f for f in findings + candidates if f.match.classification == "VERBATIM"]
         target_lengths = {record.corpus_id: len(target) for record, target in self.index}

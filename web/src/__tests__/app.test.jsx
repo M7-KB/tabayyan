@@ -54,11 +54,12 @@ describe('App shell', () => {
 })
 
 describe('composer', () => {
-  it('uses the approved placeholder and an icon-only send button with a text name', () => {
+  it('uses the approved placeholder and a visibly labelled send button with an icon', () => {
     render(<InputScreen onSubmitText={vi.fn()} onSubmitMedia={vi.fn()} />)
     expect(screen.getByPlaceholderText('اكتب الادعاء أو السؤال هنا…')).toBeInTheDocument()
     const send = screen.getByRole('button', { name: strings.textSubmit })
     expect(send).toHaveClass('send-button')
+    expect(send).toHaveTextContent(strings.textSubmit)
     expect(send.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 

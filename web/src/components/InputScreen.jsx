@@ -39,7 +39,7 @@ export function InputScreen({ onSubmitText, onSubmitMedia, initialText = '' }) {
 
   return (
     <section className="input-screen" aria-labelledby="input-heading">
-      <h2 id="input-heading" className="sr-only">
+      <h2 id="input-heading" className="input-heading">
         {strings.inputHeading}
       </h2>
 
@@ -60,6 +60,7 @@ export function InputScreen({ onSubmitText, onSubmitMedia, initialText = '' }) {
           />
           <div className="composer-bar">
             <button type="submit" className="send-button" disabled={!hasText} aria-label={strings.textSubmit}>
+              <span>{strings.textSubmit}</span>
               <SendIcon />
             </button>
           </div>

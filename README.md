@@ -563,7 +563,7 @@ npm run build
 
 The page shows a development-preview banner until `GET /health` answers (`web/src/api/health.js`),
 the input screen has the AI-not-a-fatwa notice as a pill under the tagline (always visible), a composer with
-an icon-only send button, a collapsed privacy row under the composer (its short line is always visible), and
+a visible input heading and a labelled check button, a collapsed privacy row under the composer (its short line is always visible), and
 the source footer. The example chips render only when `strings.exampleChips` holds owner-approved entries; it is empty for now.
 The upload consent checkbox gates the upload button. The upload form is hidden in this text-first build:
 it sits behind `features.mediaUpload` in `web/src/config/features.js`, which is `false` by default. The audio
@@ -600,12 +600,19 @@ The notice is not shown when `evidence` is missing, or when a hadith notice does
 `supported_confirms` preview shows a notice.
 
 A published answer (`published_answer`, SPEC.md §0.5, §0.8) renders in its own block, `data-role="published-answer"`,
-between the evidence and the generated explanation. It shows the link host as the source chip, the title, the verbatim
+before supplementary evidence and the generated explanation. It shows the link host as the source chip, the title, the verbatim
 excerpt with the source line, and the link. Live evidence that carries `source_ref` instead of `corpus_id` renders the same
 scripture block. The UI never shows a source name that the response does not carry.
 
-Each scripture block sets the Arabic quote in Amiri Quran (`@fontsource/amiri-quran`, OFL 1.1; see SOURCES.md) and
-ends with the source line from SPEC.md §0.7 (`strings.quoteSourceNote`), shown next to the source link.
+Quran evidence uses Amiri Quran (`@fontsource/amiri-quran`, OFL 1.1; see SOURCES.md); other source
+excerpts use the interface's IBM Plex Sans Arabic for readability. Each source block keeps the source
+line from SPEC.md §0.7 (`strings.quoteSourceNote`) and its link. The compact question header keeps the
+complete user text and its edit action. Result sections use quieter borders and larger reading text in
+both themes, while source text and generated explanations stay visibly separate. The exact fixed
+backend message that no generated explanation is shown renders as an informational note; all other
+explanations retain the AI-generated heading. The card editor now recognizes the application's
+`loading` state, showing re-check progress and disabling duplicate actions while waiting. Result
+states, evidence selection, and API payloads are unchanged.
 
 The fixtures are synthetic. To preview them locally, run `npm run dev` and open `/#card-preview`. The
 preview is compiled out of production builds. The state labels follow the SPEC.md §12 item 1 table; all

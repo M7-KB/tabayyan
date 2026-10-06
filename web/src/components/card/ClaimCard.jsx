@@ -32,6 +32,8 @@ export function ClaimCard({ card, recheck = null, onRecheck }) {
 
       {isDisputed && <PositionsList positions={card.positions} evidenceById={evidenceById} />}
 
+      {card.published_answer && <PublishedAnswer answer={card.published_answer} />}
+
       {!isDisputed && alignment === 'CONTRADICTS' && (
         <p className="source-intro">{strings.sourceTextIntro}</p>
       )}
@@ -40,8 +42,6 @@ export function ClaimCard({ card, recheck = null, onRecheck }) {
           // The published-answer block already shows this record's excerpt once.
           .filter((item) => !(card.published_answer && item.source_ref?.url === card.published_answer.url))
           .map((item) => <ScriptureBlock key={item.evidence_id} item={item} />)}
-
-      {card.published_answer && <PublishedAnswer answer={card.published_answer} />}
 
       {card.explanation_ar && (
         <ExplanationBlock textAr={card.explanation_ar} textEn={card.explanation_en} />

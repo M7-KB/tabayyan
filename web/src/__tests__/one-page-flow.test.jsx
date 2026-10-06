@@ -274,6 +274,26 @@ describe('one-page flow: edit and re-check a card in place', () => {
     expect(screen.getAllByRole('article')).toHaveLength(2)
   })
 
+  it('shows re-check progress and disables duplicate actions until the response arrives', async () => {
+    const user = userEvent.setup()
+    const pending = deferred()
+    const fetchMock = await setupTwoCards(user, () => pending.promise)
+    const [first] = screen.getAllByRole('article')
+    await user.click(within(first).getByRole('button', { name: strings.understoodEdit }))
+    const submit = within(first).getByRole('button', { name: strings.understoodRecheck })
+    await user.click(submit)
+
+    expect(within(first).getByRole('status')).toHaveTextContent(strings.recheckLoading)
+    expect(submit).toBeDisabled()
+    expect(within(first).getByRole('button', { name: strings.understoodCancel })).toBeDisabled()
+    await user.click(submit)
+    expect(checkCalls(fetchMock)).toHaveLength(2)
+
+    await act(async () => pending.resolve(jsonResponse(200, { cards: [card('c1b', 'نتيجة تجريبية جديدة')] })))
+    expect(await screen.findByText('نتيجة تجريبية جديدة')).toBeInTheDocument()
+    expect(screen.queryByText(strings.recheckLoading)).toBeNull()
+  })
+
   it('does not submit an empty edit', async () => {
     const user = userEvent.setup()
     const fetchMock = await setupTwoCards(user, () => jsonResponse(200, { cards: [] }))

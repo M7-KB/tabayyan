@@ -94,3 +94,42 @@ node --test tests/*.test.mjs
 parse5 7.3.0 is MIT; entities is BSD-2-Clause. Installed package licence files
 carry the upstream notices. These code licences are separate from the content
 permissions in SOURCES.md.
+
+## HadeethEnc owner-run private index (R2)
+
+Owner decision D4 (2026-10-06). Read SOURCES.md, section "HadeethEnc owner-run private
+index", before running: the owner confirmed D4 supersedes the 2026-10-05 line.
+Allowed: one owner-run fetch through the official API, stored only in the private
+repo, fields verbatim, attribution to HadeethEnc.com. No agent runs this collector.
+
+Node 20+ required. The collector uses only built-in modules, so no `npm ci` is needed for it.
+
+```powershell
+Set-Location 'C:\Users\m7md2\.buzz\REPOS\tabayyan'
+$hadeethOutput = Join-Path (Get-Location) ('data\private\hadeethenc-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+node tools/source-collector/collect-hadeethenc.mjs --owner-run --output $hadeethOutput
+$hadeethExit = $LASTEXITCODE
+Write-Host "Output: $hadeethOutput; exit: $hadeethExit"
+Get-Content -LiteralPath (Join-Path $hadeethOutput 'manifest.json')
+```
+
+Interrupted or partial run (exit 2): resume the same directory. Discovery is kept in
+`manifest.json` so listing calls are not repeated. Completed IDs come from the JSONL file.
+
+```powershell
+node tools/source-collector/collect-hadeethenc.mjs --owner-run --output $hadeethOutput --resume
+```
+
+Behaviour: 4 workers, at least 250 ms between request starts across all workers, one
+retry for network errors, 429 and 5xx, and no retry for other 4xx. Only
+`hadeethenc.com/api/v1/` endpoints are called, with `language=ar` and numeric IDs.
+Redirects are refused. Output: `hadeethenc.jsonl` (id, title, hadeeth, attribution,
+grade, reference, explanation, categories, url), sorted by ID; `manifest.json`
+(SHA-256, byte length, count, empty-field counts); `report.json` (reason codes only,
+no text). Existing directories are never overwritten. Output stays under ignored
+`data/private/` and must never be committed.
+
+Response shapes for `categories/roots` and paging metadata come from the official
+API documentation, which was not fetched here. The collector accepts a bare list or
+`{data: [...]}` and fails the run on any other shape (`unexpected_shape`). Verify on
+the first owner run.

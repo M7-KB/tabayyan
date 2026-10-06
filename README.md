@@ -120,7 +120,9 @@ fall back to one claim over the complete input (`router_validation`
 `fallback_whole_input`). Shape problems never fail the request; only an unparseable
 or unavailable provider response does. Evidence, state and referral gates are unchanged.
 
-Default discovery runs MCP calls, and HadeethEnc only when the router's input kind is
+MCP discovery is off by default (`ENABLE_ISLAMIC_CONTENT_MCP=false`). When enabled,
+it uses the approved endpoint. Network HadeethEnc runs only when no private hadith
+path is configured and the router's input kind is
 `hadith`, in parallel within a shared three-second budget (or the remaining request
 budget, if shorter). Verse and term routes skip both. The HadeethEnc gate is the router
 kind alone, not keywords in the query. Each adapter receives an isolated receipt scope;
@@ -153,7 +155,7 @@ The router's topic vocabulary contains at most three closed
 `Topic` IDs and `safe_to_search` must be true. Code maps IDs through `TOPIC_QUERIES`
 and rejects any full input or claim that appears in the built query. Unknown topics
 authorize no source call. No free-text query is sent. Proposed Quran references and
-private-index routing are the subsequent V3 integration, not active in V2.
+private hadith search keys are resolved locally; only source-backed IDs authorize evidence.
 
 SPEC 0.11 owner items O1/O2/O3/O5 remain open. Bayyinat is disabled; glossary matching
 is off; term cards return CANNOT_CONFIRM with `term: null`, no evidence or definition,
@@ -1325,3 +1327,34 @@ remain enforced. No free-form model/user query reaches MCP.
 The [reference-pack translation](docs/challenge-brief.md#reference-pack-pages-815-association-platforms-and-external-sources-working-translation) records pages 8–15 of the public challenge document. It distinguishes the association books platform `byenah.com` from the Osoul Center Bayyinat web edition `bayenat.net`, which the owner-run collector targets. The owner authorized publication of the translation; the reference PDF will be supplied separately under `docs/reference/`.
 
 The [owner collection guide](docs/OWNER_SOURCE_COLLECTION.md) documents Bayyinat `/ar/categories/{cat}` and `/ar/category/{cat}/{id}` routes, exact glossary headings, bounded same-host redirects and offline `--from-html` re-extraction with snapshot hashes. Output uses the owner-approved v2 fields. The offline loader validates this handoff with `expected_format_version=2`, preserving fields and translation list items unchanged; existing matcher calls default to v1 and refuse v2 until V5 runtime integration. The translation section uses «ترجمة هذا المصطلح متوفرة باللغات التالية» and keeps its list items verbatim. The synthetic collector-to-loader test covers approved routes and refusal to fetch English selectors.
+
+## Local HadeethEnc index and D7 (2026-10-06)
+
+Set `PRIVATE_HADITH_PATH=/opt/render/project/src/data/private/hadeethenc.jsonl`
+in Render. The build command uses the existing `PRIVATE_DATA_TOKEN` to fetch
+`hadeethenc/hadeethenc.jsonl` and `hadeethenc/manifest.json` from the private repo.
+No publisher collection runs in the build. The loader checks the uncompressed
+bytes at startup against owner SHA-256
+`1e0a79c49b0287a6ea33826dde1996bd465c81490f59c0050444b6241f9b2ae6`,
+10,302,934 bytes, 3,574 records and the complete manifest. Version: 2026-10-06.
+No raw fields, paths or parser payloads enter diagnostics. Health adds
+`hadith_status`, `hadith_error`, `hadith_items` (display-eligible rows) and
+`hadith_version`. A configured but invalid file disables hadith evidence and
+marks health degraded. Remove the env var to enable the existing network
+HadeethEnc fallback under its shared three-second budget.
+
+Local BM25 indexes hadith text only. Router `proposed_hadith_phrases` are bounded
+internal search keys; they never reach a response, log, evidence field or network
+query. Hadith composition uses one ID-only `OPENAI_MODEL_REASON` decision with
+`meaning: yes/no/unsure` and confidence. Missing metadata, weak/ambiguous grades,
+unknown IDs, low decision confidence, no/unsure, and levels C/D cannot support D7.
+Only publisher labels صحيح / حسن (also bracketed) qualify; no grade is inferred.
+
+Code copies source text, attribution, reference, grading and link verbatim.
+Exact source text retains CONFIRMS. A meaning-only match has SUPPORTED /
+SAME_MEANING / `supported_same_meaning`, a referral, and `hadith_caution_ar`.
+The UI label for that key is «لم نجد لفظك حرفياً؛ هذا حديث صحيح بمعنى قريب».
+User wording remains input, never the displayed hadith. MCP stays disabled unless
+`ENABLE_ISLAMIC_CONTENT_MCP=true`; its endpoint still must match the allowlist.
+These are engineering gates, not a claim of live semantic accuracy; deployment
+and Nami's fabricated/weak-hadith red team remain required.

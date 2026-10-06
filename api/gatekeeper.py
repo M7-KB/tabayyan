@@ -118,6 +118,7 @@ class QuoteGatekeeper:
             if (r.get("domain"), r.get("source_id")) not in {
                 ("quran", "kfc-mushaf"),
                 ("hadith", "sahih-bukhari"),
+                ("hadith", "hadeethenc"),
             }:
                 continue
             if r.get("domain") == "quran":

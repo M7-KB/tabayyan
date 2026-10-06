@@ -128,6 +128,8 @@ class OnePassCheckService(CheckService):
                 no_checkable_claim=route.extracted.no_checkable_claim,
                 propose_state=True,
                 quran_refs=route.quran_refs,
+                hadith_kind=route.kind == "hadith",
+                hadith_phrases=route.hadith_phrases,
             )
             code(card["abstained_reason"] or card["state"])
             if progress is not None:

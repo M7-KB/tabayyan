@@ -70,6 +70,7 @@ def test_real_default_check_route_only_sends_minimized_query(monkeypatch, mcp_en
         openai_model_extract="fixture",
         openai_model_reason="fixture",
         islamic_content_mcp_url="https://mcp.islamiccontent.org/mcp" if mcp_enabled else "",
+        enable_islamic_content_mcp=mcp_enabled,
     )
     app = create_app(settings)
     with TestClient(app) as client:

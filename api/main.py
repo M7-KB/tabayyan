@@ -40,6 +40,7 @@ from api.glossary_matcher import GlossaryMatcher
 from api.hadeethenc_discovery import HadeethEncDiscovery
 from api.islamic_mcp import IslamicContentConnector
 from api.one_pass import OnePassCheckService
+from api.private_index_search import IndexUnavailable
 from api.private_short_discovery import PrivateShortDiscovery, TransientIndexEmbedder
 from api.provider import OpenAIStructuredModel, ProviderUnavailable
 from api.retrieval import BM25Retriever
@@ -144,9 +145,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         status = short_index_status(
                             settings.private_short_index_dir, matcher_type.source_id
                         )
-                    except Exception:
+                    except CorpusValidationError as exc:
+                        # Loader reasons are fixed strings without source text or paths.
                         index_status[name] = "unavailable"
-                        logger.warning("Private short index unavailable: source=%s", name)
+                        logger.warning(
+                            "Private short index unavailable: source=%s reason=%s", name, exc
+                        )
+                    except Exception as exc:
+                        index_status[name] = "unavailable"
+                        logger.warning(
+                            "Private short index unavailable: source=%s reason=%s",
+                            name,
+                            exc if isinstance(exc, IndexUnavailable) else type(exc).__name__,
+                        )
                     else:
                         setattr(private_indexes, name, matcher)
                         index_status[name] = "loaded" if status == "complete" else "partial"

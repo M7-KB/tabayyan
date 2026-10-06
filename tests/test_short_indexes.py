@@ -5,7 +5,12 @@ import json
 
 import pytest
 
-from corpus.short_indexes import AUTHORITY_EVENT, load_short_index, short_index_status
+from corpus.short_indexes import (
+    AUTHORITY_EVENT,
+    INDEX_ONLY_FIELD_LIMIT,
+    load_short_index,
+    short_index_status,
+)
 from corpus.validate import CorpusValidationError
 
 
@@ -342,3 +347,49 @@ def test_partial_opt_in_never_relaxes_hash_pinning(tmp_path):
             allow_pending_review=True,
             allow_partial=True,
         )
+
+
+def load_v2(tmp_path, source, row):
+    digest, registry, rows = handoff(tmp_path, source, [row], version=2)
+    return load_short_index(
+        tmp_path,
+        source,
+        digest,
+        sources_path=registry,
+        allow_pending_review=True,
+        expected_format_version=2,
+    )
+
+
+def test_bayyinat_detailed_answer_may_exceed_the_display_field_limit(tmp_path):
+    # Real detailed answers run past 12,000 characters; the field is indexing input only.
+    row = v2_row("bayyinat")
+    row["detailed_answer"] = "جواب طويل عينة. " * 1250  # 20,000 characters
+    assert len(row["detailed_answer"]) == 20000
+    (loaded,) = load_v2(tmp_path, "bayyinat", row)
+    assert loaded["detailed_answer"] == row["detailed_answer"]
+
+
+def test_index_only_field_still_has_a_bound(tmp_path):
+    row = v2_row("bayyinat")
+    row["detailed_answer"] = "ج" * (INDEX_ONLY_FIELD_LIMIT + 1)
+    with pytest.raises(CorpusValidationError, match="v2 text invalid"):
+        load_v2(tmp_path, "bayyinat", row)
+
+
+@pytest.mark.parametrize(
+    "source,field",
+    [
+        ("bayyinat", "title"),
+        ("bayyinat", "question_text"),
+        ("bayyinat", "summary"),
+        ("jamhara-glossary", "terminological_meaning"),
+        ("jamhara-glossary", "term_ar"),
+    ],
+)
+def test_displayed_fields_keep_the_display_limit(tmp_path, source, field):
+    row = v2_row(source)
+    row[field] = "نص عينة. " * 2500  # 20,000 characters
+    # The display-only short field fails the generic text check, the rest the v2 check.
+    with pytest.raises(CorpusValidationError, match="text invalid"):
+        load_v2(tmp_path, source, row)

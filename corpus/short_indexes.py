@@ -53,10 +53,17 @@ def _read(path: Path, limit: int) -> bytes:
     return value
 
 
-def _string(value: object, *, optional: bool = False) -> bool:
+# Displayed fields are bounded like every other displayed text. Bayyinat's detailed
+# answer is indexing input only (display shows the summary or a 400-character first
+# paragraph) and real answers run past 12,000 characters, so it has its own bound.
+DISPLAY_FIELD_LIMIT = 12000
+INDEX_ONLY_FIELD_LIMIT = 200000
+
+
+def _string(value: object, *, optional: bool = False, limit: int = DISPLAY_FIELD_LIMIT) -> bool:
     return (
         isinstance(value, str)
-        and len(value) <= 12000
+        and len(value) <= limit
         and (optional or bool(value.strip()))
         and not any(0xD800 <= ord(char) <= 0xDFFF or char == "\x00" for char in value)
     )
@@ -212,8 +219,9 @@ def load_short_index(
                 )
                 title_field = "title" if source_id == "bayyinat" else "term_ar"
                 required = [title_field, short_field]
+                index_only = []
                 if source_id == "bayyinat":
-                    required.append("detailed_answer")
+                    index_only = ["detailed_answer"]
                     optional = ["summary"]
                     lists = ["keywords"]
                     path_pattern = r"/ar/category/[^/]+/[^/]+/?"
@@ -227,14 +235,17 @@ def load_short_index(
                 )
                 _require(
                     all(_string(row[field]) for field in required)
-                    and all(_string(row[field], optional=True) for field in optional),
+                    and all(_string(row[field], optional=True) for field in optional)
+                    and all(
+                        _string(row[field], limit=INDEX_ONLY_FIELD_LIMIT) for field in index_only
+                    ),
                     "Private index v2 text invalid",
                 )
                 _require(
                     all(
                         len(re.findall(r"[ء-ي]", row[field]))
                         > len(re.findall(r"[A-Za-z]", row[field]))
-                        for field in required
+                        for field in [*required, *index_only]
                     ),
                     "Private index v2 Arabic text required",
                 )

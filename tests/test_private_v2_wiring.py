@@ -386,3 +386,27 @@ def test_partial_env_opt_in_is_explicit(monkeypatch):
     assert Settings(openai_api_key="inert").private_short_index_allow_partial is False
     monkeypatch.setenv("PRIVATE_SHORT_INDEX_ALLOW_PARTIAL", "true")
     assert Settings(openai_api_key="inert").private_short_index_allow_partial is True
+
+
+def test_startup_logs_the_text_free_loader_reason(tmp_path, caplog):
+    import logging
+
+    write_manifest(tmp_path)
+    # No bayyinat.jsonl exists: the loader's fixed reason names the failure, not a path.
+    app = create_app(
+        Settings(
+            openai_api_key="inert",
+            openai_schema_warmup=False,
+            private_short_index_dir=tmp_path,
+            private_bayyinat_sha256="a" * 64,
+            allow_pending_review=True,
+        )
+    )
+    with caplog.at_level(logging.WARNING, logger="api.main"), TestClient(app) as client:
+        assert client.get("/health").json()["private_index_status"]["bayyinat"] == "unavailable"
+    messages = [r.getMessage() for r in caplog.records if "Private short index" in r.getMessage()]
+    assert messages == [
+        "Private short index unavailable: source=bayyinat "
+        "reason=Private short-index validation failed"
+    ]
+    assert str(tmp_path) not in " ".join(messages)

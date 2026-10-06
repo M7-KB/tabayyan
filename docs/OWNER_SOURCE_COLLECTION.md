@@ -127,7 +127,12 @@ its pane (`aria-controls` or `href="#id"`) carries the text. The extractor follo
 shapes. When the question card is absent the h1 is the question; «الخلاصة» stays
 optional (display then uses the first paragraph of the detailed answer, D6); when no tab
 is labelled «الجواب التفصيلي» the known panes `detailedAnswer`, then `allAnswers`, are
-used. Re-run offline on the saved run, no fetching:
+used. Pages repeat section headings (the full-reply pane carries every section, and
+the dedicated pane repeats its heading): a copy inside the full-reply pane never
+competes with the section's own pane or heading; for «الجواب التفصيلي» the
+`detailedAnswer` pane is preferred, identical copies collapse, and otherwise the first
+remaining copy is taken. Other duplicated sections with differing text still fail
+closed. Re-run offline on the saved run, no fetching:
 
 ```powershell
 node tools/source-collector/collect.mjs --from-html data\private\source-collection-<bayyinat-run> --output data\private\source-collection-<new-time>

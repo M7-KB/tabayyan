@@ -108,41 +108,70 @@ function collectUntil(nodes, start, stops, name) {
   return body;
 }
 
+// Whether `node` is, or sits inside, the element with this id.
+const inside = (node, id) => {
+  for (let n = node; n && isElement(n); n = n.parentNode) if (attr(n, 'id') === id) return true;
+  return false;
+};
+// The full-reply pane repeats every section with its heading; a candidate found there
+// never competes with the section's own heading or pane.
+const FULL_REPLY_PANE = 'allAnswers';
+// For these labels a duplicated section is resolved in a fixed order instead of failing.
+const PREFERRED_PANE = { 'الجواب التفصيلي': 'detailedAnswer' };
+const normalized = value => clean(value).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** The content nodes of one labelled element, plus the element that anchors it in the page. */
+function candidate(document, head, name, stops) {
+  const link = tabLink(head);
+  if (link) {
+    // A tabbed page: the label is a tab link and the content is its pane.
+    const pane = byId(document, attr(link, 'aria-controls') || attr(link, 'href').slice(1));
+    return pane ? { anchor: pane, body: collectUntil(children(pane), 0, stops, name) } : null;
+  }
+  // Content follows the heading. When the heading sits alone in a header wrapper
+  // (card-header), the content follows the wrapper instead.
+  let node = head;
+  for (;;) {
+    const siblings = children(node.parentNode ?? {});
+    const body = collectUntil(siblings, siblings.indexOf(node) + 1, stops, name);
+    const parent = node.parentNode;
+    if (body.length > 0 || !parent || !isElement(parent) || parent.tagName === 'body' ||
+      children(parent).filter(isElement).length !== 1) return { anchor: head, body };
+    node = parent;
+  }
+}
+
+const bodyText = body => clean(body.filter(n => !isMeta(n)).map(text).join(''));
+
 function field(document, name, stops) {
   const elements = walk(document).filter(n => isElement(n) && label(text(n)) === name);
   // Innermost match only: a wrapper whose text is just the heading is not a second match.
   const heads = elements.filter(n => !walk(n).slice(1).some(d => isElement(d) &&
     label(text(d)) === name));
-  const inline = heads.filter(n => !tabLink(n));
-  const tabs = heads.filter(n => tabLink(n));
-  if (inline.length > 1) return { status: 'ambiguous' };
-  let body = [];
-  if (inline.length === 1) {
-    // Content follows the heading. When the heading sits alone in a header wrapper
-    // (card-header), the content follows the wrapper instead.
-    let node = inline[0];
-    for (;;) {
-      const siblings = children(node.parentNode ?? {});
-      body = collectUntil(siblings, siblings.indexOf(node) + 1, stops, name);
-      const parent = node.parentNode;
-      if (body.length > 0 || !parent || !isElement(parent) || parent.tagName === 'body' ||
-        children(parent).filter(isElement).length !== 1) break;
-      node = parent;
+  let candidates = heads.map(head => candidate(document, head, name, stops)).filter(Boolean)
+    .map(c => ({ ...c, text: bodyText(c.body) })).filter(c => c.text);
+  if (candidates.length === 0 && heads.length === 0) {
+    // No label at all: a known pane id may still hold the section.
+    const pane = (PANE_IDS[name] ?? []).map(id => byId(document, id)).find(Boolean);
+    if (pane) {
+      const body = collectUntil(children(pane), 0, stops, name);
+      candidates = [{ anchor: pane, body, text: bodyText(body) }].filter(c => c.text);
     }
-  } else {
-    // A tabbed page: the label is a tab link and the content is its pane.
-    const ids = [...new Set(tabs.map(n => {
-      const link = tabLink(n);
-      return attr(link, 'aria-controls') || attr(link, 'href').slice(1);
-    }).filter(Boolean))];
-    if (ids.length > 1) return { status: 'ambiguous' };
-    const pane = ids.length === 1 ? byId(document, ids[0]) :
-      (PANE_IDS[name] ?? []).map(id => byId(document, id)).find(Boolean);
-    if (!pane) return { status: 'missing' };
-    body = collectUntil(children(pane), 0, stops, name);
   }
-  const value = clean(body.filter(n => !isMeta(n)).map(text).join(''));
-  return value ? { status: 'ok', text: value, body } : { status: 'missing' };
+  if (candidates.length === 0) return { status: 'missing' };
+  // Resolution for duplicates: the section's own pane or heading over the full-reply copy;
+  // then the preferred pane; then identical copies collapse; then, for labels that allow
+  // it, the first remaining candidate. Everything else stays ambiguous.
+  let pool = candidates.filter(c => !inside(c.anchor, FULL_REPLY_PANE));
+  if (pool.length === 0) pool = candidates;
+  if (pool.length > 1 && PREFERRED_PANE[name]) {
+    const preferred = pool.filter(c => inside(c.anchor, PREFERRED_PANE[name]));
+    if (preferred.length > 0) pool = preferred;
+  }
+  if (pool.length > 1 && new Set(pool.map(c => normalized(c.text))).size === 1) pool = [pool[0]];
+  if (pool.length > 1 && !PREFERRED_PANE[name]) return { status: 'ambiguous' };
+  const [chosen] = pool;
+  return { status: 'ok', text: chosen.text, body: chosen.body };
 }
 
 /** Verbatim list items from the section; plain lines when the section has no list. */

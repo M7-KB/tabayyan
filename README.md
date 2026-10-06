@@ -1250,13 +1250,42 @@ only; until a HadeethEnc result returns, hadith claims abstain with referral.
 R4's [private matcher integration](docs/PRIVATE_INDEX_MATCHERS.md) describes
 in-memory Bayyinat/glossary candidate retrieval with BM25 and 1024-dimensional
 OpenAI embeddings. No query/index cache is written, level D does not retrieve,
-and candidate scores never authorize evidence. V3 API wiring, owner source
-handoff and live/held-out retrieval evaluation remain separate requirements.
+and candidate scores never authorize evidence. V5 opts these matchers into the
+one-pass API with a checksummed v2 owner handoff. Live/held-out retrieval evaluation
+still requires the owner's artifacts and deployment.
 
 R2's [private short-index handoff](docs/PRIVATE_SHORT_INDEX_HANDOFF.md) describes
 loading owner-collected Bayyinat/glossary files with trusted SHA-256 values and
 source permission gates. No public source data is added. Loaders do not enable
 the API automatically; actual coverage awaits owner collection and inspection.
+Set `PRIVATE_SHORT_INDEX_DIR` to the directory containing `manifest.json` and
+the v2 JSONL files. Set `PRIVATE_BAYYINAT_SHA256` and/or `PRIVATE_GLOSSARY_SHA256`
+to trusted checksums supplied separately by the owner. An unset checksum leaves
+that source disabled. No private artifact paths or hashes are inferred, and this
+change does not fetch files during the build. The owner supplies them privately.
+Set `OPENAI_MODEL_EMBED=text-embedding-3-large` explicitly; the live adapter reads
+the model and key from settings, and refuses any other embedding model for this
+1024-dimensional index contract.
+The complete-manifest, scoped-permission, checksum and review gates run before
+startup embeddings. A configured invalid artifact or embedding failure disables
+that source and degrades health; `/health` reports fixed source statuses/counts.
+The owner-authorized pending-review mode is `ALLOW_PENDING_REVIEW=true`.
+
+Only routed doubts use Bayyinat and only routed term requests use the glossary.
+Level D skips both. Retrieval has a 3-second cap within the 35-second request
+deadline; failures produce retryable unfinished results. Candidates are bound to
+the current request and still pass the existing verbatim, embedded-scripture,
+grading, alignment and confidence gates. Query embeddings are transient.
+Private candidates retain the measured lexical overlap floor; only resolved
+router Quran references receive the existing D2 question exception.
+Bayyinat indexes title, question, keywords and detailed answer; display copies
+the summary unchanged, or the first paragraph of the detailed answer up to
+400 characters with no added ellipsis. Paragraphs end at a blank line; internal
+line breaks are copied unchanged. Glossary indexes term, short explanation
+and verbatim translation-list items; its display field is terminological meaning.
+The list has no verified English-equivalent mapping. Until that contract exists,
+term cards retain abstention and the glossary link; no `term_en` is generated or
+inferred from language names. Private contents never enter the public repo.
 
 The owner-run [R1 collection command](docs/OWNER_SOURCE_COLLECTION.md) collects
 Bayyinat and the approved dictionary into private JSONL with SHA-256 manifests.
@@ -1339,7 +1368,7 @@ remain enforced. No free-form model/user query reaches MCP.
 
 The [reference-pack translation](docs/challenge-brief.md#reference-pack-pages-815-association-platforms-and-external-sources-working-translation) records pages 8–15 of the public challenge document. It distinguishes the association books platform `byenah.com` from the Osoul Center Bayyinat web edition `bayenat.net`, which the owner-run collector targets. The owner authorized publication of the translation; the reference PDF will be supplied separately under `docs/reference/`.
 
-The [owner collection guide](docs/OWNER_SOURCE_COLLECTION.md) documents Bayyinat `/ar/categories/{cat}` and `/ar/category/{cat}/{id}` routes, exact glossary headings, bounded same-host redirects and offline `--from-html` re-extraction with snapshot hashes. Output uses the owner-approved v2 fields. The offline loader validates this handoff with `expected_format_version=2`, preserving fields and translation list items unchanged; existing matcher calls default to v1 and refuse v2 until V5 runtime integration. The translation section uses «ترجمة هذا المصطلح متوفرة باللغات التالية» and keeps its list items verbatim. The synthetic collector-to-loader test covers approved routes and refusal to fetch English selectors.
+The [owner collection guide](docs/OWNER_SOURCE_COLLECTION.md) documents Bayyinat `/ar/categories/{cat}` and `/ar/category/{cat}/{id}` routes, exact glossary headings, bounded same-host redirects and offline `--from-html` re-extraction with snapshot hashes. Output uses the owner-approved v2 fields. V5 runtime loading selects `expected_format_version=2`, preserving fields and translation list items unchanged; v1 offline callers remain supported. The translation section uses «ترجمة هذا المصطلح متوفرة باللغات التالية» and keeps its list items verbatim. The synthetic collector-to-loader test covers approved routes and refusal to fetch English selectors.
 
 ## Local HadeethEnc index and D7 (2026-10-06)
 

@@ -49,6 +49,8 @@ def test_health_reports_config_and_unavailable_artifacts(settings):
         "corpus_status": "not_configured",
         "corpus_error": None,
         "hadith_status": "not_configured",
+        "private_index_status": {"bayyinat": "not_configured", "glossary": "not_configured"},
+        "private_index_items": {"bayyinat": 0, "glossary": 0},
         "hadith_error": None,
         "hadith_items": 0,
         "hadith_version": None,

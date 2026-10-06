@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from api.bayyinat_matcher import BayyinatMatcher
 from api.check import CheckRequest
 from api.classifier import LevelClassifier, LevelProposal
 from api.composer import Composer, DecisionProposal, HadithMeaningProposal
@@ -35,9 +36,11 @@ from api.extract import (
     ExtractResponse,
 )
 from api.gatekeeper import QuoteGatekeeper, SourceRequest
+from api.glossary_matcher import GlossaryMatcher
 from api.hadeethenc_discovery import HadeethEncDiscovery
 from api.islamic_mcp import IslamicContentConnector
 from api.one_pass import OnePassCheckService
+from api.private_short_discovery import PrivateShortDiscovery, TransientIndexEmbedder
 from api.provider import OpenAIStructuredModel, ProviderUnavailable
 from api.retrieval import BM25Retriever
 from api.router import Router, RouterProposal
@@ -81,6 +84,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         hadith_records = []
         hadith_status = "disabled" if settings.health_only else "not_configured"
         hadith_error = None
+        private_indexes = PrivateShortDiscovery()
+        initial_index_status = "disabled" if settings.health_only else "not_configured"
+        index_status = {"bayyinat": initial_index_status, "glossary": initial_index_status}
+        index_counts = {"bayyinat": 0, "glossary": 0}
         if not settings.health_only:
             settings.require_key()
             policy, tuning = load_config(settings.content_policy_path, settings.tuning_path)
@@ -110,6 +117,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         HADITH_SHA256,
                         len(hadith_records),
                     )
+            if settings.private_short_index_dir is not None:
+                embedder = TransientIndexEmbedder(
+                    settings.openai_api_key, settings.openai_model_embed
+                )
+                for name, matcher_type, digest in (
+                    ("bayyinat", BayyinatMatcher, settings.private_bayyinat_sha256),
+                    ("glossary", GlossaryMatcher, settings.private_glossary_sha256),
+                ):
+                    if not digest:
+                        continue
+                    try:
+                        matcher = await matcher_type.from_private_files(
+                            settings.private_short_index_dir,
+                            digest,
+                            embedder,
+                            allow_pending_review=settings.allow_pending_review,
+                            expected_format_version=2,
+                        )
+                    except Exception:
+                        index_status[name] = "unavailable"
+                        logger.warning("Private short index unavailable: source=%s", name)
+                    else:
+                        setattr(private_indexes, name, matcher)
+                        index_status[name] = "loaded"
+                        index_counts[name] = len(matcher._records)
         app.state.policy = policy
         app.state.tuning = tuning
         app.state.corpus = records
@@ -119,6 +151,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.hadith_records = hadith_records
         app.state.hadith_status = hadith_status
         app.state.hadith_error = hadith_error
+        app.state.private_indexes = private_indexes
+        app.state.index_status = index_status
+        app.state.index_counts = index_counts
         # One connection pool shared across models and requests; never stores request data.
         with httpx.Client(trust_env=False) as provider_client:
             app.state.provider_client = provider_client
@@ -247,6 +282,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             local_hadith=settings.private_hadith_path is not None,
                         ),
                         corpus_version=app.state.corpus_version,
+                        private_indexes=app.state.private_indexes,
                         connector=DefaultDiscovery(
                             mcp=IslamicContentConnector()
                             if settings.enable_islamic_content_mcp
@@ -336,6 +372,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             and bool(app.state.corpus)
             and app.state.corpus_error is None
             and app.state.hadith_error is None
+            and "unavailable" not in app.state.index_status.values()
             and app.state.policy is not None
             and app.state.tuning is not None
             and bool(settings.openai_model_extract.strip())
@@ -351,6 +388,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "corpus_status": app.state.corpus_status,
             "corpus_error": app.state.corpus_error,
             "hadith_status": app.state.hadith_status,
+            "private_index_status": app.state.index_status,
+            "private_index_items": app.state.index_counts,
             "hadith_error": app.state.hadith_error,
             "hadith_items": len(app.state.hadith_records),
             "hadith_version": HADITH_VERSION if app.state.hadith_status == "loaded" else None,

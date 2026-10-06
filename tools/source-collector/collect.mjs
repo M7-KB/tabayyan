@@ -80,21 +80,68 @@ const crawlable = value => value && matches(
  * headings fail closed. Content runs over following siblings until a stop label or a
  * heading that is not a nested label. Nothing is inferred from other containers.
  */
+// Page furniture next to a section's content: author/source lines, breadcrumbs, pagers.
+const META_CLASS = /(?:^|\s)(?:reference|breadcrumb|next-prev|share|social|nav|navbar)(?:\s|$)/;
+const isMeta = node => isElement(node) && META_CLASS.test(attr(node, 'class'));
+// The tab link (`<a href="#pane">` or role="tab") that contains a labelled element, if any.
+const tabLink = node => {
+  for (let n = node.parentNode; n && isElement(n); n = n.parentNode) {
+    if (n.tagName === 'a' && (attr(n, 'href').startsWith('#') || attr(n, 'role') === 'tab')) return n;
+  }
+  return null;
+};
+const byId = (document, id) => id ? walk(document).find(n => isElement(n) && attr(n, 'id') === id) : null;
+// Known tab pane ids on bayenat.net question pages, used only when no labelled heading or
+// tab link names the section. The full-reply pane holds the detailed answer when there is
+// no dedicated pane for it.
+const PANE_IDS = { 'الجواب التفصيلي': ['detailedAnswer', 'allAnswers'] };
+
+/** Nodes after `start` within `nodes`, up to a stop label or a non-nested heading. */
+function collectUntil(nodes, start, stops, name) {
+  const body = [];
+  for (const node of nodes.slice(start)) {
+    if (isElement(node) && label(text(node)) === name) continue; // the section's own heading
+    if (isElement(node) && (stops.includes(label(text(node))) ||
+      (isHeading(node) && !NESTED_LABELS.includes(label(text(node)))))) break;
+    body.push(node);
+  }
+  return body;
+}
+
 function field(document, name, stops) {
   const elements = walk(document).filter(n => isElement(n) && label(text(n)) === name);
   // Innermost match only: a wrapper whose text is just the heading is not a second match.
   const heads = elements.filter(n => !walk(n).slice(1).some(d => isElement(d) &&
     label(text(d)) === name));
-  if (heads.length > 1) return { status: 'ambiguous' };
-  if (heads.length === 0) return { status: 'missing' };
-  const siblings = children(heads[0].parentNode ?? {});
-  const body = [];
-  for (const node of siblings.slice(siblings.indexOf(heads[0]) + 1)) {
-    if (isElement(node) && (stops.includes(label(text(node))) ||
-      (isHeading(node) && !NESTED_LABELS.includes(label(text(node)))))) break;
-    body.push(node);
+  const inline = heads.filter(n => !tabLink(n));
+  const tabs = heads.filter(n => tabLink(n));
+  if (inline.length > 1) return { status: 'ambiguous' };
+  let body = [];
+  if (inline.length === 1) {
+    // Content follows the heading. When the heading sits alone in a header wrapper
+    // (card-header), the content follows the wrapper instead.
+    let node = inline[0];
+    for (;;) {
+      const siblings = children(node.parentNode ?? {});
+      body = collectUntil(siblings, siblings.indexOf(node) + 1, stops, name);
+      const parent = node.parentNode;
+      if (body.length > 0 || !parent || !isElement(parent) || parent.tagName === 'body' ||
+        children(parent).filter(isElement).length !== 1) break;
+      node = parent;
+    }
+  } else {
+    // A tabbed page: the label is a tab link and the content is its pane.
+    const ids = [...new Set(tabs.map(n => {
+      const link = tabLink(n);
+      return attr(link, 'aria-controls') || attr(link, 'href').slice(1);
+    }).filter(Boolean))];
+    if (ids.length > 1) return { status: 'ambiguous' };
+    const pane = ids.length === 1 ? byId(document, ids[0]) :
+      (PANE_IDS[name] ?? []).map(id => byId(document, id)).find(Boolean);
+    if (!pane) return { status: 'missing' };
+    body = collectUntil(children(pane), 0, stops, name);
   }
-  const value = clean(body.map(text).join(''));
+  const value = clean(body.filter(n => !isMeta(n)).map(text).join(''));
   return value ? { status: 'ok', text: value, body } : { status: 'missing' };
 }
 
@@ -128,7 +175,10 @@ export function extract(html, url) {
   if (!arabic(title)) return { links, reason: 'not_arabic_record' };
   const fail = (status, key) => ({ links, reason: `${status}_${key}` });
   if (hostname === 'bayenat.net') {
-    const question = field(document, 'نص السؤال', others(BAYENAT_LABELS, 'نص السؤال'));
+    let question = field(document, 'نص السؤال', others(BAYENAT_LABELS, 'نص السؤال'));
+    // Some question pages carry the question only in the h1; a missing section falls
+    // back to the title, while a duplicated section still fails closed.
+    if (question.status === 'missing') question = { status: 'ok', text: title };
     if (question.status !== 'ok') return fail(question.status, 'question_text');
     const detailed = field(document, 'الجواب التفصيلي', ['نص السؤال', 'كلمات دلالية']);
     if (detailed.status !== 'ok') return fail(detailed.status, 'detailed_answer');

@@ -90,6 +90,23 @@ Saved pages without such a manifest cannot be re-extracted: they need their orig
 node tools/source-collector/collect.mjs --from-html data\private\source-collection-<time> --output data\private\source-collection-<new-time>
 ```
 
+## Bayyinat question-page markup (2026-10-06)
+
+Saved question pages place «نص السؤال» as a card header whose content is the following
+card body (the author and source reference lines beside it are page furniture and are
+excluded), and put the answer sections behind tabs: the tab link carries the label and
+its pane (`aria-controls` or `href="#id"`) carries the text. The extractor follows both
+shapes. When the question card is absent the h1 is the question; «الخلاصة» stays
+optional (display then uses the first paragraph of the detailed answer, D6); when no tab
+is labelled «الجواب التفصيلي» the known panes `detailedAnswer`, then `allAnswers`, are
+used. Re-run offline on the saved run, no fetching:
+
+```powershell
+node tools/source-collector/collect.mjs --from-html data\private\source-collection-<bayyinat-run> --output data\private\source-collection-<new-time>
+```
+
+Then assemble the loader directory with `build-short-index.mjs` as described above.
+
 ## Section parsing
 
 Each field is found by its exact visible heading text (the innermost element whose

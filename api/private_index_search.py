@@ -154,7 +154,7 @@ class PrivateIndexMatcher:
         expected_sha256: str,
         embedder: Embedder,
         *,
-        startup_timeout: float = 120,
+        startup_timeout: float = 300,
         **loader_options,
     ):
         if not math.isfinite(startup_timeout) or startup_timeout <= 0:

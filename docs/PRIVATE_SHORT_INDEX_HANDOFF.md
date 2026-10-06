@@ -54,3 +54,13 @@ a manifest without entry status falls back to its run-level `complete` flag. A p
 source loads only with `allow_partial=True` (`PRIVATE_SHORT_INDEX_ALLOW_PARTIAL=true`
 in Render). `short_index_status(directory, source_id)` returns the status for health.
 The trusted SHA-256, byte count, record count, host, field and URL checks are unchanged.
+
+## Field bounds (2026-10-06)
+
+Displayed fields are bounded at 12,000 characters. Bayyinat's `detailed_answer` is
+indexing input only (display shows «الخلاصة» or the first paragraph capped at 400
+characters) and real answers run past 12,000 characters, so it is bounded at 200,000
+characters instead. Startup logs a failed source's fixed loader reason
+(`Private short index unavailable: source=… reason=…`); reasons never contain source
+text or paths. Startup embedding truncates each record to 8,000 bytes and has a
+300-second budget for the whole index.

@@ -148,6 +148,16 @@ BM25 indexes and queries use the `ar-search-v1` prefix aliases from #92. Overlap
 counts each distinct query-word group once, even when several aliases match;
 aliases never change corpus checksums, displayed text, or quote authorization.
 
+Direct Quran evidence, whether nominated by the router or found lexically, must
+share a content word with the original claim span or match a complete quotation
+in that span. A model-rewritten premise and a publisher's answer cannot supply
+that overlap. A one-word unmarked scripture hit also preserves letter identity:
+folding an interrogative's hamza must not turn ordinary prose in a publisher title
+or excerpt into an extra verse citation. Diacritics and format marks remain
+normalized; actual short quotations and explicitly attributed spans retain their
+source checks. Regression coverage is in `tests/test_evidence_relevance.py`,
+including the HTTP publisher-answer path and its low-confidence fallback.
+
 Legacy `claims` requests remain accepted and are joined for the single router call;
 when `original_text` is present it is authoritative. Client levels and deterministic
 personal-case cues in client claims can only restrict the result. An entire request

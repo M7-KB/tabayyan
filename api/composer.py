@@ -899,24 +899,30 @@ class Composer:
             gate["verbatim"] = "fail"
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
-        # A nominated ayah is a lookup key: it is shown only when the model cited it and
-        # a content word of the question (not a function word, more than two letters)
-        # occurs in the verse. The publisher answer's text is not consulted: a Bayyinat
-        # title such as «ألم ...» normalizes onto the one-word verse «الم» (owner, live
-        # result after PR 127). A nomination with no shared content word is never shown.
-        if nominated_ids & set(selected_ids):
-            unrelated = [
-                cid
-                for cid in selected_ids
-                if cid in nominated_ids
-                and not _content_overlap((asked, claim.text_ar), by_id[cid].record["text_ar"])
-            ]
-            if unrelated:
+        # Every directly selected ayah needs relevance to the original claim span,
+        # including lexical hits. Neither a model-rewritten premise nor the publisher
+        # answer can supply that relevance. An actual complete quotation remains
+        # eligible even when its only word would normally be a stopword.
+        quoted_ids = {
+            f.match.record.corpus_id
+            for f in findings
+            if f.marker is not None and f.match.classification == "VERBATIM" and not f.match.partial
+        }
+        unrelated = [
+            cid
+            for cid in selected_ids
+            if by_id[cid].record["domain"] == "quran"
+            and cid not in quoted_ids
+            and not _content_overlap((asked,), matching_text(by_id[cid].record))
+            and words(asked, fold_variants=False)
+            != words(matching_text(by_id[cid].record), fold_variants=False)
+        ]
+        if unrelated:
+            code("quran_evidence:no_overlap")
+            if nominated_ids.intersection(unrelated):
                 code("nominated_ref:no_overlap")
-                selected_ids = [cid for cid in selected_ids if cid not in unrelated]
-                card["evidence"] = [
-                    e for e in card["evidence"] if e["evidence_id"] not in unrelated
-                ]
+            selected_ids = [cid for cid in selected_ids if cid not in unrelated]
+            card["evidence"] = [e for e in card["evidence"] if e["evidence_id"] not in unrelated]
         if not card["evidence"]:
             return publisher_fallback("NO_MATCHING_EVIDENCE", proposal.alignment_proposal)
         # Apply this guard to every displayed glossary item, in every input path,

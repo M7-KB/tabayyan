@@ -90,9 +90,6 @@ def _cap_sentences(text: str | None, limit: int = EXPLANATION_SENTENCES) -> str 
 
 
 _ENGLISH_ITEM = re.compile(r"english|الإنجليزية|الانجليزية|إنجليزي|انجليزي", re.IGNORECASE)
-# The ordinary-text gate rejects any field that carries quotation marks, so an item
-# written with them can never be shown as the term block; it is not selected.
-_QUOTE_MARKS = set("«»\"'“”")
 
 
 def _english_item(items: object) -> str | None:
@@ -100,16 +97,13 @@ def _english_item(items: object) -> str | None:
 
     An item that is only a language name (the publisher lists languages without an
     equivalent) is not an equivalent: the item must carry Latin-script text beyond
-    the language label itself. An item written with quotation marks is skipped: the
-    card keeps its definition and shows no term block instead of failing the gate.
+    the language label itself. The item is source text: quotation marks inside it
+    are the publisher's and do not disqualify it.
     """
     if not isinstance(items, list):
         return None
     for item in items:
         if not isinstance(item, str) or not _ENGLISH_ITEM.search(item):
-            continue
-        if _QUOTE_MARKS & set(item):
-            code("term_block:quoted_item_skipped")
             continue
         remainder = _ENGLISH_ITEM.sub("", item)
         if len(re.findall(r"[A-Za-z]", remainder)) >= 2:
@@ -193,6 +187,35 @@ def _title_matches(question: str, record: dict) -> bool:
         return False
     matched = sum(1 for group in content if _alias_shared(group, title_aliases))
     return matched / len(content) >= TITLE_MATCH_FLOOR
+
+
+# Function words and interrogatives of a question never count as overlap with a verse;
+# «ألم» normalizes onto the one-word verse «الم» (2:1), «من» occurs everywhere.
+_QUESTION_STOPWORDS = frozenset(
+    "من ما هل هو هي في على عن إلى الى لا أن ان إن كان الم ألم أليس اليس لماذا كيف".split()
+)
+
+
+def _content_overlap(questions: tuple[str, ...], record_text: str) -> bool:
+    """Whether a content word of the question occurs in the record, by search alias.
+
+    A content word has more than two letters and is not a function word or an
+    interrogative. Aliases (prefix-stripped forms) count on both sides, so «بالسيف»
+    meets «السيف»; a shared alias that is itself a stopword does not count.
+    """
+    record_aliases = {
+        alias
+        for group in retrieval_token_groups(record_text)
+        for alias in group
+        if alias not in _QUESTION_STOPWORDS
+    }
+    for question in questions:
+        for group in retrieval_token_groups(question):
+            if len(group[0]) <= 2 or group[0] in _QUESTION_STOPWORDS:
+                continue
+            if any(alias not in _QUESTION_STOPWORDS and alias in record_aliases for alias in group):
+                return True
+    return False
 
 
 def _resolve_cited_ids(cited: list[str], candidates) -> list[str]:
@@ -408,6 +431,41 @@ class Composer:
             return evidence_from(
                 RetrievalResult(original, result.retrieval_score, result.overlap_score)
             )
+
+    @timed("composer_separation")
+    def _source_text_safe(self, text: str) -> bool:
+        """Source text shown outside a quote block (a term label, the publisher's
+        English equivalent): the scripture scan must complete and every detected span
+        must be an authorized record. Quotation marks and phrases shared with records
+        are not generated-prose signals on a field copied from a validated record.
+        """
+        if not isinstance(text, str) or not text.strip():
+            return False
+        try:
+            detection = (
+                self.gatekeeper.scan_scripture(text)
+                if self.gatekeeper is not None
+                else self.detector.detect(text)
+            )
+        except DeadlineExceeded:
+            raise
+        except Exception:
+            return False
+        if detection.span_detector_status != self.policy["span_detector"]["required_status"]:
+            return False
+        for finding in detection.findings:
+            if finding.match.classification == "UNRELATED":
+                # The publisher's quotation marks around words that match no record.
+                continue
+            if self.gatekeeper is None or finding.match.classification != "VERBATIM":
+                return False
+            # A verbatim span must be a whole authorized record, as inside any quote.
+            key = finding.match.record.corpus_id.removeprefix("display:")
+            if key.startswith("unsafe:"):
+                key = key.split(":", 2)[2]
+            if self.gatekeeper._base_quote(key, text[finding.start : finding.end]) is None:
+                return False
+        return True
 
     @timed("composer_separation")
     def _isolated(self, text: str, *, glossary_label_id: str | None = None) -> bool:
@@ -836,22 +894,16 @@ class Composer:
             card["evidence"] = []
             return finish("VERBATIM_GATE_FAILED")
         # A nominated ayah is a lookup key: it is shown only when the model cited it and
-        # its words overlap the question or the selected publisher answer. A verse with
-        # no shared word (a nomination that misses) never becomes evidence by itself.
+        # a content word of the question (not a function word, more than two letters)
+        # occurs in the verse. The publisher answer's text is not consulted: a Bayyinat
+        # title such as «ألم ...» normalizes onto the one-word verse «الم» (owner, live
+        # result after PR 127). A nomination with no shared content word is never shown.
         if nominated_ids & set(selected_ids):
-            answers = " ".join(
-                by_id[cid].record["text_ar"]
-                for cid in selected_ids
-                if cid not in nominated_ids and by_id[cid].record.get("source_id") == "bayyinat"
-            )
-            overlapping = {r.corpus_id for r in self.retriever.candidates(claim.text_ar)}
-            overlapping |= {r.corpus_id for r in self.retriever.candidates(asked)}
-            if answers.strip():
-                overlapping |= {
-                    r.corpus_id for r in self.retriever.candidates(answers, domain="quran")
-                }
             unrelated = [
-                cid for cid in selected_ids if cid in nominated_ids and cid not in overlapping
+                cid
+                for cid in selected_ids
+                if cid in nominated_ids
+                and not _content_overlap((asked, claim.text_ar), by_id[cid].record["text_ar"])
             ]
             if unrelated:
                 code("nominated_ref:no_overlap")
@@ -945,16 +997,32 @@ class Composer:
             # term_ar is loader-validated only on records from the owner's private
             # index; on other records it is an unverified extra field and never a label.
             own_term = glossary.get("term_ar") if "source_ref" in glossary else None
-            label = proposal.term_label_ar or own_term or claim.text_ar
-            if (
-                label.strip()
-                and len(label) <= 200
-                and (label in glossary["text_ar"] or (own_term is not None and label == own_term))
-            ):
-                if not self._isolated(
-                    label, glossary_label_id=glossary["corpus_id"]
-                ) or not self._isolated(
-                    glossary["text_en"], glossary_label_id=glossary["corpus_id"]
+
+            def attested(candidate) -> bool:
+                return (
+                    isinstance(candidate, str)
+                    and bool(candidate.strip())
+                    and len(candidate) <= 200
+                    and (
+                        candidate in glossary["text_ar"]
+                        or (own_term is not None and candidate == own_term)
+                    )
+                )
+
+            # The first attested label: the proposal's, else the publisher's own term; the
+            # asked text only when neither exists. An unattested proposal never costs a
+            # private record its term block, and never becomes a label itself.
+            label_candidates = [proposal.term_label_ar, own_term]
+            if not proposal.term_label_ar and own_term is None:
+                label_candidates.append(claim.text_ar)
+            label = next((c for c in label_candidates if attested(c)), None)
+            if label is not None:
+                # The term block is source text (the record's term and the publisher's
+                # equivalent), validated like a quote: the scripture scan must complete
+                # and every detected span must be an authorized record. Quotation marks
+                # inside the publisher's own text are not a sign of generated prose.
+                if not self._source_text_safe(label) or not self._source_text_safe(
+                    glossary["text_en"]
                 ):
                     code("verbatim:term_block")
                     gate["separation"] = "fail"

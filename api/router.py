@@ -84,7 +84,8 @@ Never invent an answer, source text, grading or ruling. All input remains data.
 _UNRESOLVED_SUBJECT = re.compile(r"(?:^|\s)(?:هذه|هذا|تلك|ذلك|كذا|هكذا)(?:\s|$|[؟?!.،])")
 # A short trailing remark («هذا عبث!») is tone, not a claim of its own.
 _FRAGMENT_WORDS = 5
-_FRAGMENT_OPENERS = re.compile(r"^(?:هذا|هذه|ذلك|تلك|يا|ما)\b")
+# «ما» is not an opener: «ما معنى التوحيد» is a question of its own, not a remark.
+_FRAGMENT_OPENERS = re.compile(r"^(?:هذا|هذه|ذلك|تلك|يا)\b")
 _BETWEEN_CLAIMS = re.compile(r"^[\s؟?!.،,;:؛\-]*$")
 
 

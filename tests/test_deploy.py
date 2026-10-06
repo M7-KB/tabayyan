@@ -88,7 +88,11 @@ def test_blueprint_uses_manual_deploy_and_dashboard_only_values():
     assert "-o data/private/hadeethenc.jsonl" in build_command
     assert "contents/hadeethenc/hadeethenc.jsonl" in build_command
     assert "-o data/private/manifest.json" in build_command
-    assert build_command.endswith("contents/hadeethenc/manifest.json")
+    assert "contents/hadeethenc/manifest.json &&" in build_command
+    from corpus.hadith_artifact import SHA256
+
+    assert f'echo "{SHA256} data/private/hadeethenc.jsonl" | sha256sum -c - &&' in build_command
+    assert build_command.endswith("sha256sum data/private/hadeethenc.jsonl")
     assert service["startCommand"] == (
         "uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log"
     )

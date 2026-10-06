@@ -1,5 +1,16 @@
 # Tools register
 
+## Request-wait diagnostics (2026-10-06)
+
+Codex / OpenAI (session identifies GPT-6; exact API model ID not exposed)
+implemented active-stage diagnostics and explicit hadith checksum logging under
+owner planning event
+`513e1d6618aeafe0294117abd44093c201046c0b1f837fc5e507f92d58573156`.
+Tools: bundled Buzz CLI and local skill, Git/GitHub CLI, PowerShell, Python 3.11,
+pytest, Ruff and Node. Synthetic tests only; no private corpus reads, collectors
+or live model calls. Live health reads establish only the reported build state.
+Provider terms were not independently verified in this coding session.
+
 ## Owner collector and reference-pack revisions (2026-10-06)
 
 R1 (reference-pack translation), R2 (HadeethEnc owner collector) and R3

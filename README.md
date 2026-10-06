@@ -1293,6 +1293,8 @@ Router schema failures repair individual fields with conservative defaults; unkn
 topics and malformed/out-of-range Quran refs are dropped individually (owner D3).
 Repair validation has a fixed attempt cap; fallback claim and premise fields are
 bounded to 12,000 characters, including legacy claim lists joined with newlines.
+If a fallback input exceeds that limit, only its first 12,000 characters are kept;
+the fallback truncates without adding a notice to the response.
 Request summary codes record fixed router field names and alignment gate outcomes,
 never model values, source text or user text. Provider failures remain distinct.
 Missing or wrong-source nominations are ignored. Level D skips this retrieval.

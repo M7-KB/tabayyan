@@ -26,7 +26,8 @@ const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308]);
 const BAYENAT_LABELS = ['نص السؤال', 'الجواب التفصيلي', 'الخلاصة', 'مضمون الشبهة', 'المراجع', 'كلمات دلالية'];
 // Sub-headings inside the detailed answer: kept as text, never a stop point for it.
 const NESTED_LABELS = ['الخلاصة', 'مضمون الشبهة', 'المراجع'];
-const GLOSSARY_LABELS = ['المعنى الاصطلاحي', 'الشرح المختصر', 'التعريف اللغوي المختصر', 'التعريف', 'الترجمات'];
+const TRANSLATIONS_LABEL = 'ترجمة هذا المصطلح متوفرة باللغات التالية';
+const GLOSSARY_LABELS = ['المعنى الاصطلاحي', 'الشرح المختصر', 'التعريف اللغوي المختصر', 'التعريف', TRANSLATIONS_LABEL];
 const LISTING_REASONS = new Set(['home_listing', 'category_listing']);
 const sha = value => createHash('sha256').update(value).digest('hex');
 const attr = (node, name) => node.attrs?.find(a => a.name === name)?.value ?? '';
@@ -151,7 +152,7 @@ export function extract(html, url) {
   const short = optional('الشرح المختصر');
   const linguistic = optional('التعريف اللغوي المختصر');
   const definition = optional('التعريف');
-  const translations = field(document, 'الترجمات', others(GLOSSARY_LABELS, 'الترجمات'));
+  const translations = field(document, TRANSLATIONS_LABEL, others(GLOSSARY_LABELS, TRANSLATIONS_LABEL));
   for (const found of [short, linguistic, definition, translations]) {
     if (found.status === 'ambiguous') return { links, reason: 'ambiguous_section' };
   }

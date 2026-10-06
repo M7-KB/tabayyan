@@ -57,13 +57,17 @@ an API/build/startup dependency. Agents must not run live collection.
   detailed_answer (الجواب التفصيلي, for indexing only).
 - `glossary.jsonl`: id, url, term_ar (h1), terminological_meaning (المعنى الاصطلاحي),
   short_explanation (الشرح المختصر), linguistic_definition (التعريف اللغوي المختصر),
-  definition (التعريف), translations (verbatim bullet items under الترجمات).
+  definition (التعريف), translations (verbatim bullet items under
+  ترجمة هذا المصطلح متوفرة باللغات التالية).
   Optional fields stay empty, never inferred or machine-translated.
 - `manifest.json`: SHA-256, actual UTF-8 byte lengths and counts for JSONL and
   private HTML snapshots; authority event, timestamp, traversal status.
 - `report.json`: page URLs and collection/skip/failure reasons without page text.
 - `html/`: private publisher HTML snapshots for extraction inspection. Never
   display full pages or upload these snapshots/records to chat/public Git.
+
+Snapshots are saved before extraction checks, so refused non-Arabic pages may
+also have private HTML snapshots. They are never included as JSONL records.
 
 DOM text extraction decodes entities and standardizes HTML layout spaces/newlines.
 

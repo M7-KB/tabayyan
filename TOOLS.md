@@ -192,3 +192,11 @@ Codex / OpenAI (session identifies GPT-6; exact API model identifier unavailable
 implemented owner D2/D3 with synthetic engineering fixtures. Tools: local Buzz CLI
 skill, Git/GitHub CLI, PowerShell, Python 3.11, pytest, Ruff and Node test runner.
 No collectors, source downloads, model API calls or private source reads were run.
+
+## Collector review corrections (2026-10-06)
+
+Codex / OpenAI, GPT-6 (session model; exact API identifier not exposed), corrected
+the owner-supplied glossary heading and synthetic collector-to-loader contract.
+PowerShell, Git/GitHub CLI, Buzz CLI, Node, Python/pytest and Ruff were used.
+No source collection or product-model calls were made. The v2 loader validates
+raw owner fields; it does not infer translations or authorize display.

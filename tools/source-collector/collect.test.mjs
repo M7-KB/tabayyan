@@ -21,7 +21,7 @@ const glossary = arPage('<h1>مصطلح عينة</h1>' +
   '<h2>الشرح المختصر</h2><p>شرح مختصر عينة.</p>' +
   '<h2>التعريف اللغوي المختصر</h2><p>تعريف لغوي عينة.</p>' +
   '<h2>التعريف</h2><p>تعريف عينة.</p>' +
-  '<h2>الترجمات</h2><ul><li>English: Sample translation</li></ul>');
+  '<h2>ترجمة هذا المصطلح متوفرة باللغات التالية</h2><ul><li>English: Sample translation</li></ul>');
 const html = { 'Content-Type': 'text/html' };
 
 test('URL allowlist: category listings and records only, plus home seeds', () => {
@@ -115,6 +115,13 @@ test('glossary record: verbatim terminological meaning, optional fields, transla
   assert.deepEqual(bare.translations, []);
   const noMeaning = extract(arPage('<h1>مصطلح عينة</h1><h2>الشرح المختصر</h2><p>شرح.</p>'), TERM_URL);
   assert.equal(noMeaning.reason, 'missing_terminological_meaning');
+});
+
+test('owner translation heading retains every publisher list item verbatim', () => {
+  const page = glossary.replace('<li>English: Sample translation</li>',
+    '<li>English: Sample translation</li><li>French: Sample equivalent</li>');
+  assert.deepEqual(extract(page, TERM_URL).record.translations,
+    ['English: Sample translation', 'French: Sample equivalent']);
 });
 
 test('a declared Arabic page still needs Arabic title and required text per record', () => {

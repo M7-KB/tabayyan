@@ -285,6 +285,9 @@ def test_configured_bad_index_is_degraded_and_never_enables_network_fallback(tmp
 def test_real_http_route_loads_private_index_and_never_dispatches_phrases(
     tmp_path, monkeypatch, valid, caplog
 ):
+    import logging
+
+    caplog.set_level(logging.INFO, logger="api.main")
     path = files(tmp_path, monkeypatch)
     if not valid:
         path.write_bytes(path.read_bytes() + b" ")
@@ -327,8 +330,11 @@ def test_real_http_route_loads_private_index_and_never_dispatches_phrases(
     if valid:
         assert card["alignment"] == "SAME_MEANING"
         assert card["evidence"][0]["quote_ar"] == TEXT
+        assert "Private hadith verified: sha256=" in caplog.text
+        assert "records=1" in caplog.text
     else:
         assert card["evidence"] == []
+        assert "Private hadith verified:" not in caplog.text
     assert len(route_model.calls) == 1 and len(reason_model.calls) == int(valid)
     assert "PRIVATE_PHRASE_SENTINEL" not in response.text
     assert "PRIVATE_PHRASE_SENTINEL" not in caplog.text

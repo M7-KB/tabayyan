@@ -7,7 +7,7 @@ from time import monotonic
 from api.check import CheckRequest, CheckService
 from api.classifier import rule_level
 from api.deadline import request_deadline, request_progress
-from api.diagnostics import code, record
+from api.diagnostics import code, record, timed
 from api.extract import ExtractionError
 from api.gatekeeper import SourceRequest
 from api.provider import ProviderUnavailable
@@ -120,17 +120,18 @@ class OnePassCheckService(CheckService):
         def compose(claim):
             if self._remaining() <= 0:
                 raise ProviderUnavailable("timeout")
-            card = composer.compose(
-                claim,
-                original=text,
-                lang=route.extracted.detected_lang,
-                input_kind=route.extracted.input_kind,
-                no_checkable_claim=route.extracted.no_checkable_claim,
-                propose_state=True,
-                quran_refs=route.quran_refs,
-                hadith_kind=route.kind == "hadith",
-                hadith_phrases=route.hadith_phrases,
-            )
+            with timed("composition_worker"):
+                card = composer.compose(
+                    claim,
+                    original=text,
+                    lang=route.extracted.detected_lang,
+                    input_kind=route.extracted.input_kind,
+                    no_checkable_claim=route.extracted.no_checkable_claim,
+                    propose_state=True,
+                    quran_refs=route.quran_refs,
+                    hadith_kind=route.kind == "hadith",
+                    hadith_phrases=route.hadith_phrases,
+                )
             code(card["abstained_reason"] or card["state"])
             if progress is not None:
                 progress.complete(claim.id, card)
@@ -146,7 +147,8 @@ class OnePassCheckService(CheckService):
         futures = [pool.submit(context.copy().run, compose, claim) for claim in claims]
         cards, retryable = [], []
         try:
-            done, _ = wait(futures, timeout=self._remaining())
+            with timed("composition_wait"):
+                done, _ = wait(futures, timeout=self._remaining())
             for claim, future in zip(claims, futures, strict=True):
                 if future in done:
                     try:

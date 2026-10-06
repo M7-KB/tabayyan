@@ -43,6 +43,7 @@ from api.retrieval import BM25Retriever
 from api.router import Router, RouterProposal
 from api.settings import Settings
 from api.span_detector import DetectorConfig, Record, SpanDetector
+from corpus.hadith_artifact import SHA256 as HADITH_SHA256
 from corpus.hadith_artifact import VERSION as HADITH_VERSION
 from corpus.hadith_artifact import load_hadith_artifact
 from corpus.private_artifact import load_private_corpus
@@ -104,6 +105,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     logger.warning("Private hadith unavailable: %s", hadith_error)
                 else:
                     hadith_status = "loaded"
+                    logger.info(
+                        "Private hadith verified: sha256=%s records=%d",
+                        HADITH_SHA256,
+                        len(hadith_records),
+                    )
         app.state.policy = policy
         app.state.tuning = tuning
         app.state.corpus = records

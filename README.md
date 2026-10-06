@@ -129,8 +129,16 @@ kind alone, not keywords in the query. Each adapter receives an isolated receipt
 late or failed batches cannot enter composition. Text-free request summaries record
 `retrieval_mcp` and `retrieval_hadeethenc` timings, plus composer input scans,
 gatekeeper checks, separation, dependencies, published answers, card validation, and
-total post-provider time. The summary also carries text-free integer totals
-(`proposed_refs` as the router's raw nominations, `resolved_refs`, `lexical_hits_capped`
+total post-provider time. The summary includes `active_stages` with elapsed
+milliseconds for stages still running at the
+HTTP deadline, including parallel composition workers and the evidence-copy
+step immediately after `composer_gatekeeper`. These entries locate unfinished
+work; they do not establish the cause of an earlier request from completed
+timings alone. Successful private hadith startup logs the verified pinned
+`sha256` and accepted record count after all artifact checks pass. The Render build
+also checks the pinned hash and prints the checksum line before startup.
+The summary also carries text-free integer totals (`proposed_refs` as the router's
+raw nominations, `resolved_refs`, `lexical_hits_capped`
 capped at 50, `compose_candidates`) and enum codes (`classifier:<status>` per claim,
 then each card's abstain reason or state). These timings and counts identify work after
 inference without logging user queries or source text.

@@ -22,7 +22,9 @@ services:
       curl -fsSL -H "Authorization: Bearer $PRIVATE_DATA_TOKEN"
       -H "Accept: application/vnd.github.raw"
       -o data/private/manifest.json
-      https://api.github.com/repos/M7-KB/tabayyan-private-data/contents/hadeethenc/manifest.json
+      https://api.github.com/repos/M7-KB/tabayyan-private-data/contents/hadeethenc/manifest.json &&
+      echo "1e0a79c49b0287a6ea33826dde1996bd465c81490f59c0050444b6241f9b2ae6  data/private/hadeethenc.jsonl" |
+      sha256sum -c - && sha256sum data/private/hadeethenc.jsonl
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT --no-access-log
     healthCheckPath: /health
     envVars:

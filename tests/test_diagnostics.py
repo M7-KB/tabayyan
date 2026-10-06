@@ -136,3 +136,83 @@ def test_one_info_summary_per_request_with_parallel_states(caplog):
     assert "routing" in line and "retrieval" in line and "composition" in line
     assert "states=['SUPPORTED']" in line and "failures=[]" in line
     assert TEXT not in line
+
+
+def test_deadline_summary_identifies_unfinished_evidence_copy(caplog):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from contextvars import copy_context
+    from time import monotonic
+
+    from api.diagnostics import Summary, finish, summary, timed
+
+    current = Summary()
+    token = summary.set(current)
+    correlation = request_id.set("fixed-correlation")
+    entered, release = threading.Event(), threading.Event()
+
+    def stalled():
+        with timed("composition_worker"), timed("composer_evidence_copy"):
+            entered.set()
+            release.wait(timeout=2)
+
+    caplog.set_level(logging.INFO, logger="api.diagnostics")
+    pool = ThreadPoolExecutor(max_workers=1)
+    try:
+        worker = pool.submit(copy_context().run, stalled)
+        assert entered.wait(timeout=1)
+        finish("http_failure", monotonic())
+        line = caplog.records[-1].getMessage()
+        assert "active_stages=[('composition_worker'," in line
+        assert "('composer_evidence_copy'," in line
+        assert "fixed-correlation" in line
+        release.set()
+        worker.result(timeout=1)
+        assert current.active == {}
+    finally:
+        release.set()
+        pool.shutdown()
+        request_id.reset(correlation)
+        summary.reset(token)
+
+
+def test_nested_parallel_stages_have_independent_lifetimes():
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from contextvars import copy_context
+
+    from api.diagnostics import Summary, summary, timed
+
+    current = Summary()
+    token = summary.set(current)
+    barrier = threading.Barrier(3)
+    release = threading.Event()
+
+    def worker():
+        with timed("composition_worker"), timed("composer_gatekeeper"):
+            barrier.wait(timeout=2)
+            release.wait(timeout=2)
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(copy_context().run, worker) for _ in range(2)]
+            try:
+                barrier.wait(timeout=2)
+                with current.lock:
+                    names = [name for name, _ in current.active.values()]
+                assert names.count("composition_worker") == 2
+                assert names.count("composer_gatekeeper") == 2
+            finally:
+                release.set()
+            for future in futures:
+                future.result(timeout=1)
+        assert current.active == {}
+        try:
+            with timed("composer_evidence_copy"):
+                raise ValueError("PRIVATE_SENTINEL")
+        except ValueError:
+            pass
+        assert current.active == {}
+        assert current.stages[-1][0:2] == ("composer_evidence_copy", "failed")
+    finally:
+        summary.reset(token)

@@ -175,9 +175,10 @@ class Composer:
             original = self.gatekeeper.verify(result.corpus_id, result.record["text_ar"])
         if original is None:
             raise ValueError("Source quote rejected")
-        return evidence_from(
-            RetrievalResult(original, result.retrieval_score, result.overlap_score)
-        )
+        with timed("composer_evidence_copy"):
+            return evidence_from(
+                RetrievalResult(original, result.retrieval_score, result.overlap_score)
+            )
 
     @timed("composer_separation")
     def _isolated(self, text: str, *, glossary_label_id: str | None = None) -> bool:

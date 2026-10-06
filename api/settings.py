@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     allow_pending_review: bool = False
     private_corpus_path: Path | None = None
     private_hadith_path: Path | None = None
+    private_short_index_dir: Path | None = None
+    private_bayyinat_sha256: str = ""
+    private_glossary_sha256: str = ""
     corpus_manifest_path: Path = ROOT / "corpus/manifest.json"
     islamic_content_mcp_url: str = "https://mcp.islamiccontent.org/mcp"
     enable_islamic_content_mcp: bool = False

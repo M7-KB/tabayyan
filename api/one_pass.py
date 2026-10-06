@@ -23,6 +23,7 @@ class OnePassCheckService(CheckService):
         connector=None,
         search_phrases=None,
         deadline_seconds=35,
+        private_indexes=None,
     ):
         super().__init__(
             extractor=router,
@@ -33,6 +34,7 @@ class OnePassCheckService(CheckService):
         )
         self.router = router
         self.deadline_seconds = deadline_seconds
+        self.private_indexes = private_indexes
 
     def check(self, request: CheckRequest, *, source_request: SourceRequest | None = None) -> dict:
         deadline = monotonic() + self.deadline_seconds
@@ -86,6 +88,24 @@ class OnePassCheckService(CheckService):
         restricted = any(c.level == "D" for c in claims)
         started = monotonic()
         source_request = source_request or SourceRequest()
+        if self.private_indexes is not None and not restricted:
+            try:
+                self._stage(
+                    lambda: self.private_indexes.discover(
+                        text,
+                        source_request,
+                        kind=route.kind,
+                        level=max((c.level for c in claims), key="ABCD".index),
+                        timeout=min(3, self._remaining()),
+                    )
+                )
+            except Exception:
+                # Discard partial private-index candidates, never invent a miss.
+                source_request = SourceRequest()
+                record("retrieval_private_index", "unavailable", started)
+                result = self._response([])
+                result["retryable_results"] = [unfinished(claim) for claim in claims]
+                return result
         if self.connector is not None and not restricted and route.kind not in {"verse", "term"}:
             query = self.search_phrases.from_queries(
                 route.queries,

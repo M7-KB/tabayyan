@@ -19,6 +19,11 @@ MODEL = "text-embedding-3-large"
 DIMENSIONS = 1024
 
 
+def _embedding_text(text: str) -> str:
+    # Bound only the indexing input; keep complete raw records and lexical text.
+    return text.encode("utf-8")[:8000].decode("utf-8", errors="ignore").strip()
+
+
 class IndexUnavailable(RuntimeError):
     """Text-free retrieval failure; caller uses its retryable failure policy."""
 
@@ -46,9 +51,12 @@ class Embedder(Protocol):
 class OpenAIIndexEmbedder:
     """Fixed model/endpoint, shared client, no retries/caches/logged text."""
 
-    def __init__(self, client: httpx.AsyncClient, key: SecretStr):
+    def __init__(self, client: httpx.AsyncClient, key: SecretStr, *, model: str = MODEL):
         self._client = client
         self._key = key
+        if model != MODEL:
+            raise IndexUnavailable("invalid_embedding_model")
+        self._model = model
 
     async def embed(self, texts: list[str], *, timeout: float) -> list[tuple[float, ...]]:
         # Conservative token upper bound via UTF-8 bytes, not an English word heuristic.
@@ -69,7 +77,7 @@ class OpenAIIndexEmbedder:
                     "https://api.openai.com/v1/embeddings",
                     headers={"Authorization": f"Bearer {self._key.get_secret_value()}"},
                     json={
-                        "model": MODEL,
+                        "model": self._model,
                         "dimensions": DIMENSIONS,
                         "encoding_format": "float",
                         "input": texts,
@@ -82,7 +90,7 @@ class OpenAIIndexEmbedder:
                 if len(response.content) > 2 * 1024 * 1024:
                     raise IndexUnavailable("invalid_embedding_response")
                 payload = response.json()
-            if not isinstance(payload, dict) or payload.get("model") != MODEL:
+            if not isinstance(payload, dict) or payload.get("model") != self._model:
                 raise IndexUnavailable("invalid_embedding_response")
             rows = payload.get("data")
             if not isinstance(rows, list) or len(rows) != len(texts):
@@ -157,7 +165,10 @@ class PrivateIndexMatcher:
         try:
             async with asyncio.timeout(startup_timeout):
                 for offset in range(0, len(records), 16):
-                    batch = [cls.search_text(row) for row in records[offset : offset + 16]]
+                    batch = [
+                        _embedding_text(cls.search_text(row))
+                        for row in records[offset : offset + 16]
+                    ]
                     vectors.extend(await embedder.embed(batch, timeout=min(30, startup_timeout)))
         except TimeoutError:
             raise IndexUnavailable("index_startup_timeout") from None
@@ -263,7 +274,9 @@ class PrivateIndexMatcher:
             async with asyncio.timeout_at(loop_deadline):
                 lexical = await asyncio.to_thread(self._lexical, query, deadline)
                 _check_deadline(deadline)
-                vectors = await self._embedder.embed([query], timeout=deadline - perf_counter())
+                vectors = await self._embedder.embed(
+                    [_embedding_text(query)], timeout=deadline - perf_counter()
+                )
                 _check_deadline(deadline)
                 result = await asyncio.to_thread(
                     self._rank, lexical, vectors, top_k, semantic_floor, deadline

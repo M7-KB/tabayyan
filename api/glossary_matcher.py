@@ -8,4 +8,14 @@ class GlossaryMatcher(PrivateIndexMatcher):
 
     @staticmethod
     def search_text(row: dict) -> str:
+        if "terminological_meaning" in row:
+            return "\n".join([row["term_ar"], row["short_explanation"], *row["translations"]])
         return "\n".join([row["term_ar"], *row["translations"].values()])
+
+    @staticmethod
+    def display_text(row: dict) -> str:
+        return (
+            row["terminological_meaning"]
+            if "terminological_meaning" in row
+            else row["definition_short"]
+        )

@@ -36,6 +36,8 @@ def test_health_only_without_artifacts_or_config(tmp_path, monkeypatch):
             "corpus_status": "disabled",
             "corpus_error": None,
             "hadith_status": "disabled",
+            "private_index_status": {"bayyinat": "disabled", "glossary": "disabled"},
+            "private_index_items": {"bayyinat": 0, "glossary": 0},
             "hadith_error": None,
             "hadith_items": 0,
             "hadith_version": None,

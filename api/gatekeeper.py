@@ -22,6 +22,8 @@ _EVIDENCE = Draft202012Validator(
 # SPEC section 0.3. Unrecorded connector hosts stay disabled. This table is a
 # provenance check, not an HTTP transport or permission to call a source.
 SOURCES = {
+    "bayyinat": ("bayenat.net", {"faq"}, "بينات"),
+    "jamhara-glossary": ("islamic-content.com", {"glossary"}, "الجمهرة"),
     "dorar-hadith": ("dorar.net", {"hadith"}, "الدرر السنية"),
     "dorar-tafsir": ("dorar.net", {"tafsir"}, "الدرر السنية"),
     "dorar-aqeeda": ("dorar.net", {"aqeeda"}, "الدرر السنية"),

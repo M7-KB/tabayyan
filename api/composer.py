@@ -343,8 +343,8 @@ class Composer:
             )
             return finish("LEVEL_D_PERSONAL_CASE")
         if propose_state and input_kind == "term":
-            # SPEC 0.11 O2 remains open: no glossary retrieval or copied definition.
-            return finish("NO_MATCHING_EVIDENCE")
+            if not any(r["domain"] == "glossary" for r in self.records.values()):
+                return finish("NO_MATCHING_EVIDENCE")
         if detection.span_detector_status != self.policy["span_detector"]["required_status"]:
             gate["span_detector"] = "fail"
             return finish(self.policy["span_detector"]["failure_reason"])
@@ -376,6 +376,17 @@ class Composer:
         count("lexical_hits_capped", len(hits))
         candidates = hits[:COMPOSE_POOL]
         nominated_ids = set()
+        # Private-index ranking ran before binding these validated source results.
+        # Their titles/questions may match even when the copied answer does not.
+        private_candidates = [
+            RetrievalResult(r, 0, 0)
+            for r in self.records.values()
+            if r.get("source_id") in {"bayyinat", "jamhara-glossary"}
+            and "source_ref" in r
+            and (input_kind != "term" or r["domain"] == "glossary")
+        ][:5]
+        nominated_ids.update(r.corpus_id for r in private_candidates)
+        candidates = list({r.corpus_id: r for r in [*private_candidates, *candidates]}.values())
         # Model nominations are lookup keys only, never evidence or confidence.
         # Resolve solely in already loader-validated local KFC records.
         if input_kind != "term" and quran_refs:
@@ -392,7 +403,7 @@ class Composer:
                     nominated.append(
                         lexical.get(candidate["corpus_id"], RetrievalResult(candidate, 0, 0))
                     )
-            nominated_ids = {r.corpus_id for r in nominated}
+            nominated_ids.update(r.corpus_id for r in nominated)
             count("resolved_refs", len(nominated))
             candidates = list({r.corpus_id: r for r in [*nominated, *candidates]}.values())
         count("compose_candidates", len(candidates))

@@ -141,6 +141,9 @@ class Match:
     distance: int
     token_count: int
     length_difference: int
+    # True when a marked span matched a window inside a longer record (an excerpt)
+    # rather than the whole record. Window matching never runs for unmarked text.
+    partial: bool = False
 
 
 @dataclass(frozen=True)
@@ -179,6 +182,13 @@ class Detection:
             record = near[0].match.record
             notice = {"corpus_id": record.corpus_id, "quote_ar": record.text_ar, "note_ar": note_ar}
         return {"force_quran_contradicts": force, "misquote_notice": notice}
+
+
+# Marked excerpts shorter than these token counts are not window-matched: exact
+# excerpts need three tokens and near misses five, so a short common phrase cannot
+# be flagged as a misquote against one of thousands of record windows.
+EXCERPT_VERBATIM_MIN_TOKENS = 3
+EXCERPT_NEAR_MIN_TOKENS = 5
 
 
 class _Lookup:
@@ -252,7 +262,50 @@ class SpanDetector:
     def classify(self, text: str, trigger: str = "A") -> Match:
         if trigger not in {"A", "B"}:
             raise ValueError("invalid trigger")
-        return self._classify(words(text), trigger)
+        tokens = words(text)
+        match = self._classify(tokens, trigger)
+        if trigger == "A" and match.classification == "UNRELATED":
+            # A marked quotation may be an excerpt of a longer record. Compare it
+            # with same-length windows of records that share enough of its tokens.
+            excerpt = self._excerpt_match(tokens)
+            if excerpt is not None:
+                return excerpt
+        return match
+
+    def _excerpt_match(self, tokens: tuple[str, ...]) -> Match | None:
+        """Match a marked span against windows inside longer records.
+
+        An exact window anywhere in the index wins: a correctly quoted excerpt is
+        never a misquote, even when another record holds a near twin. A near miss
+        needs at least EXCERPT_NEAR_MIN_TOKENS tokens and the ordinary word budget
+        for the span length, and reports the first best record in index order.
+        Comparison equality only classifies; the composer still copies any
+        displayed text from the loader-validated record by ID.
+        """
+        n = len(tokens)
+        if not self.index or n < EXCERPT_VERBATIM_MIN_TOKENS:
+            return None
+        lookup = self._lookup_for()
+        budget = self.config.budget(n) if n >= EXCERPT_NEAR_MIN_TOKENS else 0
+        # A window within budget shares at least n - budget of the span's tokens.
+        hits: Counter = Counter()
+        for token in set(tokens):
+            hits.update(lookup.postings.get(token, ()))
+        needed = max(1, n - budget)
+        best = None
+        for position in sorted(p for p, h in hits.items() if h >= needed):
+            record, target = lookup.index[position]
+            if len(target) <= n + budget:
+                continue  # The whole-record comparison already covered this record.
+            for start in range(len(target) - n + 1):
+                window = target[start : start + n]
+                if window == tokens:
+                    return Match("VERBATIM", record, 0, n, 0, partial=True)
+                if budget and (best is None or best.distance > 1):
+                    distance = word_distance(tokens, window)
+                    if distance <= budget and (best is None or distance < best.distance):
+                        best = Match("NEAR_MISS", record, distance, n, 0, partial=True)
+        return best
 
     def _classify(self, tokens: tuple[str, ...], trigger: str) -> Match:
         if not self.index:

@@ -10,7 +10,13 @@ from jsonschema import ValidationError
 
 from api.check import CheckRequest, CheckService
 from api.classifier import LevelClassifier
-from api.composer import COMPOSE_POOL, VALIDATOR, Composer, evidence_from
+from api.composer import (
+    COMPOSE_POOL,
+    SEPARATION_FALLBACK_TEXT,
+    VALIDATOR,
+    Composer,
+    evidence_from,
+)
 from api.extract import ExtractedClaim, ExtractionError, Extractor, Span
 from api.main import create_app
 from api.retrieval import BM25Retriever, RetrievalResult
@@ -214,8 +220,11 @@ def test_invalid_or_low_confidence_proposals_abstain(value, reason):
 @pytest.mark.parametrize("text", [TEXT, '"fabricated source quote"', "قال الله تعالى fabricated"])
 def test_generated_quotes_fail_separation(field, text):
     card = compose(engine(proposal(**{field: text})), lang="en")
-    assert card["abstained_reason"] == "VERBATIM_GATE_FAILED"
-    assert card["gate_report"]["separation"] == "fail"
+    # Only the generated prose is rejected; the verified evidence stays on the card
+    # and a fixed note replaces the explanation.
+    assert card["state"] == "SUPPORTED" and card["evidence"]
+    assert card["explanation_ar"] == SEPARATION_FALLBACK_TEXT[0]
+    assert card["explanation_en"] == SEPARATION_FALLBACK_TEXT[1]
     assert text not in card["explanation_ar"]
 
 
@@ -601,7 +610,9 @@ def test_generated_prose_requires_completed_scan(monkeypatch, status, field):
         value["positions"] = [p]
     else:
         value[field] = unsafe
-    e = engine(value, records=[record(text="تفاحة موز")])
+    # A hadith record: a Quran near miss on the claim would be answered by the
+    # deterministic correction before any generated prose is examined.
+    e = engine(value, records=[record(text="تفاحة موز", domain="hadith")])
     # Exercise a two-token scan configuration: the three-word excerpt guard
     # cannot detect this near-miss and must not substitute for a completed scan.
     e.detector.config = replace(e.detector.config, trigger_b_min_window_tokens=2)
@@ -617,8 +628,14 @@ def test_generated_prose_requires_completed_scan(monkeypatch, status, field):
 
     monkeypatch.setattr(e.detector, "detect", failing_scan)
     card = compose(e, lang="en")
-    assert card["state"] == "CANNOT_CONFIRM"
-    assert card["gate_report"]["separation"] == "fail"
+    if field in {"label_ar", "summary_ar"}:
+        # A position cannot stand on unverified prose: the card abstains.
+        assert card["state"] == "CANNOT_CONFIRM"
+        assert card["gate_report"]["separation"] == "fail"
+    else:
+        # Unverifiable explanation prose is replaced; the verified evidence stays.
+        assert card["state"] == "SUPPORTED" and card["evidence"]
+        assert card["explanation_ar"] == SEPARATION_FALLBACK_TEXT[0]
     assert card["positions"] == []
     assert unsafe not in (card["explanation_ar"], card["explanation_en"])
 

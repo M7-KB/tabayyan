@@ -159,6 +159,61 @@ test('bayenat detailed answer falls back to the known pane ids when no tab names
   assert.equal(extract(none, TABBED_URL).reason, 'missing_detailed_answer');
 });
 
+// Real pages repeat section headings: the full-reply pane (#allAnswers) carries every
+// section with its heading, and the dedicated pane carries the section heading again.
+const dupBay = ({ detailedPane = true, summaryPane = true, detailedCopies = 1, summaryCopies = 1,
+  identical = false } = {}) => arPage(
+  '<h1>عنوان سؤال عينة</h1>' +
+  '<div class="card"><div class="card-header"><h2> نص السؤال</h2></div>' +
+  '<div class="card-body"><p>نص سؤال عينة.</p></div></div>' +
+  '<ul class="nav nav-tabs" role="tablist">' +
+  '<li><a href="#allAnswers" aria-controls="allAnswers" role="tab"><h4> عرض الرد كاملا </h4></a></li>' +
+  (detailedPane ? '<li><a href="#detailedAnswer" aria-controls="detailedAnswer" role="tab"><h4> الجواب التفصيلي </h4></a></li>' : '') +
+  '</ul><div class="tab-content">' +
+  '<div role="tabpanel" id="allAnswers"><h3>الجواب التفصيلي</h3><p>نسخة الرد الكامل من الجواب.</p>' +
+  '<h3>الخلاصة</h3><p>نسخة الرد الكامل من الخلاصة.</p></div>' +
+  (detailedPane ? '<div role="tabpanel" id="detailedAnswer"><h3>الجواب التفصيلي</h3><p>جواب تفصيلي من لوحته.</p></div>' : '') +
+  Array.from({ length: detailedCopies - 1 }, (_, i) =>
+    `<section><h3>الجواب التفصيلي</h3><p>${identical ? 'جواب تفصيلي من لوحته.' : `نسخة مستقلة ${i + 1} من الجواب.`}</p></section>`).join('') +
+  (summaryPane ? '<div role="tabpanel" id="summary"><h3>الخلاصة</h3><p>خلاصة من لوحتها.</p></div>' : '') +
+  Array.from({ length: summaryCopies - 1 }, (_, i) =>
+    `<section><h3>الخلاصة</h3><p>${identical ? 'خلاصة من لوحتها.' : `خلاصة مستقلة ${i + 1}.`}</p></section>`).join('') +
+  '</div>');
+
+test('duplicated labels: the detailedAnswer pane wins over the full-reply copy and a tab link', () => {
+  const { record, reason } = extract(dupBay(), TABBED_URL);
+  assert.equal(reason, undefined);
+  assert.equal(record.detailed_answer, 'جواب تفصيلي من لوحته.');
+  assert.equal(record.summary, 'خلاصة من لوحتها.');
+});
+
+test('duplicated labels: the full-reply copy is used only when it is the sole candidate', () => {
+  const { record } = extract(dupBay({ detailedPane: false, summaryPane: false }), TABBED_URL);
+  // In the full reply the detailed answer runs on through its nested summary heading,
+  // as in the flat markup; the summary section is its own copy.
+  assert.equal(record.detailed_answer.split('\n')[0], 'نسخة الرد الكامل من الجواب.');
+  assert.equal(record.summary, 'نسخة الرد الكامل من الخلاصة.');
+});
+
+test('duplicated labels: identical copies collapse, differing detailed answers take the first', () => {
+  const same = extract(dupBay({ detailedPane: false, detailedCopies: 3, identical: true }), TABBED_URL);
+  assert.equal(same.record.detailed_answer, 'جواب تفصيلي من لوحته.');
+  const differing = extract(dupBay({ detailedPane: false, detailedCopies: 3 }), TABBED_URL);
+  assert.equal(differing.record.detailed_answer, 'نسخة مستقلة 1 من الجواب.');
+});
+
+test('duplicated labels: differing summaries outside the full reply still fail closed', () => {
+  assert.equal(extract(dupBay({ summaryCopies: 2 }), TABBED_URL).reason, 'ambiguous_summary');
+  const identical = extract(dupBay({ summaryCopies: 2, identical: true }), TABBED_URL);
+  assert.equal(identical.record.summary, 'خلاصة من لوحتها.');
+});
+
+test('a page with no detailed answer anywhere stays skipped', () => {
+  const none = dupBay({ detailedPane: false }).replace('id="allAnswers"', 'id="none"')
+    .replace('<h3>الجواب التفصيلي</h3><p>نسخة الرد الكامل من الجواب.</p>', '');
+  assert.equal(extract(none, TABBED_URL).reason, 'missing_detailed_answer');
+});
+
 test('bayenat record fails closed on missing or duplicated sections', () => {
   // A missing question section falls back to the h1; a duplicated one still fails.
   const missingQuestion = bay.replace('<h2>نص السؤال</h2><p>نص سؤال عينة للاختبار.</p>', '');

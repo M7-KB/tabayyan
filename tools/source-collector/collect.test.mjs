@@ -90,9 +90,81 @@ test('bayenat summary is optional and stays empty when absent', () => {
   assert.match(record.detailed_answer, /فقرة أولى/);
 });
 
+// Structure of a saved bayenat.net question page (card header + card body for the question,
+// author/source reference lines, a similar-phrasings card, Bootstrap tabs for the answer).
+// Content is placeholder text; only the publisher's section labels and ids are real.
+const tabbedBay = ({ question = true, summary = true, detailedTab = true } = {}) => arPage(
+  '<div class="page-header"><div><div><h1 class="page-title">عنوان سؤال عينة</h1>' +
+  '<ol class="breadcrumb"><li><a href="https://bayenat.net/ar"><i class="fas fa-home"></i> الرئيسية</a></li>' +
+  '<li><a href="https://bayenat.net/ar/categories/131"> التصنيف الموضوعي</a></li><li> تصنيف عينة</li></ol>' +
+  '</div></div></div>' +
+  '<main class="main-content"><div class="container">' +
+  '<div class="next-prev"><a href="https://bayenat.net/ar/category/131/908" class="btn btn-success">السابق</a>' +
+  '<a href="https://bayenat.net/ar/category/131/910" class="btn btn-dark">التالى</a></div>' +
+  (question ? '<div class="card question-card shadow-sm"><div class="card-header">' +
+    '<h2 class="card-title"> نص السؤال</h2></div>' +
+    '<div class="card-body islamic-typography"><table><tbody><tr><td>' +
+    '<p>فقرة أولى من نص السؤال.</p><p>فقرة ثانية من نص السؤال؛&nbsp;</p></td></tr></tbody></table></div>' +
+    '<div class="reference"><h4><i class="fa fa-user"></i>  المؤلف: <span> مؤلف عينة </span></h4></div>' +
+    '<div class="reference"><h4><i class="fa fa-pen"></i>  المصدر: <span> مصدر عينة </span></h4></div></div>' : '') +
+  '<div class="card question-card second shadow-sm"><div class="card-header">' +
+  '<h2 class="card-title"> عبارات مشابهة للسؤال</h2></div>' +
+  '<div class="card-body islamic-typography"><p>صياغة مشابهة عينة&nbsp;</p></div></div>' +
+  '<div class="shobha-menu"><ul class="nav nav-tabs" role="tablist">' +
+  '<li role="presentation" class="active"><a href="#allAnswers" aria-controls="allAnswers" role="tab" data-toggle="tab">' +
+  '<i class="flaticon flaticon-monitoring"></i><h4> عرض الرد كاملا </h4></a></li>' +
+  (detailedTab ? '<li role="presentation"><a href="#detailedAnswer" aria-controls="detailedAnswer" role="tab" data-toggle="tab">' +
+    '<i class="flaticon"></i><h4> الجواب التفصيلي </h4></a></li>' : '') +
+  (summary ? '<li role="presentation"><a href="#summary" aria-controls="summary" role="tab" data-toggle="tab">' +
+    '<h4> الخلاصة </h4></a></li>' : '') +
+  '</ul><div class="tab-content">' +
+  '<div role="tabpanel" class="tab-pane active" id="allAnswers"><p>فقرة أولى من الجواب التفصيلي.</p>' +
+  '<p>فقرة ثانية من الجواب.</p>' + (summary ? '<p>خلاصة عينة.</p>' : '') + '</div>' +
+  '<div role="tabpanel" class="tab-pane" id="detailedAnswer"><p>فقرة أولى من الجواب التفصيلي.</p>' +
+  '<p>فقرة ثانية من الجواب.</p></div>' +
+  (summary ? '<div role="tabpanel" class="tab-pane" id="summary"><p>خلاصة عينة.</p></div>' : '') +
+  '</div></div></div></main>');
+const TABBED_URL = 'https://bayenat.net/ar/category/131/909';
+
+test('bayenat tabbed page: question from the card body, answer and summary from the panes', () => {
+  const { record, reason } = extract(tabbedBay(), TABBED_URL);
+  assert.equal(reason, undefined);
+  assert.equal(record.id, '/ar/category/131/909');
+  assert.equal(record.title, 'عنوان سؤال عينة');
+  assert.equal(record.question_text, 'فقرة أولى من نص السؤال.\nفقرة ثانية من نص السؤال؛');
+  assert.ok(!/مؤلف|مصدر|السابق|التالى/.test(record.question_text));
+  assert.equal(record.detailed_answer, 'فقرة أولى من الجواب التفصيلي.\nفقرة ثانية من الجواب.');
+  assert.equal(record.summary, 'خلاصة عينة.');
+  assert.deepEqual(record.keywords, []);
+});
+
+test('bayenat tabbed page without a summary keeps the detailed answer and an empty summary', () => {
+  const { record } = extract(tabbedBay({ summary: false }), TABBED_URL);
+  assert.equal(record.summary, '');
+  assert.equal(record.detailed_answer.split('\n')[0], 'فقرة أولى من الجواب التفصيلي.');
+});
+
+test('bayenat tabbed page without a question card uses the h1 as the question', () => {
+  const { record } = extract(tabbedBay({ question: false }), TABBED_URL);
+  assert.equal(record.question_text, 'عنوان سؤال عينة');
+  assert.equal(record.detailed_answer, 'فقرة أولى من الجواب التفصيلي.\nفقرة ثانية من الجواب.');
+});
+
+test('bayenat detailed answer falls back to the known pane ids when no tab names it', () => {
+  const { record } = extract(tabbedBay({ detailedTab: false }), TABBED_URL);
+  assert.equal(record.detailed_answer, 'فقرة أولى من الجواب التفصيلي.\nفقرة ثانية من الجواب.');
+  const onlyFull = tabbedBay({ detailedTab: false }).replace('id="detailedAnswer"', 'id="other"');
+  assert.match(extract(onlyFull, TABBED_URL).record.detailed_answer, /^فقرة أولى من الجواب التفصيلي\./);
+  const none = onlyFull.replace('id="allAnswers"', 'id="none"');
+  assert.equal(extract(none, TABBED_URL).reason, 'missing_detailed_answer');
+});
+
 test('bayenat record fails closed on missing or duplicated sections', () => {
+  // A missing question section falls back to the h1; a duplicated one still fails.
   const missingQuestion = bay.replace('<h2>نص السؤال</h2><p>نص سؤال عينة للاختبار.</p>', '');
-  assert.equal(extract(missingQuestion, BAY_URL).reason, 'missing_question_text');
+  assert.equal(extract(missingQuestion, BAY_URL).record.question_text, 'سؤال عينة');
+  const twoQuestions = bay.replace('<h2>الجواب التفصيلي</h2>', '<h2>نص السؤال</h2><p>ثانٍ.</p><h2>الجواب التفصيلي</h2>');
+  assert.equal(extract(twoQuestions, BAY_URL).reason, 'ambiguous_question_text');
   const missingDetailed = bay.replace('<h2>الجواب التفصيلي</h2><p>فقرة أولى من الجواب التفصيلي.</p>', '');
   assert.equal(extract(missingDetailed, BAY_URL).reason, 'missing_detailed_answer');
   const twoSummaries = bay.replace('<h2>كلمات دلالية</h2>', '<h3>الخلاصة</h3><p>ثانية.</p><h2>كلمات دلالية</h2>');
@@ -237,7 +309,9 @@ test('a broken required section prevents complete handoff', async () => {
         url.includes('bayenat') ? bay : glossary } });
     assert.equal(result.complete, false);
     const report = JSON.parse(await readFile(path.join(directory, 'broken/report.json'), 'utf8'));
-    assert.equal(report.find(row => row.url.endsWith('/x/2')).reason, 'missing_question_text');
+    // The h1 stands in for a missing question section; the missing detailed answer
+    // is what keeps this page out of the handoff.
+    assert.equal(report.find(row => row.url.endsWith('/x/2')).reason, 'missing_detailed_answer');
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

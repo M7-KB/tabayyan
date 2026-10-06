@@ -118,6 +118,22 @@ A partial source loads only when `PRIVATE_SHORT_INDEX_ALLOW_PARTIAL=true` is set
 Render (owner decision); `/health` then reports that source as `partial` with its
 record count. Hash pinning is unchanged, and each source loads independently, so the
 glossary serves even while `PRIVATE_BAYYINAT_SHA256` is unset.
+## Bayyinat question-page markup (2026-10-06)
+
+Saved question pages place «نص السؤال» as a card header whose content is the following
+card body (the author and source reference lines beside it are page furniture and are
+excluded), and put the answer sections behind tabs: the tab link carries the label and
+its pane (`aria-controls` or `href="#id"`) carries the text. The extractor follows both
+shapes. When the question card is absent the h1 is the question; «الخلاصة» stays
+optional (display then uses the first paragraph of the detailed answer, D6); when no tab
+is labelled «الجواب التفصيلي» the known panes `detailedAnswer`, then `allAnswers`, are
+used. Re-run offline on the saved run, no fetching:
+
+```powershell
+node tools/source-collector/collect.mjs --from-html data\private\source-collection-<bayyinat-run> --output data\private\source-collection-<new-time>
+```
+
+Then assemble the loader directory with `build-short-index.mjs` as described in the previous section.
 
 ## Section parsing
 

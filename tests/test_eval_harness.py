@@ -321,8 +321,11 @@ def test_evidence_on_a_no_matching_evidence_card_fails(tmp_path):
     bundle = write_bundle(tmp_path / "bundle.json", patch)
     code, report = run(tmp_path, testset=countable_testset(tmp_path), bundle=bundle)
     assert code == 1
-    detail = assertion(report, "T06", "must_not_fabricate")["detail"]
-    assert "NO_MATCHING_EVIDENCE card returned evidence items" in detail
+    # The card contract itself rejects evidence on an abstaining card (one state per
+    # card); the harness reports that first and the fabrication check is not reached.
+    schema = assertion(report, "T06", "schema_valid")
+    assert schema["status"] == "fail" and "evidence" in schema["detail"]
+    assert case(report, "T06")["status"] == "fail"
 
 
 def test_a_missing_response_fails_the_case_and_g19(tmp_path):
@@ -697,5 +700,8 @@ def test_no_matching_evidence_consistency_reads_actual_card(tmp_path):
     bundle = write_bundle(tmp_path / "actual-reason-bundle.json", patch)
     code, report = run(tmp_path, testset=path, bundle=bundle)
     assert code == 1
-    assert assertion(report, "T15", "schema_valid")["status"] == "pass"
-    assert assertion(report, "T15", "must_not_fabricate")["status"] == "fail"
+    # An abstaining card with evidence now fails the card contract itself, whatever
+    # the testset expected; the harness still fails the case on the actual card.
+    schema = assertion(report, "T15", "schema_valid")
+    assert schema["status"] == "fail" and "evidence" in schema["detail"]
+    assert case(report, "T15")["status"] == "fail"

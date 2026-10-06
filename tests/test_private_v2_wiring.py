@@ -86,14 +86,18 @@ def test_bayyinat_first_paragraph_keeps_internal_lines_and_stops_at_blank_line(n
     raw["summary"] = ""
     first = newline.join(["First original line", "Second original line"])
     raw["detailed_answer"] = first + newline + " \t" + newline + "Next paragraph"
-    assert BayyinatMatcher.display_text(raw) == first
+    # Lines of the first paragraph are kept, joined by a line feed.
+    assert BayyinatMatcher.display_text(raw) == first.replace("\r\n", "\n")
 
 
 def test_bayyinat_single_paragraph_keeps_all_lines_until_character_cap():
     raw = row()
     raw["summary"] = ""
     raw["detailed_answer"] = "First original line\n" + "ح" * 450
-    assert BayyinatMatcher.display_text(raw) == raw["detailed_answer"][:400]
+    # The cap falls on the last whitespace inside the limit, never inside a word.
+    assert BayyinatMatcher.display_text(raw) == "First original line"
+    raw["detailed_answer"] = "First original line\n" + "ح" * 370
+    assert BayyinatMatcher.display_text(raw) == raw["detailed_answer"]
 
 
 def test_long_private_fields_bound_embedding_input_without_changing_display(tmp_path):

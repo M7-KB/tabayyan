@@ -32,7 +32,10 @@ export function ClaimCard({ card, recheck = null, onRecheck }) {
         <p className="source-intro">{strings.sourceTextIntro}</p>
       )}
       {!isDisputed &&
-        card.evidence.map((item) => <ScriptureBlock key={item.evidence_id} item={item} />)}
+        card.evidence
+          // The published-answer block already shows this record's excerpt once.
+          .filter((item) => !(card.published_answer && item.source_ref?.url === card.published_answer.url))
+          .map((item) => <ScriptureBlock key={item.evidence_id} item={item} />)}
 
       {card.published_answer && <PublishedAnswer answer={card.published_answer} />}
 

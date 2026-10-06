@@ -308,7 +308,19 @@ class QuoteGatekeeper:
         return self._embedded_detector.detect(text)
 
     def _embedded(self, text: str) -> list[dict] | None:
-        """Require each detected scripture span to have its own authorized record."""
+        """Require each detected scripture span to have its own authorized record.
+
+        The scan of one text is computed once per request: verify, dependencies and
+        published_answer all ask about the same displayed excerpt.
+        """
+        cache = self.__dict__.setdefault("_embedded_cache", {})
+        if text in cache:
+            return copy.deepcopy(cache[text])
+        result = self._embedded_uncached(text)
+        cache[text] = copy.deepcopy(result)
+        return result
+
+    def _embedded_uncached(self, text: str) -> list[dict] | None:
         try:
             detection = self.scan_scripture(text)
         except DeadlineExceeded:

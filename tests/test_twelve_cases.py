@@ -132,7 +132,12 @@ class Scripted:
         self.state = "SUPPORTED"
         self.prefer = ("faq", "glossary", "quran", "hadith")
         self.term_label = None
+        # Composition knobs: proposal confidence, evidence gap, or a provider failure.
+        self.confidence = 0.9
+        self.evidence_gap = False
+        self.error = None
         self.calls = []
+        self.records_seen = []
 
     def complete_json(self, *, instructions, data, schema):
         self.calls.append(schema)
@@ -141,7 +146,10 @@ class Scripted:
             return copy.deepcopy(self.route)
         if "meaning" in fields:
             return {"corpus_id": None, "meaning": "no", "confidence": 0.9}
+        if self.error is not None:
+            raise self.error
         records = json.loads(data["records"])
+        self.records_seen.append([r["corpus_id"] for r in records])
         chosen = next(
             (r for domain in self.prefer for r in records if r["domain"] == domain), records[0]
         )
@@ -150,10 +158,10 @@ class Scripted:
             "corpus_ids": [chosen["corpus_id"]],
             "positions": [],
             "recorded_disagreement": False,
-            "evidence_gap": False,
+            "evidence_gap": self.evidence_gap,
             "alignment_proposal": self.alignment,
             "alignment_confidence": self.alignment_confidence,
-            "confidence": 0.9,
+            "confidence": self.confidence,
             "explanation_ar": EXPLANATION,
             "explanation_en": EXPLANATION_EN,
             "term_label_ar": self.term_label,
@@ -185,6 +193,11 @@ def route(text, *, kind, level, origin, lang="ar", refs=(), phrases=(), no_claim
 
 @pytest.fixture(scope="module")
 def harness():
+    yield from harness_client()
+
+
+def harness_client():
+    """The HTTP check path over synthetic records and the scripted model."""
     _, tuning = load_config(POLICY, TUNING)
     gatekeeper = QuoteGatekeeper(
         local_records=[quran_record(), hadith_record()],

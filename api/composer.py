@@ -146,6 +146,48 @@ def _mentions_term(record: dict, text: str, lang: str) -> bool:
     return False
 
 
+# Interrogatives and function words name no subject; a title match counts content words.
+_QUESTION_WORDS = frozenset(
+    "لماذا ماذا ما هل كيف من متى أين اين لم لما لمَ هو هي في عن على الى إلى و أو ثم أن إن ان "
+    "كان يا هناك هنا الذي التي ليس لا نعم بل قد كل".split()
+)
+# Share of the question's content words the title must carry, and the shared leading
+# letters that let an inflected form count (المسلمون / المسلمين), both at least five long.
+TITLE_MATCH_FLOOR = 0.6
+_STEM_PREFIX = 4
+
+
+def _alias_shared(group: tuple[str, ...], aliases: set[str]) -> bool:
+    if set(group) & aliases:
+        return True
+    return any(
+        len(a) >= _STEM_PREFIX + 1
+        and len(b) >= _STEM_PREFIX + 1
+        and a[:_STEM_PREFIX] == b[:_STEM_PREFIX]
+        for a in group
+        for b in aliases
+    )
+
+
+def _title_matches(question: str, record: dict) -> bool:
+    """Whether a received Bayyinat record's title names the subject the question asks about.
+
+    Counts the question's content words (interrogatives and function words dropped, at
+    least two left) that the title also carries by search alias. A match only lets the
+    publisher's answer stand where the model's confidence alone would block it; the
+    answer itself is still copied from the record by ID.
+    """
+    title = record.get("title_ar")
+    if not isinstance(title, str) or not title.strip():
+        return False
+    title_aliases = {alias for group in retrieval_token_groups(title) for alias in group}
+    content = [g for g in retrieval_token_groups(question) if g[0] not in _QUESTION_WORDS]
+    if len(content) < 2:
+        return False
+    matched = sum(1 for group in content if _alias_shared(group, title_aliases))
+    return matched / len(content) >= TITLE_MATCH_FLOOR
+
+
 class PositionProposal(StrictObject):
     label_ar: str = Field(min_length=1, max_length=200)
     summary_ar: str = Field(min_length=1, max_length=2000)
@@ -436,10 +478,15 @@ class Composer:
 
         def finish(reason=None):
             if reason is not None:
+                # An abstaining card shows no evidence block: published evidence is
+                # displayed only on a SUPPORTED or DISPUTED card (owner, 2026-10-06).
+                # A misquote notice is a correction, not evidence, and stays.
                 card.update(
                     state="CANNOT_CONFIRM",
                     alignment=None,
                     positions=[],
+                    evidence=[],
+                    published_answer=None,
                     state_label_key="cannot_confirm",
                     abstained_reason=reason,
                 )
@@ -552,6 +599,44 @@ class Composer:
             private_lexical.get(r["corpus_id"], RetrievalResult(r, 0, 0)) for r in private_records
         ]
         candidates = list({r.corpus_id: r for r in [*private_candidates, *candidates]}.values())
+        # A received Bayyinat answer whose title names the asked subject answers the
+        # question by itself (owner, 2026-10-06): the model's low confidence, evidence
+        # gap or CANNOT_CONFIRM blocks only cards without such a record.
+        asked = card["claim"]["text_original"]
+        title_matched = [
+            r
+            for r in private_candidates
+            if input_kind != "term"
+            and r.record.get("source_id") == "bayyinat"
+            and r.record.get("domain") == "faq"
+            and (_title_matches(asked, r.record) or _title_matches(claim.text_ar, r.record))
+        ]
+        count("bayyinat_title_matches", len(title_matched))
+
+        def publisher_fallback(reason, alignment_proposal=None):
+            for result in title_matched:
+                try:
+                    item = self._evidence(result)
+                except Exception:
+                    gate["verbatim"] = "fail"
+                    continue
+                code("publisher_fallback:" + reason)
+                alignment = "CONTRADICTS" if alignment_proposal == "CONTRADICTS" else "CONFIRMS"
+                code("alignment:" + alignment)
+                card.update(
+                    state="SUPPORTED",
+                    alignment=alignment,
+                    state_label_key="supported_" + alignment.lower(),
+                    evidence=[item],
+                    positions=[],
+                    abstained_reason=None,
+                    # No generated prose stands on a low-confidence proposal.
+                    explanation_ar=SEPARATION_FALLBACK_TEXT[0],
+                    explanation_en=SEPARATION_FALLBACK_TEXT[1] if lang == "en" else None,
+                )
+                return finish()
+            return finish(reason)
+
         # Model nominations are lookup keys only, never evidence or confidence.
         # Resolve solely in already loader-validated local KFC records.
         if input_kind != "term" and quran_refs:
@@ -613,9 +698,9 @@ class Composer:
         except ProviderUnavailable as exc:
             if propose_state and exc.category in {"timeout", "retry_budget"}:
                 raise
-            return finish("LOW_CONFIDENCE")
+            return publisher_fallback("LOW_CONFIDENCE")
         except Exception:
-            return finish("LOW_CONFIDENCE")
+            return publisher_fallback("LOW_CONFIDENCE")
         provider_finished = monotonic()
         card["confidence"] = proposal.confidence
         card["alignment_confidence"] = proposal.alignment_confidence
@@ -643,7 +728,7 @@ class Composer:
             for cid in proposal.corpus_ids
         )
         if propose_state and proposal.state == "CANNOT_CONFIRM" and not publisher_proposed:
-            return finish("NO_MATCHING_EVIDENCE")
+            return publisher_fallback("NO_MATCHING_EVIDENCE", proposal.alignment_proposal)
         # Reject invented IDs even when a valid ID appears alongside them.
         if self.gatekeeper is None and (
             len(set(proposal.corpus_ids)) != len(proposal.corpus_ids)
@@ -705,11 +790,9 @@ class Composer:
                 card["evidence"] = []
                 return finish("VERBATIM_GATE_FAILED")
         if proposal.confidence < self.tuning.card_confidence_min:
-            card["evidence"] = []
-            return finish("LOW_CONFIDENCE")
+            return publisher_fallback("LOW_CONFIDENCE", proposal.alignment_proposal)
         if proposal.evidence_gap:
-            card["evidence"] = []
-            return finish("CONFLICTING_EVIDENCE")
+            return publisher_fallback("CONFLICTING_EVIDENCE", proposal.alignment_proposal)
         explanations = [proposal.explanation_ar] if proposal.explanation_ar.strip() else []
         if lang == "en":
             if proposal.explanation_en and proposal.explanation_en.strip():
@@ -843,7 +926,7 @@ class Composer:
         # The policy's state rules decide the state from verified evidence; the
         # model's proposed state is advisory except for its own CANNOT_CONFIRM above.
         if card["state"] == "CANNOT_CONFIRM":
-            return finish("CONFLICTING_EVIDENCE")
+            return publisher_fallback("CONFLICTING_EVIDENCE", proposal.alignment_proposal)
         card["abstained_reason"] = None
         if card["state"] == "DISPUTED":
             card.update(positions=positions, state_label_key="disputed")
@@ -888,7 +971,7 @@ class Composer:
                 code("alignment:" + (rule["result"] or "UNDETERMINED"))
                 if rule["result"] is None:
                     gate["alignment"] = "fail"
-                    return finish(rule["abstained_reason"])
+                    return publisher_fallback(rule["abstained_reason"], proposal.alignment_proposal)
                 card["alignment"] = rule["result"]
                 break
         card["state_label_key"] = "supported_" + card["alignment"].lower()

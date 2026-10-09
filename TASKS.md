@@ -6,8 +6,11 @@ Last updated: 2026-10-02
 Times are Riyadh. **Build window: Oct 2 → Oct 6 23:59**, on organizer permission to start early (SPEC.md
 §10 item 15). There is no separate pre-work category and no `baseline` tag — everything below is simply a
 day in the plan. The word `baseline` does not appear anywhere in this repository.
-Owner decisions driving this plan: SPEC.md §10. Still open: SPEC.md §12 (specialist wording/boundaries
-only).
+Owner decisions driving this plan: SPEC.md §10. Still open: SPEC.md §12 (wording questions, owner's call).
+**Current authority (AGENTS.md, owner update 2026-10-06):** scope is frozen to text input for submission, and
+corpus and test-set changes are approved by the owner. Where lines below still name a Sharia specialist
+approval, read the owner's approval; where they put link or audio work in the build window, read it as out of
+scope for submission. Those lines are not edited here.
 
 Conventions, from `AGENTS.md`: one task = one branch = one PR, small PRs, tests ship with code, the README
 section you touched is updated in the same PR, never push to main, never merge.
